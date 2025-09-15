@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Clock, CheckCircle, MessageCircle, X, Star } from 'lucide-react';
 
 export type TicketStatus = 'waiting' | 'active' | 'marked_resolved' | 'resolved';
 
@@ -78,11 +79,11 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       <button
         key={index}
         onClick={() => setRating(index + 1)}
-        className={`unjam-text-2xl unjam-transition-colors ${
+        className={`unjam-transition-colors ${
           index < rating ? 'unjam-text-yellow-400' : 'unjam-text-gray-300'
         }`}
       >
-        ★
+        <Star size={24} fill={index < rating ? 'currentColor' : 'none'} />
       </button>
     ));
   };
@@ -90,15 +91,15 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   const getStatusIcon = () => {
     switch (ticket.status) {
       case 'waiting':
-        return '⏱';
+        return <Clock size={18} />;
       case 'active':
-        return '⏱';
+        return <Clock size={18} />;
       case 'marked_resolved':
-        return '✅';
+        return <CheckCircle size={18} />;
       case 'resolved':
-        return '✅';
+        return <CheckCircle size={18} />;
       default:
-        return '⏱';
+        return <Clock size={18} />;
     }
   };
 
@@ -118,7 +119,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   };
 
   return (
-    <div className={`unjam-fixed unjam-bottom-4 unjam-right-4 unjam-w-80 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border-2 ${getStatusColor()} unjam-p-4 unjam-font-sans`}>
+    <div className={`unjam-fixed unjam-bottom-4 unjam-right-4 unjam-w-120 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border-2 ${getStatusColor()} unjam-p-4 unjam-font-sans`}>
       {/* Header */}
       <div className="unjam-flex unjam-items-center unjam-justify-between unjam-mb-3">
         <div className="unjam-flex unjam-items-center unjam-gap-2">
@@ -129,9 +130,9 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         </div>
         <button
           onClick={onHide}
-          className="unjam-text-gray-400 hover:unjam-text-gray-600 unjam-text-lg unjam-font-bold"
+          className="unjam-text-gray-400 hover:unjam-text-gray-600"
         >
-          ×
+          <X size={18} />
         </button>
       </div>
 
@@ -158,13 +159,15 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           
           <div className="unjam-space-y-2">
             <button className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50">
-              💬 Hide Chat
+              <MessageCircle size={16} />
+              Hide Chat
             </button>
-            <button 
+            <button
               onClick={onMarkFixed}
               className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
             >
-              ✅ This is fixed
+              <CheckCircle size={16} />
+              This is fixed
             </button>
           </div>
         </div>
@@ -175,17 +178,19 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           <p className="unjam-text-gray-600 unjam-mb-4">Issue resolved! Please confirm:</p>
           
           <div className="unjam-flex unjam-gap-2">
-            <button 
+            <button
               onClick={onConfirmFixed}
               className="unjam-flex-1 unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
             >
-              ✅ Yes, it's fixed!
+              <CheckCircle size={14} />
+              Yes, it's fixed!
             </button>
-            <button 
+            <button
               onClick={onMarkStillBroken}
               className="unjam-flex-1 unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
             >
-              × Still broken
+              <X size={14} />
+              Still broken
             </button>
           </div>
         </div>

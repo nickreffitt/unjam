@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import TicketBox, { Ticket, TicketStatus } from '@extension/components/TicketBox/TicketBox';
+import TicketBox, { type Ticket, type TicketStatus } from '@extension/components/TicketBox/TicketBox';
 import TicketModal from '@extension/components/TicketModal/TicketModal';
+import type { CustomerProfile } from '@common';
 import '@extension/styles.css';
 
 const CustomerExtension: React.FC = () => {
@@ -8,17 +9,27 @@ const CustomerExtension: React.FC = () => {
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isTicketVisible, setIsTicketVisible] = useState(true);
 
-  const handleCreateTicket = (description: string) => {
+  // Create a mock customer profile for development
+  const customerProfile: CustomerProfile = {
+    id: 'CUST-DEV-001',
+    name: 'Development Customer',
+    type: 'customer',
+    email: 'dev@customer.com'
+  };
+
+  const handleTicketCreated = (ticketId: string) => {
+    console.info('Ticket created with ID:', ticketId);
+    // In a real implementation, we might fetch the ticket or receive it via real-time updates
+    // For now, create a basic ticket representation
     const newTicket: Ticket = {
-      id: generateTicketId(),
+      id: ticketId,
       status: 'waiting' as TicketStatus,
       createdAt: new Date(),
     };
-    
+
     setCurrentTicket(newTicket);
     setIsTicketVisible(true);
-    setIsModalOpen(false); // Close modal after creating ticket
-    console.log('Creating ticket:', { description, ticket: newTicket });
+    setIsModalOpen(false);
   };
 
   const handleTicketHide = () => {
@@ -42,7 +53,7 @@ const CustomerExtension: React.FC = () => {
         status: 'resolved' as TicketStatus,
       };
       setCurrentTicket(updatedTicket);
-      console.log('Customer marked ticket as fixed');
+      console.info('Customer marked ticket as fixed');
     }
   };
 
@@ -53,7 +64,7 @@ const CustomerExtension: React.FC = () => {
         status: 'resolved' as TicketStatus,
       };
       setCurrentTicket(updatedTicket);
-      console.log('Customer confirmed fix');
+      console.info('Customer confirmed fix');
     }
   };
 
@@ -64,19 +75,16 @@ const CustomerExtension: React.FC = () => {
         status: 'active' as TicketStatus,
       };
       setCurrentTicket(updatedTicket);
-      console.log('Customer marked as still broken');
+      console.info('Customer marked as still broken');
     }
   };
 
   const handleSubmitRating = (rating: number, feedback?: string) => {
-    console.log('Rating submitted:', { rating, feedback });
+    console.info('Rating submitted:', { rating, feedback });
     setCurrentTicket(null);
     setIsTicketVisible(false);
   };
 
-  const generateTicketId = (): string => {
-    return 'e4ed1d2c-610b-467f-9bd4-5030337bec06';
-  };
 
   const getButtonText = () => {
     // If ticket exists and is not resolved, show "Show Active Ticket"
@@ -143,7 +151,8 @@ const CustomerExtension: React.FC = () => {
       <TicketModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSubmit={handleCreateTicket}
+        customerProfile={customerProfile}
+        onTicketCreated={handleTicketCreated}
       />
 
       {currentTicket && isTicketVisible && (

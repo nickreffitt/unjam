@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { TicketManager, TicketStore, type CustomerProfile } from '@common';
 
 interface TicketModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (description: string) => void;
+  customerProfile: CustomerProfile;
+  onTicketCreated?: (ticketId: string) => void;
 }
 
-const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProfile, onTicketCreated }) => {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Create TicketManager instance with customer profile and store
+  const ticketManager = useMemo(() => {
+    const ticketStore = new TicketStore();
+    return new TicketManager(customerProfile, ticketStore);
+  }, [customerProfile]);
 
   if (!isOpen) return null;
 
@@ -18,9 +26,18 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, onSubmit }) 
 
     setIsSubmitting(true);
     try {
-      await onSubmit(description.trim());
+      // Use TicketManager to create the ticket
+      const ticket = await ticketManager.createTicket(description.trim());
+
+      // Clear form and close modal
       setDescription('');
       onClose();
+
+      // Notify parent component of the new ticket
+      onTicketCreated?.(ticket.id);
+    } catch (error) {
+      console.error('Failed to create ticket:', error);
+      // TODO: Show error message to user
     } finally {
       setIsSubmitting(false);
     }

@@ -6,7 +6,7 @@ import '@dashboard/styles.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/app">
       <EngineerDashboard />
     </BrowserRouter>
   </React.StrictMode>,

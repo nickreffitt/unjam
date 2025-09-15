@@ -6,17 +6,24 @@
   "scripts": {
     "dev": "vite",
     "dev:dashboard": "vite --config vite.dashboard.config.ts",
+    "dev:unified": "vite --config vite.unified.config.ts",
     "build": "vite build",
     "build:dashboard": "vite build --config vite.dashboard.config.ts",
-    "test": "vitest",
-    "test:ui": "vitest --ui"
+    "build:unified": "vite build --config vite.unified.config.ts",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
   },
   "dependencies": {
+    "lucide-react": "^0.544.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.8.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.35.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -24,9 +31,16 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/react-router-dom": "^5.3.3",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
     "@vitejs/plugin-react": "^4.0.0",
     "@vitest/ui": "^0.34.6",
     "autoprefixer": "^10.4.14",
+    "cypress": "^15.2.0",
+    "eslint": "^9.35.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
     "jsdom": "^26.1.0",
     "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2",

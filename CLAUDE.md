@@ -59,6 +59,13 @@ Tickets are stored in a Supabase PostgreSQL database in a `tickets` table. The s
 - **Constructor Dependency Injection**: Use for better testability and modularity
 - **Data Access**: Abstract all Supabase interactions behind "Store" classes (e.g., `TicketStore`)
   - No direct Supabase client usage outside Store classes
+  - **Store Responsibility**: Stores handle ONLY persistence and CRUD operations on domain objects
+  - **Manager Responsibility**: Managers handle business logic AND object conversions (e.g., `Ticket` → `TicketListItem`)
+  - Stores should have no knowledge of display/presentation objects
+- **Persistence Architecture**: Store objects use persistence directly with row-level security (not client-server)
+  - Stores connect directly to Supabase with RLS applied
+  - No separate API layer - direct database access with security at row level
+  - This eliminates traditional client-server architecture complexity
 - **Continuous Refactoring**: Remove obsolete code as new features are added
 
 ### Testing Requirements
@@ -67,7 +74,25 @@ Tickets are stored in a Supabase PostgreSQL database in a `tickets` table. The s
 - **Test Types**:
   - **Unit Tests**: Isolated component/function testing
   - **Integration Tests**: Tests that connect to real Supabase database
+  - **E2E/Acceptance Tests**: Cypress tests that validate user workflows
 - **Test Execution**: All tests must pass before completing any development task
+
+### Cypress E2E Testing Standards
+- **Test Naming**: Describe what the test validates, not implementation details
+  - Good: `it('displays TicketModal when "Create New Ticket" button is clicked')`
+  - Avoid: `it('given the page loads, when the button is pressed, the modal appears')`
+- **Structure**: Use inline comments to mark Given-When-Then sections:
+  ```javascript
+  // given the page loads
+  cy.contains('button', 'Create New Ticket').should('be.visible');
+
+  // when button clicked
+  cy.contains('button', 'Create New Ticket').click();
+
+  // then TicketModal is displayed
+  cy.contains('h2', 'Create New Ticket').should('be.visible');
+  ```
+- **URL Navigation**: Use root path `/` instead of specific routes like `/extension`
 
 ### Quality Assurance
 - Run tests before finishing any development work
@@ -89,3 +114,4 @@ Use Supabase's Postgres Changes for real-time updates:
 - Documentation: https://supabase.com/docs/guides/realtime/postgres-changes
 - Listen for both INSERT and UPDATE operations on the tickets table
 - Ensure both dashboard and extension interfaces receive appropriate updates
+- Instead of using Emoji icons from now on, use Lucide React icons https://lucide.dev/guide/packages/lucide-react
