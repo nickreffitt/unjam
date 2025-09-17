@@ -1,33 +1,34 @@
 import React, { useState } from 'react';
-import TicketBox, { type Ticket, type TicketStatus } from '@extension/components/TicketBox/TicketBox';
+import TicketBox from '@extension/components/TicketBox/TicketBox';
 import TicketModal from '@extension/components/TicketModal/TicketModal';
-import type { CustomerProfile } from '@common';
+import type { TicketStatus, Ticket } from '@common/types';
+import { useTicketManager } from '@extension/contexts/TicketManagerContext';
+import { useUserProfile } from '@extension/shared/UserProfileContext';
+import { useTicketState } from '@extension/hooks';
 import '@extension/styles.css';
 
 const CustomerExtension: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isTicketVisible, setIsTicketVisible] = useState(true);
 
-  // Create a mock customer profile for development
-  const customerProfile: CustomerProfile = {
-    id: 'CUST-DEV-001',
-    name: 'Development Customer',
-    type: 'customer',
-    email: 'dev@customer.com'
-  };
+  // Get customer profile and ticket manager from contexts
+  const { customerProfile } = useUserProfile();
+  const { ticketManager, ticketStore } = useTicketManager();
+
+  // Use dedicated hooks for state
+  const { activeTicket, setActiveTicket } = useTicketState();
 
   const handleTicketCreated = (ticketId: string) => {
     console.info('Ticket created with ID:', ticketId);
-    // In a real implementation, we might fetch the ticket or receive it via real-time updates
-    // For now, create a basic ticket representation
-    const newTicket: Ticket = {
-      id: ticketId,
-      status: 'waiting' as TicketStatus,
-      createdAt: new Date(),
-    };
-
-    setCurrentTicket(newTicket);
+    // Since storage events only work cross-tab, manually get the created ticket and update context
+    const createdTicket = ticketManager.getActiveTicket();
+    if (createdTicket) {
+      console.info('Setting active ticket in context:', createdTicket.id);
+      setActiveTicket(createdTicket);
+    } else {
+      console.warn('No active ticket found after creation');
+    }
+    // Close the modal and show the ticket
     setIsTicketVisible(true);
     setIsModalOpen(false);
   };
@@ -38,60 +39,66 @@ const CustomerExtension: React.FC = () => {
 
   const handleCreateNewTicketClick = () => {
     // If ticket exists and is not resolved, just show the existing ticket
-    if (currentTicket && currentTicket.status !== 'resolved') {
+    if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
       setIsTicketVisible(true);
     } else {
-      // Only allow creating new ticket if no ticket exists or current ticket is resolved
+      // Only allow creating new ticket if no ticket exists or current ticket is completed
       setIsModalOpen(true);
     }
   };
 
   const handleMarkFixed = () => {
-    if (currentTicket) {
-      const updatedTicket: Ticket = {
-        ...currentTicket,
-        status: 'resolved' as TicketStatus,
+    if (activeTicket) {
+      const updatedTicket = {
+        ...activeTicket,
+        status: 'completed' as TicketStatus,
       };
-      setCurrentTicket(updatedTicket);
+      ticketStore.update(activeTicket.id, updatedTicket);
+      // Manually update context for same-tab updates (storage events only work cross-tab)
+      setActiveTicket(updatedTicket);
       console.info('Customer marked ticket as fixed');
     }
   };
 
-  const handleConfirmFixed = () => {
-    if (currentTicket) {
-      const updatedTicket: Ticket = {
-        ...currentTicket,
-        status: 'resolved' as TicketStatus,
-      };
-      setCurrentTicket(updatedTicket);
-      console.info('Customer confirmed fix');
+  const handleConfirmFixed = async () => {
+    if (activeTicket) {
+      try {
+        const updatedTicket = await ticketManager.markAsResolved(activeTicket.id);
+        // Manually update context for same-tab updates (storage events only work cross-tab)
+        setActiveTicket(updatedTicket);
+        console.info('Customer confirmed fix');
+      } catch (error) {
+        console.error('Failed to confirm fix:', error);
+      }
     }
   };
 
-  const handleMarkStillBroken = () => {
-    if (currentTicket) {
-      const updatedTicket: Ticket = {
-        ...currentTicket,
-        status: 'active' as TicketStatus,
-      };
-      setCurrentTicket(updatedTicket);
-      console.info('Customer marked as still broken');
+  const handleMarkStillBroken = async () => {
+    if (activeTicket) {
+      try {
+        const updatedTicket = await ticketManager.markStillBroken(activeTicket.id);
+        // Manually update context for same-tab updates (storage events only work cross-tab)
+        setActiveTicket(updatedTicket);
+        console.info('Customer marked as still broken');
+      } catch (error) {
+        console.error('Failed to mark as still broken:', error);
+      }
     }
   };
 
   const handleSubmitRating = (rating: number, feedback?: string) => {
     console.info('Rating submitted:', { rating, feedback });
-    setCurrentTicket(null);
+    setActiveTicket(null);
     setIsTicketVisible(false);
   };
 
 
   const getButtonText = () => {
-    // If ticket exists and is not resolved, show "Show Active Ticket"
-    if (currentTicket && currentTicket.status !== 'resolved') {
+    // If ticket exists and is not completed, show "Show Active Ticket"
+    if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
       return 'Show Active Ticket';
     }
-    // If no ticket exists or ticket is resolved, allow creating new ticket
+    // If no ticket exists or ticket is completed, allow creating new ticket
     return 'Create New Ticket';
   };
 
@@ -108,40 +115,87 @@ const CustomerExtension: React.FC = () => {
         >
           {getButtonText()}
         </button>
-        
+
         {/* Debug controls for testing different states */}
-        {process.env.NODE_ENV === 'development' && currentTicket && (
+        {process.env.NODE_ENV === 'development' && activeTicket && (
           <div className="unjam-mt-8 unjam-p-4 unjam-bg-white unjam-rounded-lg unjam-shadow unjam-max-w-sm unjam-mx-auto">
             <h3 className="unjam-font-semibold unjam-mb-2">Debug Controls</h3>
             <div className="unjam-space-y-2">
               <button
-                onClick={() => setCurrentTicket({...currentTicket, status: 'waiting'})}
+                onClick={() => {
+                  if (activeTicket) {
+                    const updatedTicket = { ...activeTicket, status: 'waiting' as TicketStatus };
+                    ticketStore.update(activeTicket.id, updatedTicket);
+                    // Manually update context for same-tab updates (storage events only work cross-tab)
+                    setActiveTicket(updatedTicket);
+                  }
+                }}
                 className="unjam-block unjam-w-full unjam-text-sm unjam-bg-orange-200 hover:unjam-bg-orange-300 unjam-px-2 unjam-py-1 unjam-rounded"
               >
                 Set to Waiting
               </button>
               <button
-                onClick={() => setCurrentTicket({
-                  ...currentTicket, 
-                  status: 'active',
-                  engineerName: 'John',
-                  claimedAt: new Date()
-                })}
+                onClick={() => {
+                  if (activeTicket) {
+                    const updatedTicket = {
+                      ...activeTicket,
+                      status: 'in-progress' as TicketStatus,
+                      assignedTo: {
+                        id: 'ENG-001',
+                        name: 'John',
+                        type: 'engineer' as const,
+                        email: 'john@engineer.com'
+                      },
+                      claimedAt: new Date()
+                    };
+                    ticketStore.update(activeTicket.id, updatedTicket);
+                    // Manually update context for same-tab updates (storage events only work cross-tab)
+                    setActiveTicket(updatedTicket);
+                  }
+                }}
                 className="unjam-block unjam-w-full unjam-text-sm unjam-bg-blue-200 hover:unjam-bg-blue-300 unjam-px-2 unjam-py-1 unjam-rounded"
               >
-                Set to Active (John)
+                Set to In Progress (John)
               </button>
               <button
-                onClick={() => setCurrentTicket({...currentTicket, status: 'marked_resolved'})}
+                onClick={() => {
+                  if (activeTicket) {
+                    // Calculate auto-complete timeout
+                    const timeoutMinutes = Number((import.meta as { env?: Record<string, string> }).env?.VITE_AUTO_COMPLETE_TIMEOUT_MINUTES) || 30;
+                    const now = new Date();
+                    const autoCompleteTimeoutAt = new Date(now.getTime() + (timeoutMinutes * 60 * 1000));
+
+                    const updatedTicket: Ticket = { 
+                      ...activeTicket, 
+                      status: 'awaiting-confirmation',
+                      markedAsFixedAt: new Date(),
+                      autoCompleteTimeoutAt,
+                    };
+                    ticketStore.update(activeTicket.id, updatedTicket);
+                    // Manually update context for same-tab updates (storage events only work cross-tab)
+                    setActiveTicket(updatedTicket);
+                  }
+                }}
                 className="unjam-block unjam-w-full unjam-text-sm unjam-bg-green-200 hover:unjam-bg-green-300 unjam-px-2 unjam-py-1 unjam-rounded"
               >
-                Set to Marked Resolved
+                Set to Awaiting Confirmation
               </button>
               <button
-                onClick={() => setCurrentTicket({...currentTicket, status: 'resolved'})}
+                onClick={() => {
+                  if (activeTicket) {
+                    const updatedTicket = { 
+                      ...activeTicket, 
+                      status: 'completed' as TicketStatus,  
+                      resolvedAt: new Date()
+                    };
+                    ticketStore.update(activeTicket.id, updatedTicket);
+                    // Manually update context for same-tab updates (storage events only work cross-tab)
+                    setActiveTicket(updatedTicket);
+                  }
+                }}
                 className="unjam-block unjam-w-full unjam-text-sm unjam-bg-purple-200 hover:unjam-bg-purple-300 unjam-px-2 unjam-py-1 unjam-rounded"
               >
-                Set to Resolved
+                Set to Completed
               </button>
             </div>
           </div>
@@ -155,9 +209,9 @@ const CustomerExtension: React.FC = () => {
         onTicketCreated={handleTicketCreated}
       />
 
-      {currentTicket && isTicketVisible && (
+      {activeTicket && isTicketVisible && (
         <TicketBox
-          ticket={currentTicket}
+          ticket={activeTicket}
           onHide={handleTicketHide}
           onMarkFixed={handleMarkFixed}
           onConfirmFixed={handleConfirmFixed}

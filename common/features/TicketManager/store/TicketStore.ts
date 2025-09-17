@@ -1,12 +1,14 @@
-import { type Ticket, type TicketStatus, type EngineerProfile } from '../types';
-import { mockTickets } from './mockData';
+import { type Ticket, type TicketStatus, type EngineerProfile } from '@common/types';
+import { TicketEventEmitter } from '@common/features/TicketManager/events';
 
 export class TicketStore {
   private tickets: Ticket[] = [];
+  private readonly storageKey: string = 'ticketStore-tickets';
+  private readonly eventEmitter: TicketEventEmitter;
 
   constructor() {
-    // Initialize with existing mock data
-    this.tickets = [...mockTickets];
+    this.eventEmitter = new TicketEventEmitter();
+    this.loadTicketsFromStorage();
   }
 
   /**
@@ -19,8 +21,13 @@ export class TicketStore {
 
     // Add to the beginning of the array (most recent first)
     this.tickets.unshift(newTicket);
+    this.saveTicketsToStorage();
 
     console.info('TicketStore: Created ticket', newTicket.id);
+
+    // Emit event for ticket creation
+    this.eventEmitter.emitTicketCreated(newTicket);
+
     return newTicket;
   }
 
@@ -77,8 +84,13 @@ export class TicketStore {
 
     // Replace the ticket at the found index
     this.tickets[ticketIndex] = ticketToUpdate;
+    this.saveTicketsToStorage();
 
     console.info('TicketStore: Updated ticket', ticketId);
+
+    // Emit event for ticket update
+    this.eventEmitter.emitTicketUpdated(ticketToUpdate);
+
     return { ...ticketToUpdate };
   }
 
@@ -121,6 +133,29 @@ export class TicketStore {
   }
 
   /**
+   * Gets the active ticket for a specific customer
+   * An active ticket is one that is not completed or auto-completed
+   * @param customerId - The ID of the customer to find an active ticket for
+   * @returns The active ticket if found, null otherwise
+   */
+  getActiveTicketByCustomer(customerId: string): Ticket | null {
+    const activeStatuses: TicketStatus[] = ['waiting', 'in-progress', 'awaiting-confirmation', 'marked-resolved'];
+
+    const activeTicket = this.tickets.find(ticket =>
+      ticket.createdBy.id === customerId &&
+      activeStatuses.includes(ticket.status)
+    );
+
+    if (activeTicket) {
+      console.info('TicketStore: Found active ticket for customer', customerId, activeTicket.id);
+      return { ...activeTicket }; // Return a copy to prevent external mutations
+    } else {
+      console.info('TicketStore: No active ticket found for customer', customerId);
+      return null;
+    }
+  }
+
+  /**
    * Gets all tickets (mainly for testing purposes)
    * @returns All tickets in the store
    */
@@ -129,10 +164,65 @@ export class TicketStore {
   }
 
   /**
+   * Reloads tickets from localStorage
+   * Used when we need to sync with changes made by other tabs
+   */
+  reload(): void {
+    this.loadTicketsFromStorage();
+  }
+
+  /**
+   * Loads tickets from localStorage
+   * If no data exists, initializes with mock data
+   */
+  private loadTicketsFromStorage(): void {
+    try {
+      const stored = localStorage.getItem(this.storageKey);
+      if (stored) {
+        const parsedTickets = JSON.parse(stored);
+        // Convert date strings back to Date objects
+        this.tickets = parsedTickets.map((ticket: Ticket) => ({
+          ...ticket,
+          createdAt: ticket.createdAt ? new Date(ticket.createdAt) : undefined,
+          claimedAt: ticket.claimedAt ? new Date(ticket.claimedAt) : undefined,
+          resolvedAt: ticket.resolvedAt ? new Date(ticket.resolvedAt) : undefined,
+          abandonedAt: ticket.abandonedAt ? new Date(ticket.abandonedAt) : undefined,
+        }));
+        console.info('TicketStore: Loaded tickets from localStorage');
+      } else {
+        // Initialize with mock data if no stored data exists
+        this.tickets = [];
+        this.saveTicketsToStorage();
+        console.info('TicketStore: Initialized with mock data and saved to localStorage');
+      }
+    } catch (error) {
+      console.error('TicketStore: Error loading tickets from localStorage', error);
+      this.tickets = [];
+    }
+  }
+
+  /**
+   * Saves tickets to localStorage
+   */
+  private saveTicketsToStorage(): void {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.tickets));
+      console.info('TicketStore: Saved tickets to localStorage');
+    } catch (error) {
+      console.error('TicketStore: Error saving tickets to localStorage:', error);
+    }
+  }
+
+
+  /**
    * Clears all tickets (mainly for testing purposes)
    */
   clear(): void {
     this.tickets = [];
+    this.saveTicketsToStorage();
     console.info('TicketStore: Cleared all tickets');
+
+    // Emit event for clearing tickets
+    this.eventEmitter.emitTicketsCleared();
   }
 }

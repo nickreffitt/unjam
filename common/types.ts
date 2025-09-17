@@ -42,3 +42,10 @@ export interface TicketListItem {
   time: string;
   actions: string[];
 }
+
+export type TicketEventType = 'ticketCreated' | 'ticketUpdated' | 'ticketDeleted' | 'ticketsCleared' | 'ticketsLoaded';
+
+export interface ErrorDisplay {
+  title: string;
+  message: string;
+}

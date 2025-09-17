@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TicketListManager } from './TicketListManager';
-import { TicketStore } from '../../data';
-import { type CustomerProfile, type EngineerProfile } from '../../types';
+import { TicketStore } from '@common/features/TicketManager/store';
+import { type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('TicketListManager', () => {
   let ticketStore: TicketStore;
@@ -25,7 +25,34 @@ describe('TicketListManager', () => {
   beforeEach(() => {
     // Create a fresh store for each test and populate with mock data
     ticketStore = new TicketStore();
-    // Note: TicketStore already initializes with mockTickets, so we don't need to clear
+    ticketStore.clear(); // Clear any existing data from localStorage
+
+    // Create test tickets
+    const testTicket1 = {
+      id: 'TKT-001',
+      status: 'waiting' as const,
+      summary: 'Test ticket 1',
+      estimatedTime: '5-10 min',
+      problemDescription: 'Test problem 1',
+      createdBy: mockCustomer,
+      createdAt: new Date(),
+      elapsedTime: 0
+    };
+
+    const testTicket2 = {
+      id: 'TKT-002',
+      status: 'waiting' as const,
+      summary: 'Test ticket 2 - Abandoned',
+      estimatedTime: '10-15 min',
+      problemDescription: 'Test problem 2',
+      createdBy: mockCustomer,
+      createdAt: new Date(Date.now() - 60000), // 1 minute ago
+      elapsedTime: 60,
+      abandonedAt: new Date(Date.now() - 30000) // Abandoned 30 seconds ago
+    };
+
+    ticketStore.create(testTicket1);
+    ticketStore.create(testTicket2);
   });
 
   describe('listNewTickets', () => {

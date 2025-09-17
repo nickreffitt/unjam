@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { type Ticket } from '@common/types';
 import { useTicketManager } from '@dashboard/Ticket/contexts/TicketManagerContext';
+import { useTicketListener } from '@common/features/TicketManager/hooks/useTicketListener';
 
 export interface UseTicketStateReturn {
   ticket: Ticket | null;
@@ -16,6 +17,10 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
   const [elapsedTime, setElapsedTime] = useState(0);
   const [timeoutRemaining, setTimeoutRemaining] = useState(0);
   const { ticketStore, ticketManager } = useTicketManager();
+
+  // Use ref to store ticket status to avoid recreating callbacks
+  const ticketStatusRef = useRef<string | undefined>();
+  ticketStatusRef.current = ticket?.status;
 
   // Load ticket on mount
   useEffect(() => {
@@ -40,6 +45,31 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
       }
     }
   }, [ticketId, ticketStore, ticketManager]);
+
+  // Handle ticket updates from other tabs (e.g., customer marking as still broken)
+  const handleTicketUpdated = useCallback((updatedTicket: Ticket) => {
+    if (updatedTicket.id === ticketId) {
+      console.info('useTicketState: Received ticket update for', ticketId, 'with status', updatedTicket.status);
+      // Reload from store to get the latest data
+      ticketStore.reload();
+      const freshTicket = ticketStore.get(ticketId);
+      if (freshTicket) {
+        setTicket(freshTicket);
+        // Reset elapsed time when ticket goes back to in-progress
+        if (freshTicket.status === 'in-progress' && ticketStatusRef.current === 'awaiting-confirmation') {
+          setElapsedTime(0);
+        }
+      }
+    }
+  }, [ticketId, ticketStore]);
+
+  // Memoize the callbacks object to prevent recreating the listener
+  const ticketListenerCallbacks = useMemo(() => ({
+    onTicketUpdated: handleTicketUpdated
+  }), [handleTicketUpdated]);
+
+  // Listen for cross-tab ticket events
+  useTicketListener(ticketListenerCallbacks);
 
   // Update elapsed time every second for active tickets
   useEffect(() => {

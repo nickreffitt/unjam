@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { TicketListManager } from '@common/features/ticket/TicketListManager';
+import { TicketListManager } from '@common/features/TicketManager';
 import { useUserProfile } from '@dashboard/shared/UserProfileContext';
 import { useTicketManager } from '@dashboard/Ticket/contexts/TicketManagerContext';
 

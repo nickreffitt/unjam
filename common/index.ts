@@ -1,11 +1,8 @@
 // Core types
 export * from './types';
 
-// Data
-export * from './data';
-
 // Features
-export * from './features/ticket';
+export * from './features/TicketManager';
 
 // Utilities
 export * from './util';

@@ -1,10 +1,10 @@
-import {
+import type {
   TicketStatus,
-  type TicketListItem,
-  type UserProfile
-} from '../../types';
-import { isEngineerProfile } from '../../util';
-import { type TicketStore } from '../../data';
+  TicketListItem,
+  UserProfile
+} from '@common/types';
+import { isEngineerProfile } from '@common/util';
+import { type TicketStore } from '@common/features/TicketManager/store';
 
 export class TicketListManager {
   private userProfile: UserProfile;
@@ -125,6 +125,13 @@ export class TicketListManager {
 
     console.info('Listing completed tickets:', ticketListItems.length);
     return ticketListItems;
+  }
+
+  /**
+   * Reloads ticket data from storage to sync with other tabs
+   */
+  reload(): void {
+    this.ticketStore.reload();
   }
 
   /**

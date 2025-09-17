@@ -1,4 +1,4 @@
-import { type UserProfile, type CustomerProfile, type EngineerProfile } from '../types';
+import { type UserProfile, type CustomerProfile, type EngineerProfile } from '@common/types';
 
 /**
  * Type guard to check if a user profile is a customer profile

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useTicketState } from '@dashboard/Ticket/hooks/useTicketState';
-import { getCompletionMessage } from '@dashboard/shared/utils/ticketFormatters';
+import { getCompletionMessage, formatCompletionTime } from '@dashboard/shared/utils/ticketFormatters';
 import TicketDetailView from '@dashboard/Ticket/components/TicketDetailView/TicketDetailView';
 
 const CompletedTicket: React.FC = () => {
@@ -10,11 +10,20 @@ const CompletedTicket: React.FC = () => {
 
   const completionInfo = ticket ? getCompletionMessage(ticket.status) : null;
 
+  // Calculate the completion time between claimedAt and resolvedAt
+  const getCompletionTimeDisplay = () => {
+    if (!ticket || !ticket.claimedAt || !ticket.resolvedAt) {
+      return "Completed";
+    }
+    const completionTime = formatCompletionTime(ticket.claimedAt, ticket.resolvedAt);
+    return `${completionTime} - Completed`;
+  };
+
   return (
     <TicketDetailView
       ticket={ticket}
       headerConfig={{
-        statusDisplay: "0:00 - Completed"
+        statusDisplay: getCompletionTimeDisplay()
       }}
       notFoundConfig={{
         title: "Ticket Not Found",

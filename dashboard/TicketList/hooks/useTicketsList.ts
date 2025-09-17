@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { type Ticket, type TicketStatus, type TicketListItem, type CustomerProfile } from '@common/types';
 import { useTicketListManager } from '@dashboard/TicketList/contexts/TicketListManagerContext';
 import { useTicketManager } from '@dashboard/Ticket/contexts/TicketManagerContext';
+import { useTicketListener } from '@common/features/TicketManager/hooks/useTicketListener';
 
 export interface UseTicketsListReturn {
   tickets: Ticket[];
@@ -15,9 +16,15 @@ export const useTicketsList = (filterStatuses: TicketStatus[]): UseTicketsListRe
   const { ticketStore } = useTicketManager();
   const { ticketListManager } = useTicketListManager();
 
-  // Use a ref to store the ticketListManager to avoid useCallback recreation
+  // Use refs to store values to avoid useCallback recreation cycles
   const ticketListManagerRef = useRef(ticketListManager);
+  const memoizedFilterStatusesRef = useRef(filterStatuses);
+  const setTicketsRef = useRef(setTickets);
+
+  // Update refs on every render to keep them current
   ticketListManagerRef.current = ticketListManager;
+  memoizedFilterStatusesRef.current = filterStatuses;
+  setTicketsRef.current = setTickets;
 
   // Memoize filterStatuses to prevent unnecessary re-renders based on array contents
   const memoizedFilterStatuses = useMemo(() => filterStatuses, [filterStatuses.join(',')]);
@@ -33,35 +40,68 @@ export const useTicketsList = (filterStatuses: TicketStatus[]): UseTicketsListRe
   // TicketListManager is now provided by context
 
   const refreshTickets = useCallback(async () => {
-    console.info('useTicketsList: refreshTickets called for filterStatuses:', memoizedFilterStatuses);
+    const currentFilterStatuses = memoizedFilterStatusesRef.current;
+    console.info('useTicketsList: refreshTickets called for filterStatuses:', currentFilterStatuses);
     try {
       let ticketListItems: TicketListItem[] = [];
       const manager = ticketListManagerRef.current;
 
-      if (memoizedFilterStatuses.includes('waiting')) {
+      if (currentFilterStatuses.includes('waiting')) {
         // Use TicketListManager for waiting tickets (new tickets)
         ticketListItems = await manager.listNewTickets();
-      } else if (memoizedFilterStatuses.includes('in-progress')) {
+      } else if (currentFilterStatuses.includes('in-progress')) {
         // Use TicketListManager for active tickets
         ticketListItems = await manager.listActiveTickets();
-      } else if (memoizedFilterStatuses.some(status => ['completed', 'auto-completed'].includes(status))) {
+      } else if (currentFilterStatuses.some(status => ['completed', 'auto-completed'].includes(status))) {
         // Use TicketListManager for completed tickets
         ticketListItems = await manager.listCompletedTickets();
       }
 
       // Extract tickets from TicketListItems for UI compatibility
       const fetchedTickets = ticketListItems.map((item: TicketListItem) => item.ticket);
-      setTickets(fetchedTickets);
+      setTicketsRef.current(fetchedTickets);
     } catch (error) {
       console.error('Failed to fetch tickets:', error);
-      setTickets([]);
+      setTicketsRef.current([]);
     }
-  }, [memoizedFilterStatuses]);
+  }, []);
 
   useEffect(() => {
     console.info('useTicketsList: Initial load useEffect triggered for:', memoizedFilterStatuses);
     refreshTickets();
   }, [refreshTickets]);
+
+  // Create stable callback functions to prevent TicketListener recreation
+  const handleTicketCreated = useCallback((ticket: Ticket) => {
+    console.info('useTicketsList: New ticket created, refreshing list:', ticket.id);
+    // Reload from storage to sync with other tabs, then refresh
+    ticketListManagerRef.current.reload();
+    // Only refresh if the new ticket matches our filter
+    if (memoizedFilterStatusesRef.current.includes(ticket.status)) {
+      refreshTickets();
+    }
+  }, []);
+
+  const handleTicketUpdated = useCallback((ticket: Ticket) => {
+    console.info('useTicketsList: Ticket updated, refreshing list:', ticket.id);
+    // Reload from storage to sync with other tabs, then refresh
+    ticketListManagerRef.current.reload();
+    refreshTickets();
+  }, []);
+
+  const handleTicketsCleared = useCallback(() => {
+    console.info('useTicketsList: All tickets cleared, refreshing list');
+    // Reload from storage to sync with other tabs, then refresh
+    ticketListManagerRef.current.reload();
+    refreshTickets();
+  }, []);
+
+  // Listen for global ticket events and refresh when tickets change
+  useTicketListener({
+    onTicketCreated: handleTicketCreated,
+    onTicketUpdated: handleTicketUpdated,
+    onTicketsCleared: handleTicketsCleared
+  });
 
   const createTestTicket = () => {
     const timestamp = Date.now();
@@ -80,7 +120,7 @@ export const useTicketsList = (filterStatuses: TicketStatus[]): UseTicketsListRe
     ticketStore.create(testTicket);
     console.info('Created test ticket:', testTicket);
 
-    // Refresh the tickets list to show the new ticket
+    // Directly refresh the current tab since storage events only work cross-tab
     refreshTickets();
   };
 

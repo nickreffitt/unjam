@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { TicketManager, TicketStore, type CustomerProfile } from '@common';
+import React, { useState } from 'react';
+import { type CustomerProfile } from '@common/types';
+import { useTicketManager } from '@extension/contexts/TicketManagerContext';
 
 interface TicketModalProps {
   isOpen: boolean;
@@ -8,15 +9,12 @@ interface TicketModalProps {
   onTicketCreated?: (ticketId: string) => void;
 }
 
-const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProfile, onTicketCreated }) => {
+const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, onTicketCreated }) => {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Create TicketManager instance with customer profile and store
-  const ticketManager = useMemo(() => {
-    const ticketStore = new TicketStore();
-    return new TicketManager(customerProfile, ticketStore);
-  }, [customerProfile]);
+  // Use shared TicketManager from context
+  const { ticketManager } = useTicketManager();
 
   if (!isOpen) return null;
 

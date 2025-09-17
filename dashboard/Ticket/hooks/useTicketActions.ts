@@ -25,7 +25,8 @@ export const useTicketActions = (): UseTicketActionsReturn => {
       navigate(`/active/${ticket.id}`);
     } catch (error) {
       console.error('Failed to claim ticket:', error);
-      // Could add toast notification here for user feedback
+      // Re-throw the error so the UI can handle it
+      throw error;
     }
   };
 
@@ -56,11 +57,20 @@ export const useTicketActions = (): UseTicketActionsReturn => {
     }
   };
 
-  const handleAbandonTask = (ticketId: string) => {
+  const handleAbandonTask = async (ticketId: string) => {
     if (window.confirm('Are you sure you want to abandon this ticket? It will be returned to the queue.')) {
-      console.info('Abandoning ticket:', ticketId);
-      // This would normally update the ticket status back to 'waiting'
-      navigate('/new');
+      try {
+        console.info('Abandoning ticket:', ticketId);
+        // Use the real TicketManager to abandon the ticket
+        const abandonedTicket = await ticketManager.abandonTicket(ticketId);
+        console.info('Ticket abandoned successfully:', abandonedTicket);
+
+        // Navigate back to new tickets list
+        navigate('/new');
+      } catch (error) {
+        console.error('Failed to abandon ticket:', error);
+        // Could add toast notification here for user feedback
+      }
     }
   };
 

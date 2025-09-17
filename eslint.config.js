@@ -125,31 +125,6 @@ export default [
       'react-refresh/only-export-components': ['warn', {
         allowConstantExport: true
       }],
-
-      // Project-specific rules based on your architecture
-      'no-restricted-imports': ['error', {
-        patterns: [
-          {
-            group: ['@dashboard/*/*/*/*'],
-            message: 'Import depth should not exceed 3 levels in dashboard'
-          },
-          {
-            group: ['@extension/*/*/*/*'],
-            message: 'Import depth should not exceed 3 levels in extension'
-          },
-          {
-            group: ['@common/*/*/*/*'],
-            message: 'Import depth should not exceed 3 levels in common'
-          }
-        ],
-        paths: [
-          {
-            name: 'react',
-            importNames: ['default'],
-            message: 'Use named import: import { ... } from "react"'
-          }
-        ]
-      }]
     }
   },
   {

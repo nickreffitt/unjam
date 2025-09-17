@@ -1,16 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, MessageCircle, X, Star } from 'lucide-react';
-
-export type TicketStatus = 'waiting' | 'active' | 'marked_resolved' | 'resolved';
-
-export interface Ticket {
-  id: string;
-  status: TicketStatus;
-  engineerName?: string;
-  createdAt: Date;
-  claimedAt?: Date;
-  abandonedAt?: Date;
-}
+import { type Ticket } from '@common/types';
 
 interface TicketBoxProps {
   ticket: Ticket | null;
@@ -64,9 +54,11 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   if (!ticket) return null;
 
   const getTimerStartTime = (): Date => {
-    if (ticket.status === 'active' && ticket.claimedAt) {
+    // For in-progress tickets, use claimedAt (when engineer started working)
+    if (ticket.status === 'in-progress' && ticket.claimedAt) {
       return ticket.claimedAt;
     }
+    // For waiting tickets or fallback, use createdAt (when ticket was created)
     return ticket.createdAt;
   };
 
@@ -92,11 +84,12 @@ const TicketBox: React.FC<TicketBoxProps> = ({
     switch (ticket.status) {
       case 'waiting':
         return <Clock size={18} />;
-      case 'active':
+      case 'in-progress':
         return <Clock size={18} />;
-      case 'marked_resolved':
+      case 'awaiting-confirmation':
         return <CheckCircle size={18} />;
-      case 'resolved':
+      case 'completed':
+      case 'auto-completed':
         return <CheckCircle size={18} />;
       default:
         return <Clock size={18} />;
@@ -107,11 +100,12 @@ const TicketBox: React.FC<TicketBoxProps> = ({
     switch (ticket.status) {
       case 'waiting':
         return 'unjam-border-orange-400 unjam-bg-orange-50';
-      case 'active':
+      case 'in-progress':
         return 'unjam-border-orange-400 unjam-bg-orange-50';
-      case 'marked_resolved':
+      case 'awaiting-confirmation':
         return 'unjam-border-green-400 unjam-bg-green-50';
-      case 'resolved':
+      case 'completed':
+      case 'auto-completed':
         return 'unjam-border-green-400 unjam-bg-green-50';
       default:
         return 'unjam-border-orange-400 unjam-bg-orange-50';
@@ -147,10 +141,10 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         </div>
       )}
 
-      {ticket.status === 'active' && (
+      {ticket.status === 'in-progress' && (
         <div className="unjam-text-center">
           <p className="unjam-text-gray-600 unjam-mb-2">
-            {ticket.engineerName} is working on your issue
+            {ticket.assignedTo?.name || 'Engineer'} is working on your issue
           </p>
           <div className="unjam-text-2xl unjam-font-mono unjam-mb-1">
             <Timer startTime={getTimerStartTime()} />
@@ -173,7 +167,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         </div>
       )}
 
-      {ticket.status === 'marked_resolved' && (
+      {ticket.status === 'awaiting-confirmation' && (
         <div className="unjam-text-center">
           <p className="unjam-text-gray-600 unjam-mb-4">Issue resolved! Please confirm:</p>
           
@@ -196,7 +190,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         </div>
       )}
 
-      {ticket.status === 'resolved' && (
+      {(ticket.status === 'completed' || ticket.status === 'auto-completed') && (
         <div>
           <p className="unjam-text-gray-700 unjam-mb-4 unjam-font-medium">Rate your experience:</p>
           

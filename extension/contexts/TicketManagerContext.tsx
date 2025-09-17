@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { TicketManager } from '@common/features/TicketManager';
 import { TicketStore } from '@common/features/TicketManager/store';
-import { useUserProfile } from '@dashboard/shared/UserProfileContext';
+import { useUserProfile } from '@extension/shared/UserProfileContext';
+import { type Ticket } from '@common/types';
 
 interface TicketManagerContextType {
   ticketManager: TicketManager;
@@ -15,14 +16,14 @@ interface TicketManagerProviderProps {
 }
 
 export const TicketManagerProvider: React.FC<TicketManagerProviderProps> = ({ children }) => {
-  const { engineerProfile } = useUserProfile();
+  const { customerProfile } = useUserProfile();
 
-  // Create shared instances using centralized engineer profile
+  // Create shared instances using centralized customer profile
   const { ticketStore, ticketManager } = useMemo(() => {
     const store = new TicketStore();
-    const manager = new TicketManager(engineerProfile, store);
+    const manager = new TicketManager(customerProfile, store);
     return { ticketStore: store, ticketManager: manager };
-  }, [engineerProfile]);
+  }, [customerProfile]);
 
   return (
     <TicketManagerContext.Provider value={{ ticketManager, ticketStore }}>

@@ -1,5 +1,10 @@
 describe('Extension - Create New Ticket', () => {
   beforeEach(() => {
+    // Clear localStorage before each test to ensure clean state
+    cy.window().then((win) => {
+      win.localStorage.clear();
+    });
+
     cy.visit('/ext');
   });
 

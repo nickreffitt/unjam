@@ -1,5 +1,10 @@
 describe('Extension - Active Ticket States', () => {
   beforeEach(() => {
+    // Clear localStorage before each test to ensure clean state
+    cy.window().then((win) => {
+      win.localStorage.clear();
+    });
+
     cy.visit('/ext');
 
     // Create a ticket with "Help me" for every test
@@ -31,8 +36,8 @@ describe('Extension - Active Ticket States', () => {
     cy.wait(2000);
     cy.contains('0:02').should('be.visible');
 
-    // when tapping the debug control "Set to Active (John)"
-    cy.contains('button', 'Set to Active (John)').click();
+    // when tapping the debug control "Set to In Progress (John)"
+    cy.contains('button', 'Set to In Progress (John)').click();
 
     // then timer starts at 0:00 again and there is text that reads "John is working on your issue"
     cy.contains('0:00').should('be.visible');
@@ -44,8 +49,8 @@ describe('Extension - Active Ticket States', () => {
   });
 
   it('shows active ticket again when reopened after closing', () => {
-    // given tapping Set to Active (John)
-    cy.contains('button', 'Set to Active (John)').click();
+    // given tapping Set to In Progress (John)
+    cy.contains('button', 'Set to In Progress (John)').click();
     cy.contains('John is working on your issue').should('be.visible');
 
     // when tapping x to close the TicketBox
@@ -61,8 +66,8 @@ describe('Extension - Active Ticket States', () => {
   });
 
   it('marks ticket as fixed and changes button to Create New Ticket', () => {
-    // given tapping Set to Active (John)
-    cy.contains('button', 'Set to Active (John)').click();
+    // given tapping Set to In Progress (John)
+    cy.contains('button', 'Set to In Progress (John)').click();
     cy.contains('John is working on your issue').should('be.visible');
 
     // when tapping "This is fixed"
@@ -75,24 +80,24 @@ describe('Extension - Active Ticket States', () => {
   });
 
   it('shows confirmation prompt when marked as resolved', () => {
-    // given tapping Set to Active (John)
-    cy.contains('button', 'Set to Active (John)').click();
+    // given tapping Set to In Progress (John)
+    cy.contains('button', 'Set to In Progress (John)').click();
     cy.contains('John is working on your issue').should('be.visible');
 
-    // when tapping "Set to Marked Resolved"
-    cy.contains('button', 'Set to Marked Resolved').click();
+    // when tapping "Set to Awaiting Confirmation"
+    cy.contains('button', 'Set to Awaiting Confirmation').click();
 
     // then the text "Issue resolved! Please confirm" is displayed
     cy.contains('Issue resolved! Please confirm').should('be.visible');
   });
 
   it('confirms resolved ticket and shows rating', () => {
-    // given tapping Set to Active (John)
-    cy.contains('button', 'Set to Active (John)').click();
+    // given tapping Set to In Progress (John)
+    cy.contains('button', 'Set to In Progress (John)').click();
     cy.contains('John is working on your issue').should('be.visible');
 
-    // when tapping "Set to Marked Resolved" and tapping "Yes, it's fixed!"
-    cy.contains('button', 'Set to Marked Resolved').click();
+    // when tapping "Set to Awaiting Confirmation" and tapping "Yes, it's fixed!"
+    cy.contains('button', 'Set to Awaiting Confirmation').click();
     cy.contains('button', "Yes, it's fixed!").click();
 
     // then the text "Rate your experience" is displayed and the button changes from "Show Active Ticket" to "Create New Ticket"
