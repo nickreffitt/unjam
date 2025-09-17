@@ -138,7 +138,7 @@ describe('Dashboard - Basic Access', () => {
     cy.contains('Waiting for customer confirmation').should('be.visible');
 
     // when tapping the debug button "customer confirms"
-    cy.contains('button', 'Test: Customer Confirms').click();
+    cy.contains('button', 'Customer Confirms').click();
 
     // then the ticket goes into completed state
     cy.contains('Completed').should('be.visible');
@@ -151,7 +151,7 @@ describe('Dashboard - Basic Access', () => {
     cy.contains('Waiting for customer confirmation').should('be.visible');
 
     // when tapping the debug button "auto complete timer expires"
-    cy.contains('button', 'Test: Timer Expires').click();
+    cy.contains('button', 'Timer Expires').click();
 
     // then the ticket goes to status "Auto Completed"
     cy.contains('Auto Completed').should('be.visible');

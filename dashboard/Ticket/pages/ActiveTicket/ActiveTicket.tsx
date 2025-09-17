@@ -4,7 +4,7 @@ import { useTicketState } from '@dashboard/Ticket/hooks/useTicketState';
 import { useTicketActions } from '@dashboard/Ticket/hooks/useTicketActions';
 import { formatElapsedTime, formatLiveElapsedTime, formatCountdownTime, formatCompletionTime } from '@dashboard/shared/utils/ticketFormatters';
 import TicketDetailView from '@dashboard/Ticket/components/TicketDetailView/TicketDetailView';
-import { Check, AlertTriangle, Clock } from 'lucide-react';
+import { Check, AlertTriangle, Clock, TestTube, Timer } from 'lucide-react';
 
 const ActiveTicket: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -81,26 +81,10 @@ const ActiveTicket: React.FC = () => {
 
     if (ticket.status === 'awaiting-confirmation') {
       return (
-        <>
-          <div className="unjam-bg-yellow-100 unjam-text-yellow-800 unjam-px-4 unjam-py-2 unjam-rounded-md unjam-font-medium unjam-flex unjam-items-center unjam-gap-2">
-            <Clock size={16} />
-            Waiting for customer confirmation
-          </div>
-          <button
-            onClick={() => simulateCustomerConfirmation(ticket, setTicket, setTimeoutRemaining)}
-            className="unjam-bg-blue-500 hover:unjam-bg-blue-600 unjam-text-white unjam-px-3 unjam-py-2 unjam-rounded-md unjam-text-sm unjam-font-medium unjam-transition-colors"
-            title="Simulate customer confirmation (for testing)"
-          >
-            🧪 Test: Customer Confirms
-          </button>
-          <button
-            onClick={() => simulateAutoCompleteTimer(ticket, setTicket, setTimeoutRemaining)}
-            className="unjam-bg-purple-500 hover:unjam-bg-purple-600 unjam-text-white unjam-px-3 unjam-py-2 unjam-rounded-md unjam-text-sm unjam-font-medium unjam-transition-colors"
-            title="Simulate auto-complete timer expiring (for testing)"
-          >
-            ⏱️ Test: Timer Expires
-          </button>
-        </>
+        <div className="unjam-bg-yellow-100 unjam-text-yellow-800 unjam-px-4 unjam-py-2 unjam-rounded-md unjam-font-medium unjam-flex unjam-items-center unjam-gap-2">
+          <Clock size={16} />
+          Waiting for customer confirmation
+        </div>
       );
     }
 
@@ -117,23 +101,47 @@ const ActiveTicket: React.FC = () => {
   };
 
   return (
-    <TicketDetailView
-      ticket={ticket}
-      headerConfig={{
-        statusDisplay: getStatusDisplay(),
-        actions: getActionButtons()
-      }}
-      notFoundConfig={{
-        title: "Ticket Not Found",
-        message: "The ticket you're looking for doesn't exist or has been removed.",
-        redirectPath: "/new",
-        redirectLabel: "View New Tickets",
-        emoji: "🎫"
-      }}
-      showAssignedTo
-      showEstimatedTime
-      chatActive
-    />
+    <>
+      {/* Debug Controls */}
+      {(process.env.NODE_ENV === 'development') && ticket?.status === 'awaiting-confirmation' && (
+        <div className="unjam-fixed unjam-bottom-4 unjam-left-4 unjam-z-50 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-p-3 unjam-border unjam-border-gray-200 unjam-space-y-2">
+          <button
+            onClick={() => simulateCustomerConfirmation(ticket, setTicket, setTimeoutRemaining)}
+            className="unjam-flex unjam-items-center unjam-gap-2 unjam-text-sm unjam-text-gray-700 hover:unjam-text-gray-900 unjam-bg-blue-100 hover:unjam-bg-blue-200 unjam-px-2 unjam-py-1 unjam-rounded unjam-w-full"
+            title="Simulate customer confirmation (for testing)"
+          >
+            <TestTube size={16} className="unjam-text-blue-600" />
+            <span className="unjam-font-medium">Customer Confirms</span>
+          </button>
+          <button
+            onClick={() => simulateAutoCompleteTimer(ticket, setTicket, setTimeoutRemaining)}
+            className="unjam-flex unjam-items-center unjam-gap-2 unjam-text-sm unjam-text-gray-700 hover:unjam-text-gray-900 unjam-bg-purple-100 hover:unjam-bg-purple-200 unjam-px-2 unjam-py-1 unjam-rounded unjam-w-full"
+            title="Simulate auto-complete timer expiring (for testing)"
+          >
+            <Timer size={16} className="unjam-text-purple-600" />
+            <span className="unjam-font-medium">Timer Expires</span>
+          </button>
+        </div>
+      )}
+
+      <TicketDetailView
+        ticket={ticket}
+        headerConfig={{
+          statusDisplay: getStatusDisplay(),
+          actions: getActionButtons()
+        }}
+        notFoundConfig={{
+          title: "Ticket Not Found",
+          message: "The ticket you're looking for doesn't exist or has been removed.",
+          redirectPath: "/new",
+          redirectLabel: "View New Tickets",
+          emoji: "🎫"
+        }}
+        showAssignedTo
+        showEstimatedTime
+        chatActive
+      />
+    </>
   );
 };
 
