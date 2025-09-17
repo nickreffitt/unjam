@@ -59,7 +59,7 @@ export class TicketEventEmitter {
     // Clean up immediately to avoid cluttering localStorage
     localStorage.removeItem(eventKey);
 
-    console.info('TicketEventEmitter: Emitting storage event:', type, data);
+    console.debug('TicketEventEmitter: Emitting storage event:', type, data);
   }
 
 }

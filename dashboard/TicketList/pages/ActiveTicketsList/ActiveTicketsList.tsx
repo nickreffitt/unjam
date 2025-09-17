@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTicketsList } from '@dashboard/TicketList/hooks/useTicketsList';
+import { useTicketListState } from '@dashboard/TicketList/hooks/useTicketListState';
 import TicketsTable from '@dashboard/TicketList/components/TicketsTable/TicketsTable';
 import { MessageCircle, Clock, ToggleLeft, ToggleRight, Ticket } from 'lucide-react';
 
 const ActiveTicketsList: React.FC = () => {
-  const { tickets } = useTicketsList(['in-progress']);
+  const { tickets } = useTicketListState(['in-progress']);
   const [showEmpty, setShowEmpty] = useState(false);
   const navigate = useNavigate();
 

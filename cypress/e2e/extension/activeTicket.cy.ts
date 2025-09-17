@@ -13,7 +13,7 @@ describe('Extension - Active Ticket States', () => {
     cy.contains('button', 'Create Ticket').click();
 
     // Verify TicketBox is visible
-    cy.get('.unjam-fixed.unjam-bottom-4.unjam-right-4').should('be.visible');
+    cy.get('[data-testid="ticket-box"]').should('be.visible');
   });
 
   it('displays timer starting at 0:00 and increments after 1 second', () => {
@@ -54,14 +54,12 @@ describe('Extension - Active Ticket States', () => {
     cy.contains('John is working on your issue').should('be.visible');
 
     // when tapping x to close the TicketBox
-    cy.get('.unjam-fixed.unjam-bottom-4.unjam-right-4').within(() => {
-      cy.get('button').first().click(); // Click the first button which is the close button
-    });
-    cy.get('.unjam-fixed.unjam-bottom-4.unjam-right-4').should('not.exist');
+    cy.get('[data-testid="ticket-box-close-button"]').click();
+    cy.get('[data-testid="ticket-box-close-button"]').should('not.exist');
 
     // then tap "Show Active Ticket" and the TicketBox appears again with "John is working on your issue" text displayed
     cy.contains('button', 'Show Active Ticket').click();
-    cy.get('.unjam-fixed.unjam-bottom-4.unjam-right-4').should('be.visible');
+    cy.get('[data-testid="ticket-box"]').should('be.visible');
     cy.contains('John is working on your issue').should('be.visible');
   });
 

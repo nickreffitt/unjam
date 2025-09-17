@@ -114,7 +114,7 @@ export class TicketManager {
     const now = new Date();
     const autoCompleteTimeoutAt = new Date(now.getTime() + (timeoutMinutes * 60 * 1000));
 
-    console.info('TicketManager: markAsFixed - timeoutMinutes:', timeoutMinutes, 'now:', now, 'autoCompleteTimeoutAt:', autoCompleteTimeoutAt);
+    console.debug('TicketManager: markAsFixed - timeoutMinutes:', timeoutMinutes, 'now:', now, 'autoCompleteTimeoutAt:', autoCompleteTimeoutAt);
 
     // Update the ticket to awaiting confirmation status
     const updatedTicket: Ticket = {
@@ -182,7 +182,7 @@ export class TicketManager {
       autoCompleteTimeoutAt: undefined,
     };
 
-    console.info(`Customer ${customerProfile.name} marked ticket ${ticketId} as still broken`);
+    console.debug(`Customer ${customerProfile.name} marked ticket ${ticketId} as still broken`);
     return this.ticketStore.update(ticketId, updatedTicket);
   }
 
@@ -201,7 +201,7 @@ export class TicketManager {
 
     // Only auto-complete tickets that are awaiting confirmation
     if (ticket.status !== 'awaiting-confirmation') {
-      console.info(`Ticket ${ticketId} is no longer awaiting confirmation, skipping auto-complete`);
+      console.debug(`Ticket ${ticketId} is no longer awaiting confirmation, skipping auto-complete`);
       return ticket;
     }
 
@@ -212,7 +212,7 @@ export class TicketManager {
       resolvedAt: new Date(),
     };
 
-    console.info(`Auto-completing ticket ${ticketId} after timeout`);
+    console.debug(`Auto-completing ticket ${ticketId} after timeout`);
     return this.ticketStore.update(ticketId, updatedTicket);
   }
 
@@ -249,7 +249,7 @@ export class TicketManager {
       autoCompleteTimeoutAt: undefined,
     };
 
-    console.info(`Engineer ${engineerProfile.name} abandoned ticket ${ticketId}`);
+    console.debug(`Engineer ${engineerProfile.name} abandoned ticket ${ticketId}`);
     return this.ticketStore.update(ticketId, updatedTicket);
   }
 

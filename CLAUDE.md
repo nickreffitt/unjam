@@ -115,3 +115,92 @@ Use Supabase's Postgres Changes for real-time updates:
 - Listen for both INSERT and UPDATE operations on the tickets table
 - Ensure both dashboard and extension interfaces receive appropriate updates
 - Instead of using Emoji icons from now on, use Lucide React icons https://lucide.dev/guide/packages/lucide-react
+
+## Module Architecture Patterns
+
+### Dashboard Module Structure (`@dashboard/[Feature]/`)
+Each dashboard feature follows this consistent structure:
+
+```
+dashboard/[Feature]/
+├── components/          # Reusable UI components
+│   └── [Component]/     # Each component in its own folder
+│       └── [Component].tsx
+├── contexts/           # React contexts for state management
+│   └── [Feature]ManagerContext.tsx
+├── hooks/              # Custom React hooks
+│   ├── use[Feature]State.ts    # State management hooks
+│   └── use[Feature]Actions.ts  # Action handler hooks
+└── pages/              # Page-level components
+    └── [PageName]/     # Each page in its own folder
+        └── [PageName].tsx
+```
+
+Example: `dashboard/Ticket/` and `dashboard/TicketList/`
+
+### Common Features Structure (`@common/features/[Feature]/`)
+Shared business logic modules follow this pattern:
+
+```
+common/features/[Feature]/
+├── [Feature].ts        # Main manager class
+├── [Feature].test.ts   # Manager tests
+├── events/            # Event handling
+│   ├── [Feature]EventEmitter.ts
+│   ├── [Feature]Listener.ts
+│   └── index.ts
+├── store/             # Data persistence
+│   ├── [Feature]Store.ts
+│   ├── [Feature]Store.test.ts
+│   └── index.ts
+├── hooks/             # Shared React hooks
+│   ├── use[Feature]Listener.ts
+│   └── index.ts
+└── index.ts           # Module exports
+```
+
+Example: `common/features/TicketManager/`
+
+### Key Design Principles
+
+1. **Feature Isolation**: Each feature is self-contained with its own components, hooks, and contexts
+2. **Consistent Naming**: Use PascalCase for components/pages, camelCase for hooks/utilities
+3. **Folder-per-Component**: Each component/page gets its own folder for future extensibility
+4. **Separation of Concerns**:
+   - `components/`: Presentational UI components
+   - `hooks/`: Business logic and state management
+   - `contexts/`: Shared state providers
+   - `pages/`: Top-level route components
+   - `store/`: Data persistence layer
+   - `events/`: Event-driven communication
+
+5. **Hook Patterns**:
+   - `use[Feature]State`: Manages local component state and data fetching
+   - `use[Feature]Actions`: Handles user interactions and side effects
+   - `use[Feature]Listener`: Subscribes to real-time events
+
+6. **Error Handling**: Use the `ErrorDisplay` type from `@common/types` for consistent error UI:
+   ```typescript
+   interface ErrorDisplay {
+     title: string;
+     message: string;
+   }
+   ```
+
+### Creating New Features
+
+When adding a new feature, follow these steps:
+
+1. **For Dashboard Features**:
+   - Create folder structure under `dashboard/[FeatureName]/`
+   - Include components/, hooks/, contexts/, and pages/ as needed
+   - Create dedicated hooks for state and actions
+
+2. **For Common Features**:
+   - Create folder structure under `common/features/[FeatureName]/`
+   - Include manager class, store, events, and hooks as needed
+   - Write tests for all public methods
+
+3. **For Extension Features**:
+   - Mirror dashboard structure under `extension/[FeatureName]/`
+   - Maintain separation from dashboard code

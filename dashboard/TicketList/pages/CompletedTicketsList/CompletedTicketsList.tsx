@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useTicketsList } from '@dashboard/TicketList/hooks/useTicketsList';
+import { useTicketListState } from '@dashboard/TicketList/hooks/useTicketListState';
 import TicketsTable from '@dashboard/TicketList/components/TicketsTable/TicketsTable';
 import { CheckCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 
 const CompletedTicketsList: React.FC = () => {
-  const { tickets } = useTicketsList(['completed', 'auto-completed']);
+  const { tickets } = useTicketListState(['completed', 'auto-completed']);
   const [showEmpty, setShowEmpty] = useState(false);
 
   return (

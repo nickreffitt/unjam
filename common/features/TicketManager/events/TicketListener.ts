@@ -151,7 +151,7 @@ export class TicketListener {
 
     window.addEventListener('storage', this.handleStorageEvent);
     this.isListening = true;
-    console.info('TicketListener: Started listening to global ticket events via storage');
+    console.debug('TicketListener: Started listening to global ticket events via storage');
   }
 
   /**
@@ -163,7 +163,7 @@ export class TicketListener {
     window.removeEventListener('storage', this.handleStorageEvent);
     this.handleStorageEvent = null;
     this.isListening = false;
-    console.info('TicketListener: Stopped listening to global ticket events');
+    console.debug('TicketListener: Stopped listening to global ticket events');
   }
 
   /**

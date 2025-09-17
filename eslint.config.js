@@ -55,7 +55,7 @@ export default [
     },
     rules: {
       // JavaScript/General
-      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+      'no-console': ['warn', { allow: ['warn', 'error', 'info', 'debug'] }],
       'no-unused-vars': 'off', // Using TypeScript's version instead
       'no-undef': 'off', // TypeScript handles this
       'prefer-const': 'error',

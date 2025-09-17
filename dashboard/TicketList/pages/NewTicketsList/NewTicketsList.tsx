@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { useTicketsList } from '@dashboard/TicketList/hooks/useTicketsList';
+import { useTicketListState } from '@dashboard/TicketList/hooks/useTicketListState';
 import { useTicketActions } from '@dashboard/Ticket/hooks/useTicketActions';
+import { useTicketListActions } from '@dashboard/TicketList/hooks/useTicketListActions';
 import TicketsTable from '@dashboard/TicketList/components/TicketsTable/TicketsTable';
 import { Ticket as TicketIcon, ToggleLeft, ToggleRight, RefreshCw, Plus, X } from 'lucide-react';
 import { type Ticket, type ErrorDisplay } from '@common/types';
 
 const NewTicketsList: React.FC = () => {
-  const { tickets, createTestTicket } = useTicketsList(['waiting']);
+  const { tickets, refreshTickets } = useTicketListState(['waiting']);
   const { handleClaimTicket } = useTicketActions();
+  const { createTestTicket } = useTicketListActions();
   const [showEmpty, setShowEmpty] = useState(false);
   const [claimError, setClaimError] = useState<ErrorDisplay | null>(null);
 
@@ -76,7 +78,7 @@ const NewTicketsList: React.FC = () => {
             <span className="unjam-font-medium">Empty State: {showEmpty ? 'ON' : 'OFF'}</span>
           </button>
           <button
-            onClick={createTestTicket}
+            onClick={() => createTestTicket(refreshTickets)}
             className="unjam-flex unjam-items-center unjam-gap-2 unjam-text-sm unjam-text-gray-700 hover:unjam-text-gray-900 unjam-bg-green-100 hover:unjam-bg-green-200 unjam-px-2 unjam-py-1 unjam-rounded unjam-w-full"
           >
             <Plus size={16} className="unjam-text-green-600" />

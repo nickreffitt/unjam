@@ -16,10 +16,10 @@ export const useTicketActions = (): UseTicketActionsReturn => {
 
   const handleClaimTicket = async (ticket: Ticket) => {
     try {
-      console.info('Claiming ticket:', ticket.id);
+      console.debug('Claiming ticket:', ticket.id);
       // Use the real TicketManager to claim the ticket
       const claimedTicket = await ticketManager.claimTicket(ticket.id);
-      console.info('Ticket claimed successfully:', claimedTicket);
+      console.debug('Ticket claimed successfully:', claimedTicket);
 
       // Navigate to the active ticket view
       navigate(`/active/${ticket.id}`);
@@ -36,10 +36,10 @@ export const useTicketActions = (): UseTicketActionsReturn => {
     setTimeoutRemaining: (time: number) => void
   ) => {
     try {
-      console.info('Marking ticket as fixed:', ticket.id);
+      console.debug('Marking ticket as fixed:', ticket.id);
       // Use the real TicketManager to mark ticket as fixed
       const updatedTicket = await ticketManager.markAsFixed(ticket.id);
-      console.info('Ticket marked as fixed successfully:', updatedTicket);
+      console.debug('Ticket marked as fixed successfully:', updatedTicket);
 
       // Update the UI state
       setTicket(updatedTicket);
@@ -60,10 +60,10 @@ export const useTicketActions = (): UseTicketActionsReturn => {
   const handleAbandonTask = async (ticketId: string) => {
     if (window.confirm('Are you sure you want to abandon this ticket? It will be returned to the queue.')) {
       try {
-        console.info('Abandoning ticket:', ticketId);
+        console.debug('Abandoning ticket:', ticketId);
         // Use the real TicketManager to abandon the ticket
         const abandonedTicket = await ticketManager.abandonTicket(ticketId);
-        console.info('Ticket abandoned successfully:', abandonedTicket);
+        console.debug('Ticket abandoned successfully:', abandonedTicket);
 
         // Navigate back to new tickets list
         navigate('/new');
@@ -81,7 +81,7 @@ export const useTicketActions = (): UseTicketActionsReturn => {
   ) => {
     if (ticket.status === 'awaiting-confirmation') {
       try {
-        console.info('Simulating customer confirmation for ticket:', ticket.id);
+        console.debug('Simulating customer confirmation for ticket:', ticket.id);
         const confirmedTicket = await ticketManager.markAsResolved(ticket.id);
         setTicket(confirmedTicket);
         setTimeoutRemaining(0);
@@ -98,7 +98,7 @@ export const useTicketActions = (): UseTicketActionsReturn => {
   ) => {
     if (ticket.status === 'awaiting-confirmation') {
       try {
-        console.info('Simulating auto-complete timer for ticket:', ticket.id);
+        console.debug('Simulating auto-complete timer for ticket:', ticket.id);
         const autoCompletedTicket = await ticketManager.autoCompleteTicket(ticket.id);
         setTicket(autoCompletedTicket);
         setTimeoutRemaining(0);

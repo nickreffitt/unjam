@@ -23,7 +23,7 @@ export class TicketStore {
     this.tickets.unshift(newTicket);
     this.saveTicketsToStorage();
 
-    console.info('TicketStore: Created ticket', newTicket.id);
+    console.debug('TicketStore: Created ticket', newTicket.id);
 
     // Emit event for ticket creation
     this.eventEmitter.emitTicketCreated(newTicket);
@@ -44,7 +44,7 @@ export class TicketStore {
 
     const paginatedTickets = filteredTickets.slice(offset, offset + size);
 
-    console.info(`TicketStore: Found ${paginatedTickets.length} tickets with status '${statusArray.join(', ')}' (${offset}-${offset + size - 1} of ${filteredTickets.length})`);
+    console.debug(`TicketStore: Found ${paginatedTickets.length} tickets with status '${statusArray.join(', ')}' (${offset}-${offset + size - 1} of ${filteredTickets.length})`);
     return paginatedTickets;
   }
 
@@ -57,10 +57,10 @@ export class TicketStore {
     const ticket = this.tickets.find(t => t.id === ticketId);
 
     if (ticket) {
-      console.info('TicketStore: Found ticket', ticketId);
+      console.debug('TicketStore: Found ticket', ticketId);
       return { ...ticket }; // Return a copy to prevent external mutations
     } else {
-      console.info('TicketStore: Ticket not found', ticketId);
+      console.debug('TicketStore: Ticket not found', ticketId);
       return null;
     }
   }
@@ -86,7 +86,7 @@ export class TicketStore {
     this.tickets[ticketIndex] = ticketToUpdate;
     this.saveTicketsToStorage();
 
-    console.info('TicketStore: Updated ticket', ticketId);
+    console.debug('TicketStore: Updated ticket', ticketId);
 
     // Emit event for ticket update
     this.eventEmitter.emitTicketUpdated(ticketToUpdate);
@@ -118,7 +118,7 @@ export class TicketStore {
 
     const paginatedTickets = filteredTickets.slice(offset, offset + size);
 
-    console.info(`TicketStore: Found ${paginatedTickets.length} tickets with status '${statusArray.join(', ')}' for engineer '${engineerProfile.name}' (${offset}-${offset + size - 1} of ${filteredTickets.length})`);
+    console.debug(`TicketStore: Found ${paginatedTickets.length} tickets with status '${statusArray.join(', ')}' for engineer '${engineerProfile.name}' (${offset}-${offset + size - 1} of ${filteredTickets.length})`);
     return paginatedTickets;
   }
 
@@ -147,10 +147,10 @@ export class TicketStore {
     );
 
     if (activeTicket) {
-      console.info('TicketStore: Found active ticket for customer', customerId, activeTicket.id);
+      console.debug('TicketStore: Found active ticket for customer', customerId, activeTicket.id);
       return { ...activeTicket }; // Return a copy to prevent external mutations
     } else {
-      console.info('TicketStore: No active ticket found for customer', customerId);
+      console.debug('TicketStore: No active ticket found for customer', customerId);
       return null;
     }
   }
@@ -188,12 +188,12 @@ export class TicketStore {
           resolvedAt: ticket.resolvedAt ? new Date(ticket.resolvedAt) : undefined,
           abandonedAt: ticket.abandonedAt ? new Date(ticket.abandonedAt) : undefined,
         }));
-        console.info('TicketStore: Loaded tickets from localStorage');
+        console.debug('TicketStore: Loaded tickets from localStorage');
       } else {
         // Initialize with mock data if no stored data exists
         this.tickets = [];
         this.saveTicketsToStorage();
-        console.info('TicketStore: Initialized with mock data and saved to localStorage');
+        console.debug('TicketStore: Initialized with mock data and saved to localStorage');
       }
     } catch (error) {
       console.error('TicketStore: Error loading tickets from localStorage', error);
@@ -207,7 +207,7 @@ export class TicketStore {
   private saveTicketsToStorage(): void {
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(this.tickets));
-      console.info('TicketStore: Saved tickets to localStorage');
+      console.debug('TicketStore: Saved tickets to localStorage');
     } catch (error) {
       console.error('TicketStore: Error saving tickets to localStorage:', error);
     }
@@ -220,7 +220,7 @@ export class TicketStore {
   clear(): void {
     this.tickets = [];
     this.saveTicketsToStorage();
-    console.info('TicketStore: Cleared all tickets');
+    console.debug('TicketStore: Cleared all tickets');
 
     // Emit event for clearing tickets
     this.eventEmitter.emitTicketsCleared();

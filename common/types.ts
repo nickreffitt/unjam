@@ -45,7 +45,19 @@ export interface TicketListItem {
 
 export type TicketEventType = 'ticketCreated' | 'ticketUpdated' | 'ticketDeleted' | 'ticketsCleared' | 'ticketsLoaded';
 
+export type ChatEventType = 'chatMessageSent' | 'chatMessagesRead' | 'chatReloaded';
+
 export interface ErrorDisplay {
   title: string;
   message: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  ticketId: string;
+  sender: UserProfile;
+  receiver: UserProfile;
+  content: string;
+  createdAt: Date;
+  isRead?: boolean;
 }

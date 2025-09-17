@@ -49,7 +49,7 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
   // Handle ticket updates from other tabs (e.g., customer marking as still broken)
   const handleTicketUpdated = useCallback((updatedTicket: Ticket) => {
     if (updatedTicket.id === ticketId) {
-      console.info('useTicketState: Received ticket update for', ticketId, 'with status', updatedTicket.status);
+      console.debug('useTicketState: Received ticket update for', ticketId, 'with status', updatedTicket.status);
       // Reload from store to get the latest data
       ticketStore.reload();
       const freshTicket = ticketStore.get(ticketId);

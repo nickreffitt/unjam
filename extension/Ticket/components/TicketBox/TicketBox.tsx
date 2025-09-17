@@ -9,6 +9,8 @@ interface TicketBoxProps {
   onConfirmFixed: () => void;
   onMarkStillBroken: () => void;
   onSubmitRating: (rating: number, feedback?: string) => void;
+  onToggleChat?: () => void;
+  isChatVisible?: boolean;
 }
 
 interface TimerProps {
@@ -46,7 +48,9 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   onMarkFixed,
   onConfirmFixed,
   onMarkStillBroken,
-  onSubmitRating
+  onSubmitRating,
+  onToggleChat,
+  isChatVisible = false
 }) => {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
@@ -113,7 +117,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   };
 
   return (
-    <div className={`unjam-fixed unjam-bottom-4 unjam-right-4 unjam-w-120 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border-2 ${getStatusColor()} unjam-p-4 unjam-font-sans`}>
+    <div data-testid="ticket-box" className={`unjam-w-120 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border ${getStatusColor()} unjam-p-4 unjam-font-sans`}>
       {/* Header */}
       <div className="unjam-flex unjam-items-center unjam-justify-between unjam-mb-3">
         <div className="unjam-flex unjam-items-center unjam-gap-2">
@@ -123,6 +127,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           </span>
         </div>
         <button
+          data-testid="ticket-box-close-button"
           onClick={onHide}
           className="unjam-text-gray-400 hover:unjam-text-gray-600"
         >
@@ -152,9 +157,12 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           <p className="unjam-text-xs unjam-text-gray-500 unjam-mb-4">ETA is ~2:30</p>
           
           <div className="unjam-space-y-2">
-            <button className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50">
+            <button
+              onClick={onToggleChat}
+              className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
+            >
               <MessageCircle size={16} />
-              Hide Chat
+              {isChatVisible ? 'Hide Chat' : 'Show Chat'}
             </button>
             <button
               onClick={onMarkFixed}

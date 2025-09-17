@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { type CustomerProfile } from '@common/types';
-import { useTicketManager } from '@extension/contexts/TicketManagerContext';
+import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
 
 interface TicketModalProps {
   isOpen: boolean;

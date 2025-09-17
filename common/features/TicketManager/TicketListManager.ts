@@ -39,7 +39,7 @@ export class TicketListManager {
       actions: ['claim', 'view']
     }));
 
-    console.info('Listing new tickets:', ticketListItems.length);
+    console.debug('Listing new tickets:', ticketListItems.length);
     return ticketListItems;
   }
 
@@ -76,7 +76,7 @@ export class TicketListManager {
       actions: ['view', 'message']
     }));
 
-    console.info('Listing active tickets:', ticketListItems.length);
+    console.debug('Listing active tickets:', ticketListItems.length);
     return ticketListItems;
   }
 
@@ -123,7 +123,7 @@ export class TicketListManager {
       actions: ['view']
     }));
 
-    console.info('Listing completed tickets:', ticketListItems.length);
+    console.debug('Listing completed tickets:', ticketListItems.length);
     return ticketListItems;
   }
 
