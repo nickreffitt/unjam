@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ChatEventEmitter } from './ChatEventEmitter';
-import { type ChatMessage } from '@common/types';
+import { type ChatMessage, type UserProfile } from '@common/types';
 
 // Mock localStorage and window
 const mockLocalStorage = {
@@ -21,6 +21,7 @@ const originalWindow = global.window;
 describe('ChatEventEmitter', () => {
   let emitter: ChatEventEmitter;
   let mockMessage: ChatMessage;
+  let mockUser: UserProfile;
 
   beforeEach(() => {
     // Reset all mocks
@@ -58,6 +59,14 @@ describe('ChatEventEmitter', () => {
       content: 'Hello, I need help',
       createdAt: new Date('2024-01-15T12:00:00Z'),
       isRead: false
+    };
+
+    // Create a mock user profile
+    mockUser = {
+      id: 'customer-1',
+      name: 'John Doe',
+      type: 'customer',
+      email: 'john@example.com'
     };
   });
 
@@ -153,6 +162,71 @@ describe('ChatEventEmitter', () => {
 
       // and should clean up the storage item
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('chatstore-event');
+    });
+  });
+
+  describe('emitChatSenderIsTyping', () => {
+    it('should emit sender typing event', () => {
+      // given a ticket ID and user
+      const ticketId = 'TKT-456';
+
+      // when emitting sender typing event
+      emitter.emitChatSenderIsTyping(ticketId, mockUser);
+
+      // then should set storage item with correct data
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'chatstore-event',
+        expect.stringContaining('"type":"chatSenderIsTyping"')
+      );
+
+      // and should include the ticket ID and user
+      const setItemCall = mockLocalStorage.setItem.mock.calls[0];
+      const eventData = JSON.parse(setItemCall[1]);
+      expect(eventData.type).toBe('chatSenderIsTyping');
+      expect(eventData.ticketId).toBe(ticketId);
+      expect(eventData.user).toEqual(mockUser);
+      expect(eventData.timestamp).toBeTypeOf('number');
+
+      // and should clean up the storage item
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('chatstore-event');
+    });
+
+    it('should throttle typing events to once every 5 seconds', () => {
+      // given a ticket ID and user
+      const ticketId = 'TKT-456';
+
+      // when emitting multiple typing events quickly
+      emitter.emitChatSenderIsTyping(ticketId, mockUser);
+      emitter.emitChatSenderIsTyping(ticketId, mockUser);
+      emitter.emitChatSenderIsTyping(ticketId, mockUser);
+
+      // then should only emit once
+      expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(1);
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledTimes(1);
+    });
+
+    it('should emit again after sufficient time has passed', async () => {
+      // given a fresh emitter and ticket ID and user
+      const freshEmitter = new ChatEventEmitter();
+      const ticketId = 'TKT-456';
+
+      // Clear any previous calls
+      vi.clearAllMocks();
+
+      // when emitting first typing event
+      freshEmitter.emitChatSenderIsTyping(ticketId, mockUser);
+      expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(1);
+
+      // and emitting again immediately (should be throttled)
+      freshEmitter.emitChatSenderIsTyping(ticketId, mockUser);
+      expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(1); // Still 1
+
+      // and waiting for throttle to expire (simulate by creating new fresh emitter)
+      const anotherFreshEmitter = new ChatEventEmitter();
+      anotherFreshEmitter.emitChatSenderIsTyping(ticketId, mockUser);
+
+      // then should emit the second time
+      expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(2);
     });
   });
 

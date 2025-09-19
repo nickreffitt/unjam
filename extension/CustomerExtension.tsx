@@ -6,6 +6,7 @@ import type { TicketStatus, Ticket } from '@common/types';
 import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
 import { useTicketState } from '@extension/Ticket/hooks';
+import { useChatManager } from '@extension/ChatBox/contexts/ChatManagerContext';
 import '@extension/styles.css';
 
 const CustomerExtension: React.FC = () => {
@@ -16,6 +17,7 @@ const CustomerExtension: React.FC = () => {
   // Get customer profile and ticket manager from contexts
   const { customerProfile } = useUserProfile();
   const { ticketManager, ticketStore } = useTicketManager();
+  const { createChatStore } = useChatManager();
 
   // Use dedicated hooks for state
   const { activeTicket, setActiveTicket, isChatVisible, setIsChatVisible } = useTicketState();
@@ -252,12 +254,32 @@ const CustomerExtension: React.FC = () => {
                 {isChatVisible ? 'Hide Chat' : 'Show Chat'}
               </button>
               {isChatVisible && (
-                <button
-                  onClick={handleSendRandomEngineerMessage}
-                  className="unjam-block unjam-w-full unjam-text-sm unjam-bg-indigo-200 hover:unjam-bg-indigo-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-mt-2 unjam-font-medium"
-                >
-                  Send Random Engineer Message
-                </button>
+                <>
+                  <button
+                    onClick={handleSendRandomEngineerMessage}
+                    className="unjam-block unjam-w-full unjam-text-sm unjam-bg-indigo-200 hover:unjam-bg-indigo-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-mt-2 unjam-font-medium"
+                  >
+                    Send Random Engineer Message
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (activeTicket && activeTicket.assignedTo) {
+                        console.debug('Debug: Triggering engineer typing indicator for customer to see');
+                        const chatStore = createChatStore(activeTicket.id);
+                        chatStore.markIsTyping(activeTicket.assignedTo);
+                        // Also trigger same-tab UI update
+                        if (chatBoxRef.current) {
+                          chatBoxRef.current.triggerTypingIndicator(activeTicket.assignedTo);
+                        }
+                      } else {
+                        console.warn('Debug: No active ticket or assigned engineer for typing simulation');
+                      }
+                    }}
+                    className="unjam-block unjam-w-full unjam-text-sm unjam-bg-yellow-200 hover:unjam-bg-yellow-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-mt-2 unjam-font-medium"
+                  >
+                    Trigger Engineer Typing
+                  </button>
+                </>
               )}
             </div>
           </div>

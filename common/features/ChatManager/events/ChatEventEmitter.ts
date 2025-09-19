@@ -1,10 +1,12 @@
-import { type ChatMessage, type ChatEventType } from '@common/types';
+import { type ChatMessage, type ChatEventType, type UserProfile } from '@common/types';
 
 /**
  * Event emitter for chat-related events
  * Abstracts the underlying event mechanism to allow for future technology changes
  */
 export class ChatEventEmitter {
+  private nextTypingEventTime: Date | null = null;
+
   constructor() {
     // No need for local listeners - everything goes through window events
   }
@@ -15,6 +17,8 @@ export class ChatEventEmitter {
    */
   emitChatMessageSent(message: ChatMessage): void {
     this.emitWindowEvent('chatMessageSent', { message });
+
+    this.nextTypingEventTime = null;
   }
 
   /**
@@ -32,6 +36,22 @@ export class ChatEventEmitter {
    */
   emitChatReloaded(ticketId: string): void {
     this.emitWindowEvent('chatReloaded', { ticketId });
+  }
+
+  /**
+   * Emits a sender typing event
+   * @param ticketId - The ticket ID for the chat
+   * @param user - The user who is typing
+   */
+  emitChatSenderIsTyping(ticketId: string, user: UserProfile): void {
+    const now = new Date();
+
+    // Check if we should throttle the event (only emit once every 5 seconds)
+    if (this.nextTypingEventTime === null || now >= this.nextTypingEventTime) {
+      // Emit the event and set the next allowed time to 5 seconds from now
+      this.emitWindowEvent('chatSenderIsTyping', { ticketId, user });
+      this.nextTypingEventTime = new Date(now.getTime() + 5000); // 5 seconds in the future
+    }
   }
 
   /**

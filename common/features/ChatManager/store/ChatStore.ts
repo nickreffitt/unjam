@@ -1,5 +1,5 @@
-import { type ChatMessage } from '@common/types';
-import { ChatEventEmitter } from '@common/features/ChatManager/events';
+import { type ChatMessage, type UserProfile } from '@common/types';
+import { type ChatEventEmitter } from '@common/features/ChatManager/events';
 
 export class ChatStore {
   private messages: ChatMessage[] = [];
@@ -7,10 +7,10 @@ export class ChatStore {
   private readonly storageKey: string;
   private readonly eventEmitter: ChatEventEmitter;
 
-  constructor(ticketId: string) {
+  constructor(ticketId: string, eventEmitter: ChatEventEmitter) {
     this.ticketId = ticketId;
     this.storageKey = `chatStore-${ticketId}`;
-    this.eventEmitter = new ChatEventEmitter();
+    this.eventEmitter = eventEmitter;
     this.loadMessagesFromStorage();
   }
 
@@ -136,6 +136,17 @@ export class ChatStore {
     } catch (error) {
       console.error('ChatStore: Error saving messages to localStorage:', error);
     }
+  }
+
+  /**
+   * Marks a user as typing
+   * @param user - The user who is typing
+   */
+  markIsTyping(user: UserProfile): void {
+    console.debug(`ChatStore: User ${user.name} is typing for ticket ${this.ticketId}`);
+
+    // Emit event for sender typing
+    this.eventEmitter.emitChatSenderIsTyping(this.ticketId, user);
   }
 
   /**

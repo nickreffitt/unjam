@@ -28,6 +28,6 @@
       "@common/*": ["common/*"]
     }
   },
-  "include": ["extension/**/*", "dashboard/**/*", "common/**/*"],
+  "include": ["extension/**/*", "dashboard/**/*", "common/**/*", "types/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

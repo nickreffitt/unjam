@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ChatStore } from './ChatStore';
+import { ChatEventEmitter } from '../events/ChatEventEmitter';
 import { type ChatMessage, type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('ChatStore', () => {
@@ -35,8 +36,9 @@ describe('ChatStore', () => {
     localStorage.clear();
     // Reset console mocks
     vi.clearAllMocks();
-    // Create new instance
-    chatStore = new ChatStore(ticketId);
+    // Create new instance with event emitter
+    const eventEmitter = new ChatEventEmitter();
+    chatStore = new ChatStore(ticketId, eventEmitter);
   });
 
   describe('constructor', () => {

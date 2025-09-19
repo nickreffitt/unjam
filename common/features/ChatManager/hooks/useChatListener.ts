@@ -10,8 +10,8 @@ import { ChatListener, type ChatListenerCallbacks } from '@common/features/ChatM
  * @example
  * ```tsx
  * useChatListener({
- *   onChatMessageSent: (message) => {
- *     console.log('New message sent:', message);
+ *   onChatMessageReceived: (message) => {
+ *     console.log('New message received:', message);
  *     refetchMessages();
  *   },
  *   onChatMessagesRead: (messageIds, ticketId) => {

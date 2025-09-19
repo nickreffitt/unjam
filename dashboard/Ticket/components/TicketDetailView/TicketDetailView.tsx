@@ -3,8 +3,9 @@ import { type Ticket } from '@common/types';
 import TicketNotFound from '@dashboard/Ticket/components/TicketNotFound/TicketNotFound';
 import TicketHeader from '@dashboard/Ticket/components/TicketHeader/TicketHeader';
 import TicketDetailsCard from '@dashboard/Ticket/components/TicketDetailsCard/TicketDetailsCard';
-import ChatSection from '@dashboard/Ticket/components/ChatSection/ChatSection';
 import TicketStatusBanner from '@dashboard/Ticket/components/TicketStatusBanner/TicketStatusBanner';
+import ChatBox, { type ChatBoxRef } from '@dashboard/ChatBox/ChatBox';
+import { ChatManagerProvider } from '@dashboard/ChatBox/contexts/ChatManagerContext';
 
 interface NotFoundConfig {
   title?: string;
@@ -35,6 +36,7 @@ interface TicketDetailViewProps {
   showAssignedTo?: boolean;
   showEstimatedTime?: boolean;
   chatActive?: boolean;
+  chatBoxRef?: React.RefObject<ChatBoxRef>;
 }
 
 const TicketDetailView: React.FC<TicketDetailViewProps> = ({
@@ -44,7 +46,8 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
   statusBanner,
   showAssignedTo = false,
   showEstimatedTime = false,
-  chatActive = false
+  chatActive = false,
+  chatBoxRef
 }) => {
   if (!ticket) {
     return (
@@ -87,10 +90,45 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
 
         {/* Chat Section */}
         <div className="lg:unjam-col-span-1">
-          <ChatSection
-            isActive={chatActive}
-            ticketStatus={ticket.status}
-          />
+          {chatActive && ticket.createdBy && (
+            <ChatManagerProvider>
+              <div className="unjam-h-[600px]">
+                <ChatBox
+                  ref={chatBoxRef}
+                  ticketId={ticket.id}
+                  receiverName={ticket.createdBy.name || 'Customer'}
+                  receiverProfile={ticket.createdBy}
+                />
+              </div>
+            </ChatManagerProvider>
+          )}
+          {!chatActive && (
+            <div className="unjam-bg-white unjam-rounded-lg unjam-shadow-sm unjam-border unjam-border-gray-200 unjam-p-6 unjam-h-full">
+              <div className="unjam-flex unjam-items-center unjam-justify-between unjam-mb-4">
+                <h2 className="unjam-text-lg unjam-font-semibold unjam-text-gray-900">Chat</h2>
+              </div>
+              <div className="unjam-flex-1 unjam-flex unjam-items-center unjam-justify-center unjam-h-64 unjam-bg-gray-50 unjam-rounded-lg">
+                <p className="unjam-text-gray-500 unjam-text-center">
+                  {ticket.status === 'completed' || ticket.status === 'auto-completed' ? (
+                    <>
+                      Chat history for<br />
+                      completed ticket
+                    </>
+                  ) : (
+                    <>
+                      Chat not available for<br />
+                      this ticket status
+                    </>
+                  )}
+                </p>
+              </div>
+              {(ticket.status === 'completed' || ticket.status === 'auto-completed') && (
+                <div className="unjam-text-center unjam-text-sm unjam-text-gray-500 unjam-mt-4">
+                  Ticket completed - chat disabled
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

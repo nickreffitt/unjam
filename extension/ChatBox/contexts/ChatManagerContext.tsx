@@ -2,6 +2,7 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { ChatManager } from '@common/features/ChatManager';
 import { ChatStore } from '@common/features/ChatManager/store';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
+import { ChatEventEmitter } from '@common/features/ChatManager/events';
 
 interface ChatManagerContextType {
   createChatManager: (ticketId: string, receiverProfile: any) => ChatManager;
@@ -19,12 +20,14 @@ export const ChatManagerProvider: React.FC<ChatManagerProviderProps> = ({ childr
 
   // Create factory functions for chat manager and store instances
   const contextValue = useMemo(() => {
-    const createChatManager = (ticketId: string, receiverProfile: any) => {
-      return new ChatManager(ticketId, customerProfile, receiverProfile);
+    const createChatStore = (ticketId: string) => {
+      const eventEmitter = new ChatEventEmitter();
+      return new ChatStore(ticketId, eventEmitter);
     };
 
-    const createChatStore = (ticketId: string) => {
-      return new ChatStore(ticketId);
+    const createChatManager = (ticketId: string, receiverProfile: any) => {
+      const chatStore = createChatStore(ticketId);
+      return new ChatManager(ticketId, customerProfile, receiverProfile, chatStore);
     };
 
     return { createChatManager, createChatStore };

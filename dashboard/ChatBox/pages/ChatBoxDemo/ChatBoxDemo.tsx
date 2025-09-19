@@ -46,14 +46,13 @@ const ChatBoxDemo: React.FC = () => {
     }
   };
 
-  const handleSendRandomMessage = () => {
+  const handleSimulateCustomerMessage = () => {
     const randomMessage = generateRandomMessage();
     console.debug('Generated message:', randomMessage);
 
     if (randomMessage && typeof randomMessage === 'string') {
-      // Use the injectCustomerMessage method to inject a test message
       if (chatBoxRef.current) {
-        chatBoxRef.current.injectCustomerMessage(randomMessage);
+        chatBoxRef.current.simulateCustomerMessage(randomMessage);
       }
     } else {
       console.error('Failed to generate valid message:', randomMessage);
@@ -71,7 +70,7 @@ const ChatBoxDemo: React.FC = () => {
         <div className="unjam-mb-6 unjam-p-4 unjam-bg-white unjam-rounded-lg unjam-shadow-sm unjam-border unjam-border-gray-200">
           <h3 className="unjam-font-semibold unjam-mb-3 unjam-text-gray-900">Debug Controls</h3>
           <button
-            onClick={handleSendRandomMessage}
+            onClick={handleSimulateCustomerMessage}
             className="unjam-bg-blue-600 hover:unjam-bg-blue-700 unjam-text-white unjam-font-medium unjam-py-2 unjam-px-4 unjam-rounded unjam-transition-colors"
           >
             Send Random Customer Message (3-50 words)

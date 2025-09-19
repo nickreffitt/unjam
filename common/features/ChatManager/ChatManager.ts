@@ -1,5 +1,5 @@
 import { type ChatMessage, type UserProfile } from '@common/types';
-import { ChatStore } from '@common/features/ChatManager/store';
+import { type ChatStore } from '@common/features/ChatManager/store';
 
 export class ChatManager {
   private readonly ticketId: string;
@@ -7,11 +7,11 @@ export class ChatManager {
   private readonly receiver: UserProfile;
   private readonly chatStore: ChatStore;
 
-  constructor(ticketId: string, sender: UserProfile, receiver: UserProfile) {
+  constructor(ticketId: string, sender: UserProfile, receiver: UserProfile, chatStore: ChatStore) {
     this.ticketId = ticketId;
     this.sender = sender;
     this.receiver = receiver;
-    this.chatStore = new ChatStore(ticketId);
+    this.chatStore = chatStore;
   }
 
   /**
@@ -125,5 +125,16 @@ export class ChatManager {
    */
   getReceiver(): UserProfile {
     return this.receiver;
+  }
+
+  /**
+   * Marks the sender as typing
+   * This will emit a cross-tab event to notify other tabs that the user is typing
+   */
+  markIsTyping(): void {
+    this.chatStore.markIsTyping(this.sender);
+    console.debug(
+      `ChatManager: ${this.sender.name} is typing for ticket ${this.ticketId}`
+    );
   }
 }

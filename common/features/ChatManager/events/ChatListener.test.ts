@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ChatListener, type ChatListenerCallbacks } from './ChatListener';
-import { type ChatMessage } from '@common/types';
+import { type ChatMessage, type UserProfile } from '@common/types';
 
 // Mock window object
 const mockWindow = {
@@ -16,6 +16,7 @@ describe('ChatListener', () => {
   let listener: ChatListener;
   let mockCallbacks: ChatListenerCallbacks;
   let mockMessage: ChatMessage;
+  let mockUser: UserProfile;
 
   beforeEach(() => {
     // Reset all mocks
@@ -29,9 +30,10 @@ describe('ChatListener', () => {
     });
 
     mockCallbacks = {
-      onChatMessageSent: vi.fn(),
+      onChatMessageReceived: vi.fn(),
       onChatMessagesRead: vi.fn(),
       onChatReloaded: vi.fn(),
+      onChatReceiverIsTyping: vi.fn(),
     };
 
     mockMessage = {
@@ -52,6 +54,13 @@ describe('ChatListener', () => {
       content: 'Hello, I need help',
       createdAt: new Date('2024-01-15T12:00:00Z'),
       isRead: false
+    };
+
+    mockUser = {
+      id: 'customer-1',
+      name: 'John Doe',
+      type: 'customer',
+      email: 'john@example.com'
     };
 
     listener = new ChatListener(mockCallbacks);
@@ -137,7 +146,7 @@ describe('ChatListener', () => {
   describe('updateCallbacks', () => {
     it('should update callbacks', () => {
       const newCallbacks: ChatListenerCallbacks = {
-        onChatMessageSent: vi.fn(),
+        onChatMessageReceived: vi.fn(),
       };
 
       // when updating callbacks
@@ -170,8 +179,8 @@ describe('ChatListener', () => {
       // when handling the event
       storageHandler(storageEvent);
 
-      // then should call onChatMessageSent callback
-      expect(mockCallbacks.onChatMessageSent).toHaveBeenCalledWith(
+      // then should call onChatMessageReceived callback
+      expect(mockCallbacks.onChatMessageReceived).toHaveBeenCalledWith(
         expect.objectContaining({
           ...mockMessage,
           createdAt: expect.any(Date)
@@ -217,6 +226,25 @@ describe('ChatListener', () => {
       expect(mockCallbacks.onChatReloaded).toHaveBeenCalledWith(ticketId);
     });
 
+    it('should handle chatSenderIsTyping event', () => {
+      // given a storage event for sender typing
+      const ticketId = 'TKT-456';
+      const storageEvent = {
+        key: 'chatstore-event',
+        newValue: JSON.stringify({
+          type: 'chatSenderIsTyping',
+          ticketId,
+          user: mockUser
+        })
+      } as StorageEvent;
+
+      // when handling the event
+      storageHandler(storageEvent);
+
+      // then should call onChatReceiverIsTyping callback
+      expect(mockCallbacks.onChatReceiverIsTyping).toHaveBeenCalledWith(ticketId, mockUser);
+    });
+
     it('should ignore events with wrong key', () => {
       // given a storage event with wrong key
       const storageEvent = {
@@ -231,7 +259,7 @@ describe('ChatListener', () => {
       storageHandler(storageEvent);
 
       // then should not call any callbacks
-      expect(mockCallbacks.onChatMessageSent).not.toHaveBeenCalled();
+      expect(mockCallbacks.onChatMessageReceived).not.toHaveBeenCalled();
     });
 
     it('should ignore events with no newValue', () => {
@@ -245,7 +273,7 @@ describe('ChatListener', () => {
       storageHandler(storageEvent);
 
       // then should not call any callbacks
-      expect(mockCallbacks.onChatMessageSent).not.toHaveBeenCalled();
+      expect(mockCallbacks.onChatMessageReceived).not.toHaveBeenCalled();
     });
 
     it('should handle invalid JSON gracefully', () => {
@@ -259,12 +287,12 @@ describe('ChatListener', () => {
       expect(() => storageHandler(storageEvent)).not.toThrow();
 
       // then should not call any callbacks
-      expect(mockCallbacks.onChatMessageSent).not.toHaveBeenCalled();
+      expect(mockCallbacks.onChatMessageReceived).not.toHaveBeenCalled();
     });
 
     it('should handle callback errors gracefully', () => {
       // given callback that throws error
-      mockCallbacks.onChatMessageSent = vi.fn().mockImplementation(() => {
+      mockCallbacks.onChatMessageReceived = vi.fn().mockImplementation(() => {
         throw new Error('Callback error');
       });
 
@@ -280,7 +308,7 @@ describe('ChatListener', () => {
       expect(() => storageHandler(storageEvent)).not.toThrow();
 
       // then callback should have been called
-      expect(mockCallbacks.onChatMessageSent).toHaveBeenCalled();
+      expect(mockCallbacks.onChatMessageReceived).toHaveBeenCalled();
     });
 
     it('should deserialize date objects correctly', () => {
@@ -302,13 +330,13 @@ describe('ChatListener', () => {
       storageHandler(storageEvent);
 
       // then should deserialize date correctly
-      expect(mockCallbacks.onChatMessageSent).toHaveBeenCalledWith(
+      expect(mockCallbacks.onChatMessageReceived).toHaveBeenCalledWith(
         expect.objectContaining({
           createdAt: expect.any(Date)
         })
       );
 
-      const callArg = (mockCallbacks.onChatMessageSent as any).mock.calls[0][0];
+      const callArg = (mockCallbacks.onChatMessageReceived as any).mock.calls[0][0];
       expect(callArg.createdAt).toBeInstanceOf(Date);
       expect(callArg.createdAt.toISOString()).toBe('2024-01-15T12:00:00.000Z');
     });

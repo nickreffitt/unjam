@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { type ChatManager } from '@common/features/ChatManager';
+import { type UserProfile } from '@common/types';
 import { useChatManager } from '@dashboard/ChatBox/contexts/ChatManagerContext';
 
 export interface UseChatActionsReturn {
@@ -7,13 +8,19 @@ export interface UseChatActionsReturn {
   setInputValue: React.Dispatch<React.SetStateAction<string>>;
   handleSendMessage: () => Promise<void>;
   handleKeyPress: (e: React.KeyboardEvent) => void;
-  injectCustomerMessage: (content: string) => Promise<void>;
+  handleInputChange: (value: string) => void;
+  simulateCustomerMessage: (content: string) => Promise<void>;
+  triggerTypingIndicator: (user: UserProfile) => void;
 }
 
 export const useChatActions = (
   ticketId: string,
   chatManager: ChatManager,
-  refreshMessages: () => Promise<void>
+  refreshMessages: () => Promise<void>,
+  setIsTyping: (typing: boolean) => void,
+  setTypingUser: (user: UserProfile | null) => void,
+  typingExpiryRef: React.MutableRefObject<Date | null>,
+  messagesEndRef: React.RefObject<HTMLDivElement>
 ): UseChatActionsReturn => {
   const [inputValue, setInputValue] = useState('');
   const { createChatStore } = useChatManager();
@@ -35,6 +42,8 @@ export const useChatActions = (
       try {
         await chatManagerRef.current.send(inputValue.trim());
         setInputValue('');
+        // Reload the ChatManager to sync with localStorage (same as we do for test messages)
+        chatManagerRef.current.reload();
         // Refresh messages to show the new message (similar to refreshTickets)
         // Since storage events only work cross-tab, we need to manually refresh
         await refreshMessagesRef.current();
@@ -52,9 +61,17 @@ export const useChatActions = (
     }
   }, [handleSendMessage]);
 
-  const injectCustomerMessage = useCallback(async (content: string) => {
+  const handleInputChange = useCallback((value: string) => {
+    setInputValue(value);
+    // Trigger typing indicator when user types (throttled to once every 5 seconds)
+    if (value.trim().length > 0) {
+      chatManagerRef.current.markIsTyping();
+    }
+  }, []);
+
+  const simulateCustomerMessage = useCallback(async (content: string) => {
     if (!content || typeof content !== 'string') {
-      console.error('injectCustomerMessage: Invalid content provided:', content);
+      console.error('simulateCustomerMessage: Invalid content provided:', content);
       return;
     }
 
@@ -87,11 +104,29 @@ export const useChatActions = (
     }
   }, []);
 
+  // Function to manually trigger typing indicator (for same-tab updates)
+  const triggerTypingIndicator = useCallback((user: UserProfile) => {
+    console.debug('dashboard useChatActions: Manually triggering typing indicator for user', user.name);
+    // Only show typing indicator if user is a customer (dashboard shows customer typing)
+    if (user.type === 'customer') {
+      setIsTyping(true);
+      setTypingUser(user);
+      // Set expiry time to 6 seconds from now (1 second longer than throttle interval)
+      typingExpiryRef.current = new Date(Date.now() + 6000);
+      // Scroll to show the typing indicator
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100); // Small delay to allow DOM update
+    }
+  }, [setIsTyping, setTypingUser, typingExpiryRef, messagesEndRef]);
+
   return {
     inputValue,
     setInputValue,
     handleSendMessage,
     handleKeyPress,
-    injectCustomerMessage
+    handleInputChange,
+    simulateCustomerMessage,
+    triggerTypingIndicator
   };
 };

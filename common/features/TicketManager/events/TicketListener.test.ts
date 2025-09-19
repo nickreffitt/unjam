@@ -272,7 +272,7 @@ describe('TicketListener', () => {
         key: 'ticketstore-event',
         newValue: JSON.stringify({
           type: 'ticketsLoaded',
-          tickets: tickets
+          tickets
         })
       } as StorageEvent;
 

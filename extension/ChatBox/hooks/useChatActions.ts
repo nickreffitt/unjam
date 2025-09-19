@@ -7,6 +7,7 @@ export interface UseChatActionsReturn {
   setInputValue: React.Dispatch<React.SetStateAction<string>>;
   handleSendMessage: () => Promise<void>;
   handleKeyPress: (e: React.KeyboardEvent) => void;
+  handleInputChange: (value: string) => void;
   injectEngineerMessage: (content: string) => Promise<void>;
 }
 
@@ -52,6 +53,14 @@ export const useChatActions = (
     }
   }, [handleSendMessage]);
 
+  const handleInputChange = useCallback((value: string) => {
+    setInputValue(value);
+    // Trigger typing indicator when user types (throttled to once every 5 seconds)
+    if (value.trim().length > 0) {
+      chatManagerRef.current.markIsTyping();
+    }
+  }, []);
+
   const injectEngineerMessage = useCallback(async (content: string) => {
     if (!content || typeof content !== 'string') {
       console.error('injectEngineerMessage: Invalid content provided:', content);
@@ -77,7 +86,6 @@ export const useChatActions = (
       console.debug('Created test engineer message via ChatStore:', testMessage);
 
       // Reload the ChatManager to sync with the new message in localStorage
-      // This is needed because we created a new ChatStore instance above
       chatManagerRef.current.reload();
 
       // Directly refresh the current tab since storage events only work cross-tab
@@ -92,6 +100,7 @@ export const useChatActions = (
     setInputValue,
     handleSendMessage,
     handleKeyPress,
+    handleInputChange,
     injectEngineerMessage
   };
 };

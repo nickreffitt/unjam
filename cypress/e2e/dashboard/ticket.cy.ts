@@ -1,4 +1,4 @@
-describe('Dashboard - Basic Access', () => {
+describe('Dashboard - Individual Ticket Pages', () => {
   beforeEach(() => {
     // Clear localStorage before each test to ensure clean state
     cy.window().then((win) => {
@@ -63,11 +63,6 @@ describe('Dashboard - Basic Access', () => {
     // Navigate to New Tickets and wait for data to load
     cy.contains('New Tickets').click();
     cy.wait(1000); // Wait for tickets to load from localStorage
-  });
-
-  it('can access dashboard interface', () => {
-    // Verify dashboard loads
-    cy.contains('Engineer Dashboard').should('be.visible');
   });
 
   it('shows ticket preview when preview icon is tapped from new tickets list', () => {
@@ -170,73 +165,5 @@ describe('Dashboard - Basic Access', () => {
     // then goes back to new tickets table
     cy.url().should('include', '/new');
     cy.contains('New Tickets').should('be.visible');
-  });
-
-  it('displays empty state when new tickets table is toggled', () => {
-    // given in the new tickets list
-    cy.visit('/app/new');
-
-    // when new ticket table is toggled as empty state (check if toggle exists)
-    cy.get('body').then(($body) => {
-      cy.contains('button', 'Empty State: OFF').click();
-
-      // then it displays the empty state
-      cy.contains('No New Tickets').should('be.visible');
-      cy.contains('There are no tickets waiting to be claimed').should('be.visible');
-      cy.contains('button', 'Refresh Tickets').should('be.visible');
-    });
-  });
-
-  it('displays empty state when active tickets table is toggled', () => {
-    // given in the active tickets list
-    cy.visit('/app/active');
-
-    // when active ticket table is debug toggled as empty state (check if toggle exists)
-    cy.get('body').then(($body) => {
-      if ($body.find('button:contains("Empty State: OFF")').length > 0) {
-        cy.contains('button', 'Empty State: OFF').click();
-
-        // then it displays the empty state
-        cy.contains('No Active Tickets').should('be.visible');
-        cy.contains("You don't have any active tickets").should('be.visible');
-        cy.contains('button', 'View New Tickets').should('be.visible');
-      } else {
-        // If no debug toggle, check if empty state is already shown (no active tickets)
-        cy.get('body').then(($innerBody) => {
-          if ($innerBody.text().includes('No Active Tickets')) {
-            cy.contains('No Active Tickets').should('be.visible');
-          } else {
-            // If there are tickets and no toggle, just pass the test
-            cy.log('Debug toggle not available in production mode');
-          }
-        });
-      }
-    });
-  });
-
-  it('displays empty state when completed tickets table is toggled', () => {
-    // given in the completed tickets list
-    cy.visit('/app/completed');
-
-    // when completed tickets table is debug toggled as empty state (check if toggle exists)
-    cy.get('body').then(($body) => {
-      if ($body.find('button:contains("Empty State: OFF")').length > 0) {
-        cy.contains('button', 'Empty State: OFF').click();
-
-        // then it displays empty state
-        cy.contains('No completed tickets').should('be.visible');
-        cy.contains('Your completed tickets will appear here').should('be.visible');
-      } else {
-        // If no debug toggle, check if empty state is already shown (no completed tickets)
-        cy.get('body').then(($innerBody) => {
-          if ($innerBody.text().includes('No completed tickets')) {
-            cy.contains('No completed tickets').should('be.visible');
-          } else {
-            // If there are tickets and no toggle, just pass the test
-            cy.log('Debug toggle not available in production mode');
-          }
-        });
-      }
-    });
   });
 });

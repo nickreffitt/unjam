@@ -32,6 +32,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           unjam-flex-1
           unjam-px-4
           unjam-py-2
+          unjam-h-10
           unjam-bg-white
           unjam-border
           unjam-border-gray-300
@@ -54,6 +55,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         className="
           unjam-px-4
           unjam-py-2
+          unjam-h-10
           unjam-bg-gray-600
           unjam-text-white
           unjam-rounded
@@ -68,7 +70,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         "
         aria-label="Send message"
       >
-        <Send size={20} />
+        <Send size={18} />
       </button>
     </div>
   );

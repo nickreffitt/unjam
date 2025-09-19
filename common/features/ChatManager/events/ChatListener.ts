@@ -1,4 +1,4 @@
-import { type ChatMessage, type ChatEventType } from '@common/types';
+import { type ChatMessage, type ChatEventType, type UserProfile } from '@common/types';
 
 /**
  * Interface for objects that listen to chat store events
@@ -6,10 +6,10 @@ import { type ChatMessage, type ChatEventType } from '@common/types';
  */
 export interface ChatListenerCallbacks {
   /**
-   * Called when a new chat message is sent
-   * @param message - The newly sent message
+   * Called when a new chat message is received (sent by another user/tab)
+   * @param message - The newly received message
    */
-  onChatMessageSent?(message: ChatMessage): void;
+  onChatMessageReceived?(message: ChatMessage): void;
 
   /**
    * Called when chat messages are marked as read
@@ -23,6 +23,13 @@ export interface ChatListenerCallbacks {
    * @param ticketId - The ticket ID for the chat that was reloaded
    */
   onChatReloaded?(ticketId: string): void;
+
+  /**
+   * Called when the receiver is typing
+   * @param ticketId - The ticket ID for the chat
+   * @param user - The user who is typing (the receiver from this listener's perspective)
+   */
+  onChatReceiverIsTyping?(ticketId: string, user: UserProfile): void;
 }
 
 /**
@@ -57,7 +64,7 @@ export class ChatListener {
 
       try {
         const eventData = JSON.parse(event.newValue);
-        const { type, message, messageIds, ticketId } = eventData;
+        const { type, message, messageIds, ticketId, user } = eventData;
 
         // Deserialize Date objects if message is present
         let deserializedMessage = message;
@@ -70,11 +77,11 @@ export class ChatListener {
 
         switch (type as ChatEventType) {
           case 'chatMessageSent':
-            if (this.callbacks.onChatMessageSent && deserializedMessage) {
+            if (this.callbacks.onChatMessageReceived && deserializedMessage) {
               try {
-                this.callbacks.onChatMessageSent(deserializedMessage);
+                this.callbacks.onChatMessageReceived(deserializedMessage);
               } catch (error) {
-                console.error('ChatListener: Error in onChatMessageSent:', error);
+                console.error('ChatListener: Error in onChatMessageReceived:', error);
               }
             }
             break;
@@ -93,6 +100,15 @@ export class ChatListener {
                 this.callbacks.onChatReloaded(ticketId);
               } catch (error) {
                 console.error('ChatListener: Error in onChatReloaded:', error);
+              }
+            }
+            break;
+          case 'chatSenderIsTyping':
+            if (this.callbacks.onChatReceiverIsTyping && ticketId && user) {
+              try {
+                this.callbacks.onChatReceiverIsTyping(ticketId, user);
+              } catch (error) {
+                console.error('ChatListener: Error in onChatReceiverIsTyping:', error);
               }
             }
             break;

@@ -64,7 +64,7 @@ describe('useChatListenerCallbacks', () => {
   it('should handle storage events correctly', () => {
     // Given a listener with event handlers
     const listener: Partial<ChatListenerCallbacks> = {
-      onChatMessageSent: vi.fn(),
+      onChatMessageReceived: vi.fn(),
       onChatMessagesRead: vi.fn(),
       onChatReloaded: vi.fn(),
     };
@@ -87,8 +87,8 @@ describe('useChatListenerCallbacks', () => {
 
         switch (type) {
           case 'chatMessageSent':
-            if (listener.onChatMessageSent && deserializedMessage) {
-              listener.onChatMessageSent(deserializedMessage);
+            if (listener.onChatMessageReceived && deserializedMessage) {
+              listener.onChatMessageReceived(deserializedMessage);
             }
             break;
           case 'chatMessagesRead':
@@ -119,7 +119,7 @@ describe('useChatListenerCallbacks', () => {
     eventHandler(mockEvent);
 
     // Then the appropriate listener method should be called
-    expect(listener.onChatMessageSent).toHaveBeenCalledWith(
+    expect(listener.onChatMessageReceived).toHaveBeenCalledWith(
       expect.objectContaining({
         ...mockMessage,
         createdAt: expect.any(Date)
@@ -130,7 +130,7 @@ describe('useChatListenerCallbacks', () => {
   it('should handle multiple event types', () => {
     // Given a listener with multiple event handlers
     const listener: Partial<ChatListenerCallbacks> = {
-      onChatMessageSent: vi.fn(),
+      onChatMessageReceived: vi.fn(),
       onChatMessagesRead: vi.fn(),
       onChatReloaded: vi.fn(),
     };
@@ -152,8 +152,8 @@ describe('useChatListenerCallbacks', () => {
 
         switch (type) {
           case 'chatMessageSent':
-            if (listener.onChatMessageSent && deserializedMessage) {
-              listener.onChatMessageSent(deserializedMessage);
+            if (listener.onChatMessageReceived && deserializedMessage) {
+              listener.onChatMessageReceived(deserializedMessage);
             }
             break;
           case 'chatMessagesRead':
@@ -189,7 +189,7 @@ describe('useChatListenerCallbacks', () => {
     } as StorageEvent);
 
     // Then all appropriate listener methods should be called
-    expect(listener.onChatMessageSent).toHaveBeenCalled();
+    expect(listener.onChatMessageReceived).toHaveBeenCalled();
     expect(listener.onChatMessagesRead).toHaveBeenCalledWith(['MSG-123'], 'TKT-456');
     expect(listener.onChatReloaded).toHaveBeenCalledWith('TKT-456');
   });
@@ -212,7 +212,7 @@ describe('useChatListenerCallbacks', () => {
   it('should handle errors in listener callbacks gracefully', () => {
     // Given a listener that throws an error
     const listener: Partial<ChatListenerCallbacks> = {
-      onChatMessageSent: vi.fn(() => {
+      onChatMessageReceived: vi.fn(() => {
         throw new Error('Listener error');
       }),
     };
@@ -239,11 +239,11 @@ describe('useChatListenerCallbacks', () => {
 
         switch (type) {
           case 'chatMessageSent':
-            if (listener.onChatMessageSent && deserializedMessage) {
+            if (listener.onChatMessageReceived && deserializedMessage) {
               try {
-                listener.onChatMessageSent(deserializedMessage);
+                listener.onChatMessageReceived(deserializedMessage);
               } catch (error) {
-                console.error('useChatListenerCallbacks: Error in onChatMessageSent:', error);
+                console.error('useChatListenerCallbacks: Error in onChatMessageReceived:', error);
               }
             }
             break;
@@ -263,7 +263,7 @@ describe('useChatListenerCallbacks', () => {
 
     // Then the error should be logged
     expect(console.error).toHaveBeenCalledWith(
-      'useChatListenerCallbacks: Error in onChatMessageSent:',
+      'useChatListenerCallbacks: Error in onChatMessageReceived:',
       expect.any(Error)
     );
 
@@ -274,7 +274,7 @@ describe('useChatListenerCallbacks', () => {
   it('should ignore events without required data', () => {
     // Given a listener
     const listener: Partial<ChatListenerCallbacks> = {
-      onChatMessageSent: vi.fn(),
+      onChatMessageReceived: vi.fn(),
     };
 
     // When an event without message data is processed
@@ -287,8 +287,8 @@ describe('useChatListenerCallbacks', () => {
 
         switch (type) {
           case 'chatMessageSent':
-            if (listener.onChatMessageSent && message) {
-              listener.onChatMessageSent(message);
+            if (listener.onChatMessageReceived && message) {
+              listener.onChatMessageReceived(message);
             }
             break;
         }
@@ -303,13 +303,13 @@ describe('useChatListenerCallbacks', () => {
     } as StorageEvent);
 
     // Then the listener should not be called
-    expect(listener.onChatMessageSent).not.toHaveBeenCalled();
+    expect(listener.onChatMessageReceived).not.toHaveBeenCalled();
   });
 
   it('should handle partial listeners', () => {
     // Given a partial listener (only some methods implemented)
     const partialListener: Partial<ChatListenerCallbacks> = {
-      onChatMessageSent: vi.fn(),
+      onChatMessageReceived: vi.fn(),
       // Other methods not implemented
     };
 
@@ -331,8 +331,8 @@ describe('useChatListenerCallbacks', () => {
 
         switch (type) {
           case 'chatMessageSent':
-            if (partialListener.onChatMessageSent && deserializedMessage) {
-              partialListener.onChatMessageSent(deserializedMessage);
+            if (partialListener.onChatMessageReceived && deserializedMessage) {
+              partialListener.onChatMessageReceived(deserializedMessage);
             }
             break;
           case 'chatMessagesRead':
@@ -358,7 +358,7 @@ describe('useChatListenerCallbacks', () => {
     } as StorageEvent);
 
     // Then only the implemented method should be called
-    expect(partialListener.onChatMessageSent).toHaveBeenCalledWith(
+    expect(partialListener.onChatMessageReceived).toHaveBeenCalledWith(
       expect.objectContaining({
         ...mockMessage,
         createdAt: expect.any(Date)

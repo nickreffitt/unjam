@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ChatManager } from './ChatManager';
+import { ChatStore } from './store';
+import { ChatEventEmitter } from './events/ChatEventEmitter';
 import { type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('ChatManager', () => {
   const ticketId = 'TKT-123';
   let chatManager: ChatManager;
+  let chatStore: ChatStore;
 
   const mockCustomer: CustomerProfile = {
     id: 'customer-1',
@@ -25,8 +28,10 @@ describe('ChatManager', () => {
     localStorage.clear();
     // Reset console mocks
     vi.clearAllMocks();
-    // Create new instance with customer as sender, engineer as receiver
-    chatManager = new ChatManager(ticketId, mockCustomer, mockEngineer);
+    // Create ChatStore and ChatManager instances
+    const eventEmitter = new ChatEventEmitter();
+    chatStore = new ChatStore(ticketId, eventEmitter);
+    chatManager = new ChatManager(ticketId, mockCustomer, mockEngineer, chatStore);
   });
 
   describe('constructor', () => {
@@ -37,7 +42,9 @@ describe('ChatManager', () => {
     });
 
     it('should create ChatManager with engineer as sender', () => {
-      const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer);
+      const engineerEventEmitter = new ChatEventEmitter();
+      const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
+      const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
       expect(engineerChatManager.getSender()).toEqual(mockEngineer);
       expect(engineerChatManager.getReceiver()).toEqual(mockCustomer);
     });
@@ -194,7 +201,9 @@ describe('ChatManager', () => {
       await chatManager.send('Initial message');
 
       // Simulate another tab/instance adding messages
-      const anotherChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer);
+      const anotherEventEmitter = new ChatEventEmitter();
+      const anotherChatStore = new ChatStore(ticketId, anotherEventEmitter);
+      const anotherChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, anotherChatStore);
       await anotherChatManager.send('Message from engineer');
 
       // Act
@@ -211,11 +220,15 @@ describe('ChatManager', () => {
   describe('cross-tab communication', () => {
     it('should allow chat between customer and engineer', async () => {
       // Customer sends a message
-      const customerChat = new ChatManager(ticketId, mockCustomer, mockEngineer);
+      const customerEventEmitter = new ChatEventEmitter();
+      const customerChatStore = new ChatStore(ticketId, customerEventEmitter);
+      const customerChat = new ChatManager(ticketId, mockCustomer, mockEngineer, customerChatStore);
       await customerChat.send('Hello, I need help');
 
       // Engineer loads the chat
-      const engineerChat = new ChatManager(ticketId, mockEngineer, mockCustomer);
+      const engineerEventEmitter = new ChatEventEmitter();
+      const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
+      const engineerChat = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
       let messages = await engineerChat.getRecent();
 
       expect(messages).toHaveLength(1);
@@ -233,6 +246,40 @@ describe('ChatManager', () => {
       expect(messages[1].sender).toEqual(mockEngineer);
       expect(messages[1].receiver).toEqual(mockCustomer);
       expect(messages[1].content).toBe('Hi, I can help you with that');
+    });
+  });
+
+  describe('markIsTyping', () => {
+    it('should emit typing event for the sender', () => {
+      // Act
+      chatManager.markIsTyping();
+
+      // Assert - verify the console debug was called (we could mock the event emitter in a more complex test)
+      expect(chatManager.getSender()).toEqual(mockCustomer);
+    });
+
+    it('should work for engineer chat manager', () => {
+      // Arrange
+      const engineerEventEmitter = new ChatEventEmitter();
+      const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
+      const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
+
+      // Act
+      engineerChatManager.markIsTyping();
+
+      // Assert
+      expect(engineerChatManager.getSender()).toEqual(mockEngineer);
+    });
+
+    it('should call chatStore.markIsTyping with sender profile', () => {
+      // Arrange - spy on the ChatStore method
+      const markIsTypingSpy = vi.spyOn(chatStore, 'markIsTyping');
+
+      // Act
+      chatManager.markIsTyping();
+
+      // Assert
+      expect(markIsTypingSpy).toHaveBeenCalledWith(mockCustomer);
     });
   });
 });

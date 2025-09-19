@@ -179,4 +179,35 @@ describe('Extension - Chat Functionality', () => {
       cy.get('a[href="https://google.com"]').should('contain', 'https://google.com');
     });
   });
+
+  it('displays typing indicator when engineer is typing', () => {
+    // given ticket is in-progress with chat visible
+    cy.contains('button', 'Create New Ticket').click();
+    cy.get('textarea[placeholder="Please describe the problem you\'re experiencing..."]').type('Help me');
+    cy.contains('button', 'Create Ticket').click();
+    cy.contains('button', 'Set to In Progress (John)').click();
+
+    // verify chat is visible and debug button appears
+    cy.get('[data-testid="chat-box"]').should('be.visible');
+    cy.contains('button', 'Trigger Engineer Typing').should('be.visible');
+
+    // verify typing indicator is not initially visible
+    cy.get('[data-testid="typing-indicator"]').should('not.exist');
+
+    // when clicking the debug button to trigger engineer typing
+    cy.contains('button', 'Trigger Engineer Typing').click();
+
+    // then typing indicator should appear in chat
+    cy.get('[data-testid="typing-indicator"]').should('be.visible');
+
+    // verify the typing indicator has animated dots
+    cy.get('[data-testid="typing-indicator"]').within(() => {
+      // Check for three animated dots
+      cy.get('.unjam-animate-pulse').should('have.length', 3);
+    });
+
+    // typing indicator should disappear after 6 seconds
+    cy.wait(6100); // Wait slightly more than 6 seconds
+    cy.get('[data-testid="typing-indicator"]').should('not.exist');
+  });
 });
