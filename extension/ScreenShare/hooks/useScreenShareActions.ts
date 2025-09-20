@@ -44,22 +44,16 @@ export const useScreenShareActions = (
 
       // Immediately start the session after accepting
       // For engineer-initiated requests: customer publishes, engineer subscribes
-      if (request.requestedBy.type === 'engineer' && engineerProfileRef.current) {
+      if (request.sender.type === 'engineer' && engineerProfileRef.current) {
         console.debug('Starting session for accepted engineer request:', request.id);
 
-        const session = await screenShareManager.startSession(
+        await screenShareManager.startSession(
           request.id,
           customerProfileRef.current,   // publisher (customer shares screen)
           engineerProfileRef.current    // subscriber (engineer views)
         );
 
-        console.debug('Screen share session started after accepting engineer request');
-
-        // Since storage events only work cross-tab, we need to manually trigger
-        // the screen capture for same-tab updates
-        console.debug('Starting screen capture for session:', session.id);
-        await screenShareManager.publishStream(session.id);
-        console.debug('Screen capture initiated, browser should show selection popup');
+        console.debug('Screen share session started with automatic publishing after accepting engineer request');
 
         // Notify parent that session has started (for same-tab updates)
         if (onSessionStarted) {
@@ -70,9 +64,6 @@ export const useScreenShareActions = (
 
       // Reload the ScreenShareManager to sync with the updated request/session in localStorage
       screenShareManager.reload();
-
-      // Directly refresh the current tab since storage events only work cross-tab
-      refreshStateRef.current();
     } catch (error) {
       console.error('Failed to accept screenshare request:', error);
     }
@@ -87,9 +78,6 @@ export const useScreenShareActions = (
 
       // Reload the ScreenShareManager to sync with the updated request in localStorage
       screenShareManager.reload();
-
-      // Directly refresh the current tab since storage events only work cross-tab
-      refreshStateRef.current();
     } catch (error) {
       console.error('Failed to reject screenshare request:', error);
     }
@@ -112,31 +100,25 @@ export const useScreenShareActions = (
 
       if (activeRequest &&
           activeRequest.status === 'accepted' &&
-          activeRequest.requestedBy.type === 'engineer' &&
-          activeRequest.requestedFrom.type === 'customer') {
+          activeRequest.sender.type === 'engineer' &&
+          activeRequest.receiver.type === 'customer') {
         // Engineer has already requested and it's been accepted, start the session directly
         console.debug('Found accepted engineer request, starting session directly:', activeRequest.id);
 
-        const session = await screenShareManager.startSession(
+        await screenShareManager.startSession(
           activeRequest.id,
           customerProfileRef.current,   // publisher (customer shares screen)
           engineerProfileRef.current    // subscriber (engineer views)
         );
 
-        console.debug('Screen share session started from accepted engineer request');
-
-        // Since storage events only work cross-tab, we need to manually trigger
-        // the screen capture for same-tab updates
-        console.debug('Starting screen capture for session:', session.id);
-        await screenShareManager.publishStream(session.id);
-        console.debug('Screen capture initiated, browser should show selection popup');
+        console.debug('Screen share session started with automatic publishing from accepted engineer request');
       } else {
         // No accepted engineer request, create a new customer-initiated request
         console.debug('No accepted engineer request found, creating customer-initiated request');
 
         screenShareManager.startCall(
-          customerProfileRef.current,  // requestedBy (customer)
-          engineerProfileRef.current   // requestedFrom (engineer)
+          customerProfileRef.current,  // sender (customer)
+          engineerProfileRef.current   // receiver (engineer)
         );
 
         console.debug('Customer-initiated screenshare request created');
@@ -147,10 +129,10 @@ export const useScreenShareActions = (
         }
       }
 
-      // Reload the ScreenShareManager to sync with the updated request/session in localStorage
+      // Reload the ScreenShareManager to sync with the updated request/session
       screenShareManager.reload();
 
-      // Directly refresh the current tab since storage events only work cross-tab
+      // Directly refresh the current tab
       refreshStateRef.current();
     } catch (error) {
       console.error('Failed to handle customer screenshare click:', error);

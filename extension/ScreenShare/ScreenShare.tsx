@@ -33,12 +33,12 @@ const ScreenShare = forwardRef<ScreenShareRef, ScreenShareProps>(({ ticketId, en
   }), [refreshState]);
 
   // Show incoming request UI if there's a pending request
-  if (activeRequest && activeRequest.status === 'pending' && activeRequest.requestedBy.type === 'engineer') {
+  if (activeRequest && activeRequest.status === 'pending' && activeRequest.sender.type === 'engineer') {
     return (
       <div data-testid="screen-share" className={`unjam-w-120 unjam-min-h-16 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border unjam-border-blue-400 unjam-bg-blue-50 unjam-p-4 unjam-z-50 unjam-font-sans ${className}`}>
         <div className="unjam-text-center">
           <p className="unjam-text-blue-900 unjam-font-medium unjam-mb-3">
-            {activeRequest.requestedBy.name} wants to view your screen
+            {activeRequest.sender.name} wants to view your screen
           </p>
           <div className="unjam-flex unjam-gap-2">
             <button

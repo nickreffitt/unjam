@@ -83,7 +83,7 @@ export class WebRTCEventEmitter {
   }
 
   /**
-   * Emits a storage event for cross-tab communication only
+   * Emits events for both same-tab and cross-tab communication
    */
   private emitWindowEvent(type: WebRTCEventType, data: Record<string, unknown>): void {
     if (typeof window === 'undefined') return; // Skip in non-browser environments
@@ -94,13 +94,19 @@ export class WebRTCEventEmitter {
       timestamp: Date.now()
     };
 
-    // Use a temporary localStorage key to trigger storage events across tabs
+    // 1. Emit custom window event for same-tab communication
+    const customEvent = new CustomEvent('webrtc-event', {
+      detail: eventPayload
+    });
+    window.dispatchEvent(customEvent);
+
+    // 2. Use localStorage to trigger storage events for cross-tab communication
     const eventKey = 'webrtcstore-event';
     localStorage.setItem(eventKey, JSON.stringify(eventPayload));
 
     // Clean up immediately to avoid cluttering localStorage
     localStorage.removeItem(eventKey);
 
-    console.debug('WebRTCEventEmitter: Emitting storage event:', type, data);
+    console.debug('WebRTCEventEmitter: Emitting both window and storage events:', type, data);
   }
 }

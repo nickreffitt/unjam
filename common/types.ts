@@ -67,8 +67,8 @@ export type ScreenShareStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled
 export interface ScreenShareRequest {
   id: string;
   ticketId: string;
-  requestedBy: UserProfile; // Engineer who requested
-  requestedFrom: UserProfile; // Customer who will share
+  sender: UserProfile; 
+  receiver: UserProfile;
   status: ScreenShareStatus;
   createdAt: Date;
   updatedAt: Date;

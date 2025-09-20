@@ -35,16 +35,24 @@ export interface ScreenShareListenerCallbacks {
    * @param ticketId - The ticket ID for the screen share that was reloaded
    */
   onScreenShareReloaded?(ticketId: string): void;
+
+  /**
+   * Called when a remote stream becomes available
+   * @param sessionId - The session ID
+   * @param ticketId - The ticket ID
+   */
+  onScreenShareRemoteStreamAvailable?(sessionId: string, ticketId: string): void;
 }
 
 /**
- * Class that manages listening to global screen share events via storage events
- * Handles the setup and teardown of storage event listeners for cross-tab communication
+ * Class that manages listening to global screen share events
+ * Handles both same-tab (window events) and cross-tab (storage events) communication
  */
 export class ScreenShareListener {
   private callbacks: Partial<ScreenShareListenerCallbacks>;
   private isListening: boolean = false;
   private handleStorageEvent: ((event: StorageEvent) => void) | null = null;
+  private handleWindowEvent: ((event: CustomEvent) => void) | null = null;
 
   constructor(callbacks: Partial<ScreenShareListenerCallbacks>) {
     this.callbacks = callbacks;
@@ -58,25 +66,53 @@ export class ScreenShareListener {
   }
 
   /**
-   * Starts listening to storage events for cross-tab communication
+   * Starts listening to both storage events (cross-tab) and window events (same-tab)
    */
   startListening(): void {
     if (this.isListening || typeof window === 'undefined') return;
 
+    // Listen for storage events (cross-tab communication)
     this.handleStorageEvent = (event: StorageEvent) => {
       // Only process events for our specific key
       if (event.key !== 'screenshare-event' || !event.newValue) return;
 
       try {
         const eventData = JSON.parse(event.newValue);
-        const { type, request, session, ticketId } = eventData;
+        this.processEventData(eventData);
+      } catch (error) {
+        console.error('ScreenShareListener: Error parsing storage event data:', error);
+      }
+    };
 
-        // Deserialize Date objects if needed
-        let deserializedRequest = request;
-        if (request) {
-          deserializedRequest = {
-            ...request,
-            createdAt: request.createdAt ? new Date(request.createdAt) : new Date(),
+    // Listen for window events (same-tab communication)
+    this.handleWindowEvent = (event: CustomEvent) => {
+      try {
+        this.processEventData(event.detail);
+      } catch (error) {
+        console.error('ScreenShareListener: Error processing window event data:', error);
+      }
+    };
+
+    window.addEventListener('storage', this.handleStorageEvent);
+    window.addEventListener('screenshare-event', this.handleWindowEvent as EventListener);
+    this.isListening = true;
+
+    console.debug('ScreenShareListener: Started listening to global screen share events via storage and window events');
+  }
+
+  /**
+   * Processes event data from either storage or window events
+   */
+  private processEventData(eventData: any): void {
+    try {
+      const { type, request, session, ticketId } = eventData;
+
+      // Deserialize Date objects if needed
+      let deserializedRequest = request;
+      if (request) {
+        deserializedRequest = {
+          ...request,
+          createdAt: request.createdAt ? new Date(request.createdAt) : new Date(),
             updatedAt: request.updatedAt ? new Date(request.updatedAt) : new Date(),
           };
         }
@@ -138,25 +174,38 @@ export class ScreenShareListener {
               }
             }
             break;
+          case 'screenShareRemoteStreamAvailable':
+            const { sessionId } = eventData;
+            if (this.callbacks.onScreenShareRemoteStreamAvailable && sessionId && ticketId) {
+              try {
+                this.callbacks.onScreenShareRemoteStreamAvailable(sessionId, ticketId);
+              } catch (error) {
+                console.error('ScreenShareListener: Error in onScreenShareRemoteStreamAvailable:', error);
+              }
+            }
+            break;
         }
-      } catch (error) {
-        console.error('ScreenShareListener: Error parsing storage event data:', error);
-      }
-    };
-
-    window.addEventListener('storage', this.handleStorageEvent);
-    this.isListening = true;
-    console.debug('ScreenShareListener: Started listening to global screen share events via storage');
+    } catch (error) {
+      console.error('ScreenShareListener: Error processing event data:', error);
+    }
   }
 
   /**
-   * Stops listening to storage events
+   * Stops listening to both storage and window events
    */
   stopListening(): void {
-    if (!this.isListening || !this.handleStorageEvent) return;
+    if (!this.isListening) return;
 
-    window.removeEventListener('storage', this.handleStorageEvent);
-    this.handleStorageEvent = null;
+    if (this.handleStorageEvent) {
+      window.removeEventListener('storage', this.handleStorageEvent);
+      this.handleStorageEvent = null;
+    }
+
+    if (this.handleWindowEvent) {
+      window.removeEventListener('screenshare-event', this.handleWindowEvent as EventListener);
+      this.handleWindowEvent = null;
+    }
+
     this.isListening = false;
     console.debug('ScreenShareListener: Stopped listening to global screen share events');
   }

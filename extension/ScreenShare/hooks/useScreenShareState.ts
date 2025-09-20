@@ -90,7 +90,9 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
   refreshStateRef.current = refreshState;
 
   // Memoize the callbacks to prevent ScreenShareListener recreation
-  const screenShareListenerCallbacks = useMemo(() => ({
+  const screenShareListenerCallbacks = useMemo(() => {
+    console.debug('useScreenShareState: Creating listener callbacks for ticket:', ticketId);
+    return {
     onScreenShareRequestCreated: (request: ScreenShareRequest) => {
       console.debug('useScreenShareState: Screen share request created', request.id, 'for ticket', request.ticketId);
       // Only refresh if it's for our ticket
@@ -101,10 +103,29 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
         console.debug('useScreenShareState: Ignoring request for different ticket:', request.ticketId, 'vs our ticket:', ticketIdRef.current);
       }
     },
-    onScreenShareRequestUpdated: (request: ScreenShareRequest) => {
+    onScreenShareRequestUpdated: async (request: ScreenShareRequest) => {
       console.debug('useScreenShareState: Screen share request updated', request.id, 'for ticket', request.ticketId);
       // Only refresh if it's for our ticket
       if (request.ticketId === ticketIdRef.current) {
+        if (request.sender.id === customerProfile.id && request.status === 'accepted') {
+          // Customer-initiated request was accepted by engineer, start session
+          console.debug('useScreenShareState: Customer request accepted, starting session and publishing stream');
+
+          try {
+            const manager = screenShareManager;
+
+            // Find the engineer from the request (receiver for customer-initiated requests)
+            const engineerProfile = request.receiver;
+
+            // Start session: customer publishes, engineer subscribes
+            const session = await manager.startSession(request.id, customerProfile, engineerProfile);
+            console.debug('useScreenShareState: Session started with automatic publishing:', session.id);
+
+          } catch (error) {
+            console.error('useScreenShareState: Failed to start session and publish stream:', error);
+          }
+        }
+
         console.debug('useScreenShareState: Refreshing state due to updated request for our ticket');
         refreshStateRef.current();
       } else {
@@ -117,13 +138,9 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
       if (session.ticketId === ticketIdRef.current) {
         console.debug('useScreenShareState: Initializing WebRTC connection for session:', session.id);
         try {
-          const manager = screenShareManager;
-
-          // If we're the publisher (customer), start publishing
+          // If we're the publisher (customer), session already includes publishing
           if (session.publisher.id === customerProfile.id) {
-            console.debug('useScreenShareState: Customer is publisher, starting screen capture');
-            await manager.publishStream(session.id);
-            console.debug('useScreenShareState: WebRTC connection initialized successfully, publishing stream');
+            console.debug('useScreenShareState: Customer is publisher, session already includes stream');
           }
 
           refreshStateRef.current();
@@ -134,7 +151,8 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
         console.debug('useScreenShareState: Ignoring session for different ticket:', session.ticketId, 'vs our ticket:', ticketIdRef.current);
       }
     }
-  }), [screenShareManager, customerProfile]); // Include dependencies for the new callback
+  };
+  }, [screenShareManager, customerProfile, ticketId]); // Include dependencies for the new callback
 
   // Listen for real-time ScreenShare events
   useScreenShareListener(screenShareListenerCallbacks);

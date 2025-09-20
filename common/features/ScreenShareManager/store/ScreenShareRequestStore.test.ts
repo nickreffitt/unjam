@@ -34,8 +34,8 @@ describe('ScreenShareRequestStore', () => {
       // given a request without ID and timestamps
       const requestData = {
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending' as ScreenShareStatus,
         autoAccept: true,
       };
@@ -47,8 +47,8 @@ describe('ScreenShareRequestStore', () => {
       expect(created.id).toBeTruthy();
       expect(created.id).toContain('ssr-');
       expect(created.ticketId).toBe('ticket-789');
-      expect(created.requestedBy).toEqual(mockEngineer);
-      expect(created.requestedFrom).toEqual(mockCustomer);
+      expect(created.sender).toEqual(mockEngineer);
+      expect(created.receiver).toEqual(mockCustomer);
       expect(created.status).toBe('pending');
       expect(created.autoAccept).toBe(true);
       expect(created.createdAt).toBeInstanceOf(Date);
@@ -62,8 +62,8 @@ describe('ScreenShareRequestStore', () => {
       // when creating a request
       const requestData = {
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending' as ScreenShareStatus,
       };
       store.create(requestData);
@@ -82,8 +82,8 @@ describe('ScreenShareRequestStore', () => {
       // given a created request
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -109,8 +109,8 @@ describe('ScreenShareRequestStore', () => {
       // given a created request
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -129,8 +129,8 @@ describe('ScreenShareRequestStore', () => {
       // given multiple requests for the same ticket created at different times
       const request1 = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'ended',
       });
 
@@ -139,8 +139,8 @@ describe('ScreenShareRequestStore', () => {
 
       const request2 = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -166,15 +166,15 @@ describe('ScreenShareRequestStore', () => {
       // given requests for different tickets
       store.create({
         ticketId: 'ticket-111',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
       store.create({
         ticketId: 'ticket-222',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -192,8 +192,8 @@ describe('ScreenShareRequestStore', () => {
       // given a pending request
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -210,8 +210,8 @@ describe('ScreenShareRequestStore', () => {
       // given an accepted request
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'accepted',
       });
 
@@ -228,8 +228,8 @@ describe('ScreenShareRequestStore', () => {
       // given an active request
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'active',
       });
 
@@ -246,15 +246,15 @@ describe('ScreenShareRequestStore', () => {
       // given ended and rejected requests
       store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'ended',
       });
 
       store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'rejected',
       });
 
@@ -269,8 +269,8 @@ describe('ScreenShareRequestStore', () => {
       // given a cancelled request
       store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'cancelled',
       });
 
@@ -285,8 +285,8 @@ describe('ScreenShareRequestStore', () => {
       // given a request that has already expired (simulate by creating one with past expiry time)
       const expiredRequest = {
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending' as const,
       };
 
@@ -310,8 +310,8 @@ describe('ScreenShareRequestStore', () => {
       // given a pending request
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -332,8 +332,8 @@ describe('ScreenShareRequestStore', () => {
       // given a created request
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -361,8 +361,8 @@ describe('ScreenShareRequestStore', () => {
       // given a created request
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -378,15 +378,15 @@ describe('ScreenShareRequestStore', () => {
       // given two created requests
       const request1 = store.create({
         ticketId: 'ticket-111',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
       store.create({
         ticketId: 'ticket-222',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -415,15 +415,15 @@ describe('ScreenShareRequestStore', () => {
       // given multiple requests
       store.create({
         ticketId: 'ticket-111',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
       store.create({
         ticketId: 'ticket-222',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'active',
       });
 
@@ -451,15 +451,15 @@ describe('ScreenShareRequestStore', () => {
       // given multiple requests
       store.create({
         ticketId: 'ticket-111',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
       store.create({
         ticketId: 'ticket-222',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'active',
       });
 
@@ -474,8 +474,8 @@ describe('ScreenShareRequestStore', () => {
       // given requests in store
       store.create({
         ticketId: 'ticket-111',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -494,8 +494,8 @@ describe('ScreenShareRequestStore', () => {
       // given a request in the store
       const created = store.create({
         ticketId: 'ticket-789',
-        requestedBy: mockEngineer,
-        requestedFrom: mockCustomer,
+        sender: mockEngineer,
+        receiver: mockCustomer,
         status: 'pending',
       });
 
@@ -530,8 +530,8 @@ describe('ScreenShareRequestStore', () => {
         {
           id: 'existing-1',
           ticketId: 'ticket-111',
-          requestedBy: mockEngineer,
-          requestedFrom: mockCustomer,
+          sender: mockEngineer,
+          receiver: mockCustomer,
           status: 'pending',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

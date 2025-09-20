@@ -2,25 +2,7 @@ import type { UserProfile, ScreenShareRequest, ScreenShareSession, WebRTCState }
 import { type ScreenShareRequestStore, type ScreenShareSessionStore } from './store';
 import { createWebRTCManager, WebRTCSignalingStore, type WebRTCManager } from '@common/features/WebRTCManager';
 import { WebRTCListener } from '@common/features/WebRTCManager/events';
-
-/**
- * Callback interface for ScreenShareManager events
- */
-export interface ScreenShareManagerCallbacks {
-  /**
-   * Called when a remote stream becomes available
-   * @param sessionId - The session ID
-   * @param stream - The remote media stream
-   */
-  onRemoteStreamAvailable?(sessionId: string, stream: MediaStream): void;
-
-  /**
-   * Called when WebRTC state changes
-   * @param sessionId - The session ID
-   * @param state - The new WebRTC state
-   */
-  onWebRTCStateChanged?(sessionId: string, state: WebRTCState): void;
-}
+import { ScreenShareEventEmitter } from './events';
 
 export class ScreenShareManager {
   private readonly ticketId: string;
@@ -34,7 +16,7 @@ export class ScreenShareManager {
   private webrtcState: WebRTCState = 'initializing';
   private currentSessionId: string | null = null;
   private webrtcListener!: WebRTCListener;
-  private callbacks: ScreenShareManagerCallbacks = {};
+  private readonly eventEmitter: ScreenShareEventEmitter;
 
 
   constructor(
@@ -46,6 +28,9 @@ export class ScreenShareManager {
     this.requestStore = requestStore;
     this.sessionStore = sessionStore;
     this.signalingStore = new WebRTCSignalingStore();
+    this.eventEmitter = new ScreenShareEventEmitter();
+
+    console.debug('ScreenShareManager: Constructor called for ticket', ticketId);
 
     // Listen for WebRTC events to track remote stream availability
     this.setupWebRTCEventListeners();
@@ -79,8 +64,8 @@ export class ScreenShareManager {
 
     const request = this.requestStore.create({
       ticketId: this.ticketId,
-      requestedBy: engineer,
-      requestedFrom: customer,
+      sender: engineer,
+      receiver: customer,
       status: autoAccept ? 'accepted' : 'pending',
       autoAccept,
     });
@@ -102,7 +87,7 @@ export class ScreenShareManager {
     user: UserProfile
   ): ScreenShareRequest {
     // Validate user can respond to this request
-    if (request.requestedFrom.id !== user.id) {
+    if (request.receiver.id !== user.id) {
       throw new Error('Only the requested customer can respond to this request');
     }
 
@@ -149,8 +134,8 @@ export class ScreenShareManager {
     // Customer-initiated call: customer requests from engineer, but needs engineer acceptance
     const request = this.requestStore.create({
       ticketId: this.ticketId,
-      requestedBy: customer,
-      requestedFrom: engineer,
+      sender: customer,
+      receiver: engineer,
       status: 'pending', // Engineer needs to accept the call
       autoAccept: false,
     });
@@ -172,12 +157,12 @@ export class ScreenShareManager {
     }
 
     // Validate this is a customer-initiated call
-    if (request.requestedBy.type !== 'customer') {
+    if (request.sender.type !== 'customer') {
       throw new Error('This method is only for customer-initiated calls');
     }
 
     // Validate engineer can accept this call
-    if (request.requestedFrom.id !== engineer.id) {
+    if (request.receiver.id !== engineer.id) {
       throw new Error('Only the target engineer can accept this call');
     }
 
@@ -208,12 +193,12 @@ export class ScreenShareManager {
     }
 
     // Validate this is a customer-initiated call
-    if (request.requestedBy.type !== 'customer') {
+    if (request.sender.type !== 'customer') {
       throw new Error('This method is only for customer-initiated calls');
     }
 
     // Validate engineer can reject this call
-    if (request.requestedFrom.id !== engineer.id) {
+    if (request.receiver.id !== engineer.id) {
       throw new Error('Only the target engineer can reject this call');
     }
 
@@ -232,11 +217,11 @@ export class ScreenShareManager {
   }
 
   /**
-   * Start a screen share session after request is accepted
+   * Start a screen share session after request is accepted and automatically begin publishing
    * @param requestId - The accepted request ID
    * @param publisher - The customer who will share (must match request)
    * @param subscriber - The engineer who will view (must match request)
-   * @returns The created session
+   * @returns The active session with stream ready
    */
   async startSession(
     requestId: string,
@@ -265,14 +250,14 @@ export class ScreenShareManager {
     let expectedPublisher: UserProfile;
     let expectedSubscriber: UserProfile;
 
-    if (request.requestedBy.type === 'engineer') {
+    if (request.sender.type === 'engineer') {
       // Engineer requested from customer
-      expectedPublisher = request.requestedFrom; // customer
-      expectedSubscriber = request.requestedBy; // engineer
+      expectedPublisher = request.receiver; // customer
+      expectedSubscriber = request.sender; // engineer
     } else {
       // Customer requested from engineer (call)
-      expectedPublisher = request.requestedBy; // customer
-      expectedSubscriber = request.requestedFrom; // engineer
+      expectedPublisher = request.sender; // customer
+      expectedSubscriber = request.receiver; // engineer
     }
 
     if (publisher.id !== expectedPublisher.id) {
@@ -315,10 +300,29 @@ export class ScreenShareManager {
       this.syncSessionWithWebRTCState(this.webrtcState);
       console.debug('ScreenShareManager: WebRTC connection initialized for session', session.id);
 
-      return session;
+      // Now automatically start screen capture and publishing
+      console.debug('ScreenShareManager: Starting screen capture for session', session.id);
+
+      const mediaStream = await this.publisherWebrtcManager.startScreenSharing();
+
+      // Update session to active with stream details
+      const activeSession = this.sessionStore.update(session.id, {
+        status: 'active',
+        streamId: mediaStream.id,
+      });
+
+      if (!activeSession) {
+        throw new Error('Failed to update session with stream details');
+      }
+
+      this.webrtcState = 'connected';
+      this.syncSessionWithWebRTCState(this.webrtcState);
+      console.debug('ScreenShareManager: Screen sharing started automatically, stream ID:', mediaStream.id);
+
+      return activeSession;
     } catch (error) {
-      // If WebRTC initialization fails, mark session as error and cleanup
-      console.error('ScreenShareManager: Failed to initialize WebRTC for session', session.id, error);
+      // If WebRTC initialization or publishing fails, mark session as error and cleanup
+      console.error('ScreenShareManager: Failed to initialize session or start publishing', session.id, error);
 
       this.webrtcState = 'failed';
       this.syncSessionWithWebRTCState(this.webrtcState);
@@ -333,62 +337,10 @@ export class ScreenShareManager {
         this.subscriberWebrtcManager = null;
       }
 
-      throw new Error(`Failed to initialize WebRTC connection: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to initialize and start screen sharing: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  /**
-   * Customer publishes their stream (starts screen capture and WebRTC publishing)
-   * @param sessionId - The session ID
-   * @returns The updated session with stream details
-   */
-  async publishStream(sessionId: string): Promise<ScreenShareSession> {
-    const session = this.sessionStore.getById(sessionId);
-    if (!session) {
-      throw new Error('Screen share session not found');
-    }
-
-    // Validate session is in correct state
-    if (session.status !== 'initializing') {
-      throw new Error('Can only publish stream for initializing sessions');
-    }
-
-    // Validate publisher WebRTC manager is available
-    if (!this.publisherWebrtcManager) {
-      throw new Error('Publisher WebRTC connection not initialized - call startSession first');
-    }
-
-    try {
-      console.debug('ScreenShareManager: Starting screen capture for session', sessionId);
-
-      // Start actual screen capture via WebRTC
-      const mediaStream = await this.publisherWebrtcManager.startScreenSharing();
-
-      // Update session with actual stream details
-      const updatedSession = this.sessionStore.update(sessionId, {
-        status: 'active',
-        streamId: mediaStream.id,
-      });
-
-      if (!updatedSession) {
-        throw new Error('Failed to update session with stream details');
-      }
-
-      this.webrtcState = 'connected';
-      this.syncSessionWithWebRTCState(this.webrtcState);
-      console.debug('ScreenShareManager: Screen sharing started, stream ID:', mediaStream.id);
-
-      return updatedSession;
-    } catch (error) {
-      // If screen capture fails, mark session as error
-      console.error('ScreenShareManager: Failed to start screen sharing for session', sessionId, error);
-
-      this.webrtcState = 'failed';
-      this.syncSessionWithWebRTCState(this.webrtcState);
-
-      throw new Error(`Failed to start screen sharing: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
 
   /**
    * Engineer subscribes to an active stream (sets up WebRTC subscription)
@@ -537,7 +489,7 @@ export class ScreenShareManager {
     }
 
     // Validate user can cancel this request
-    if (request.requestedBy.id !== user.id) {
+    if (request.sender.id !== user.id) {
       throw new Error('Only the requester can cancel the request');
     }
 
@@ -607,21 +559,7 @@ export class ScreenShareManager {
     return this.webrtcState;
   }
 
-  /**
-   * Register callbacks for ScreenShareManager events
-   * @param callbacks - The callback functions to register
-   */
-  setCallbacks(callbacks: ScreenShareManagerCallbacks): void {
-    this.callbacks = { ...callbacks };
-  }
 
-  /**
-   * Update existing callbacks
-   * @param callbacks - The callback functions to update
-   */
-  updateCallbacks(callbacks: Partial<ScreenShareManagerCallbacks>): void {
-    this.callbacks = { ...this.callbacks, ...callbacks };
-  }
 
   /**
    * Synchronize session status with WebRTC state changes
@@ -716,23 +654,34 @@ export class ScreenShareManager {
    * @private
    */
   private setupWebRTCEventListeners(): void {
+    console.debug('ScreenShareManager: Setting up WebRTC event listeners for ticket', this.ticketId);
     this.webrtcListener = new WebRTCListener({
       // Listen for remote stream events
       onWebRTCRemoteStream: (sessionId, streamInfo, _localUser, _remoteUser) => {
+        console.debug('ScreenShareManager: WebRTC remote stream event received', {
+          sessionId,
+          currentSessionId: this.currentSessionId,
+          ticketId: this.ticketId,
+          localUser: _localUser?.id,
+          remoteUser: _remoteUser?.id,
+          streamInfo
+        });
+
         // Only handle events for our current session
         if (sessionId === this.currentSessionId) {
           console.debug('ScreenShareManager: Remote stream received for session', sessionId, streamInfo);
 
           // Get the actual MediaStream object from the subscriber WebRTC manager
           const remoteStream = this.subscriberWebrtcManager?.getRemoteStream();
-          if (remoteStream && this.callbacks.onRemoteStreamAvailable) {
-            console.debug('ScreenShareManager: Triggering onRemoteStreamAvailable callback');
-            try {
-              this.callbacks.onRemoteStreamAvailable(sessionId, remoteStream);
-            } catch (error) {
-              console.error('ScreenShareManager: Error in onRemoteStreamAvailable callback:', error);
-            }
+          if (remoteStream) {
+            console.debug('ScreenShareManager: Remote stream available, emitting event');
+            // Emit event instead of using callback
+            this.eventEmitter.emitScreenShareRemoteStreamAvailable(sessionId, this.ticketId);
+          } else {
+            console.debug('ScreenShareManager: No remote stream found in subscriber manager');
           }
+        } else {
+          console.debug('ScreenShareManager: Session ID mismatch, ignoring remote stream event');
         }
       },
 
@@ -743,15 +692,7 @@ export class ScreenShareManager {
           console.debug('ScreenShareManager: WebRTC state changed for session', sessionId, 'to', state);
           this.webrtcState = state;
           this.syncSessionWithWebRTCState(state);
-
-          // Trigger callback for state changes
-          if (this.callbacks.onWebRTCStateChanged) {
-            try {
-              this.callbacks.onWebRTCStateChanged(sessionId, state);
-            } catch (error) {
-              console.error('ScreenShareManager: Error in onWebRTCStateChanged callback:', error);
-            }
-          }
+          // State changes are handled by updating the session, no need for additional events
         }
       },
 

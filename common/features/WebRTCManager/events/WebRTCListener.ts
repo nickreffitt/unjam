@@ -61,13 +61,14 @@ export interface WebRTCListenerCallbacks {
 }
 
 /**
- * Class that manages listening to global WebRTC events via storage events
- * Handles the setup and teardown of storage event listeners for cross-tab communication
+ * Class that manages listening to global WebRTC events
+ * Handles both same-tab (window events) and cross-tab (storage events) communication
  */
 export class WebRTCListener {
   private callbacks: Partial<WebRTCListenerCallbacks>;
   private isListening: boolean = false;
   private handleStorageEvent: ((event: StorageEvent) => void) | null = null;
+  private handleWindowEvent: ((event: CustomEvent) => void) | null = null;
 
   constructor(callbacks: Partial<WebRTCListenerCallbacks>) {
     this.callbacks = callbacks;
@@ -81,98 +82,145 @@ export class WebRTCListener {
   }
 
   /**
-   * Starts listening to storage events for cross-tab communication
+   * Starts listening to both storage events (cross-tab) and window events (same-tab)
    */
   startListening(): void {
     if (this.isListening || typeof window === 'undefined') return;
 
+    // Listen for storage events (cross-tab communication)
     this.handleStorageEvent = (event: StorageEvent) => {
+      console.debug('WebRTCListener: Received storage event', {
+        key: event.key,
+        hasNewValue: !!event.newValue,
+        targetKey: 'webrtcstore-event'
+      });
+
       // Only process events for our specific key
       if (event.key !== 'webrtcstore-event' || !event.newValue) return;
 
+      console.debug('WebRTCListener: Processing WebRTC storage event');
+
       try {
         const eventData = JSON.parse(event.newValue);
-        const { type, sessionId, state, error, streamInfo, candidate, offer, answer, localUser, remoteUser } = eventData;
-
-        switch (type as WebRTCEventType) {
-          case 'webrtcStateChanged':
-            if (this.callbacks.onWebRTCStateChanged && sessionId && state && localUser && remoteUser) {
-              try {
-                this.callbacks.onWebRTCStateChanged(sessionId, state, localUser, remoteUser);
-              } catch (error) {
-                console.error('WebRTCListener: Error in onWebRTCStateChanged:', error);
-              }
-            }
-            break;
-
-          case 'webrtcError':
-            if (this.callbacks.onWebRTCError && sessionId && error && localUser && remoteUser) {
-              try {
-                this.callbacks.onWebRTCError(sessionId, error, localUser, remoteUser);
-              } catch (callbackError) {
-                console.error('WebRTCListener: Error in onWebRTCError:', callbackError);
-              }
-            }
-            break;
-
-          case 'webrtcRemoteStream':
-            if (this.callbacks.onWebRTCRemoteStream && sessionId && streamInfo && localUser && remoteUser) {
-              try {
-                this.callbacks.onWebRTCRemoteStream(sessionId, streamInfo, localUser, remoteUser);
-              } catch (error) {
-                console.error('WebRTCListener: Error in onWebRTCRemoteStream:', error);
-              }
-            }
-            break;
-
-          case 'webrtcIceCandidate':
-            if (this.callbacks.onWebRTCIceCandidate && sessionId && candidate && localUser && remoteUser) {
-              try {
-                this.callbacks.onWebRTCIceCandidate(sessionId, candidate, localUser, remoteUser);
-              } catch (error) {
-                console.error('WebRTCListener: Error in onWebRTCIceCandidate:', error);
-              }
-            }
-            break;
-
-          case 'webrtcOfferCreated':
-            if (this.callbacks.onWebRTCOfferCreated && sessionId && offer && localUser && remoteUser) {
-              try {
-                this.callbacks.onWebRTCOfferCreated(sessionId, offer, localUser, remoteUser);
-              } catch (error) {
-                console.error('WebRTCListener: Error in onWebRTCOfferCreated:', error);
-              }
-            }
-            break;
-
-          case 'webrtcAnswerCreated':
-            if (this.callbacks.onWebRTCAnswerCreated && sessionId && answer && localUser && remoteUser) {
-              try {
-                this.callbacks.onWebRTCAnswerCreated(sessionId, answer, localUser, remoteUser);
-              } catch (error) {
-                console.error('WebRTCListener: Error in onWebRTCAnswerCreated:', error);
-              }
-            }
-            break;
-        }
+        this.processEventData(eventData);
       } catch (error) {
         console.error('WebRTCListener: Error parsing storage event data:', error);
       }
     };
 
+    // Listen for window events (same-tab communication)
+    this.handleWindowEvent = (event: CustomEvent) => {
+      console.debug('WebRTCListener: Received window event', event.detail?.type);
+      try {
+        this.processEventData(event.detail);
+      } catch (error) {
+        console.error('WebRTCListener: Error processing window event data:', error);
+      }
+    };
+
     window.addEventListener('storage', this.handleStorageEvent);
+    window.addEventListener('webrtc-event', this.handleWindowEvent as EventListener);
     this.isListening = true;
-    console.debug('WebRTCListener: Started listening to global WebRTC events via storage');
+    console.debug('WebRTCListener: Started listening to global WebRTC events via storage and window events');
   }
 
   /**
-   * Stops listening to storage events
+   * Processes event data from either storage or window events
+   */
+  private processEventData(eventData: any): void {
+    try {
+      const { type, sessionId, state, error, streamInfo, candidate, offer, answer, localUser, remoteUser } = eventData;
+
+      console.debug('WebRTCListener: Parsed event data', {
+        type,
+        sessionId,
+        hasStreamInfo: !!streamInfo,
+        localUser: localUser?.id,
+        remoteUser: remoteUser?.id
+      });
+
+      switch (type as WebRTCEventType) {
+        case 'webrtcStateChanged':
+          if (this.callbacks.onWebRTCStateChanged && sessionId && state && localUser && remoteUser) {
+            try {
+              this.callbacks.onWebRTCStateChanged(sessionId, state, localUser, remoteUser);
+            } catch (error) {
+              console.error('WebRTCListener: Error in onWebRTCStateChanged:', error);
+            }
+          }
+          break;
+
+        case 'webrtcError':
+          if (this.callbacks.onWebRTCError && sessionId && error && localUser && remoteUser) {
+            try {
+              this.callbacks.onWebRTCError(sessionId, error, localUser, remoteUser);
+            } catch (callbackError) {
+              console.error('WebRTCListener: Error in onWebRTCError:', callbackError);
+            }
+          }
+          break;
+
+        case 'webrtcRemoteStream':
+          if (this.callbacks.onWebRTCRemoteStream && sessionId && streamInfo && localUser && remoteUser) {
+            try {
+              this.callbacks.onWebRTCRemoteStream(sessionId, streamInfo, localUser, remoteUser);
+            } catch (error) {
+              console.error('WebRTCListener: Error in onWebRTCRemoteStream:', error);
+            }
+          }
+          break;
+
+        case 'webrtcIceCandidate':
+          if (this.callbacks.onWebRTCIceCandidate && sessionId && candidate && localUser && remoteUser) {
+            try {
+              this.callbacks.onWebRTCIceCandidate(sessionId, candidate, localUser, remoteUser);
+            } catch (error) {
+              console.error('WebRTCListener: Error in onWebRTCIceCandidate:', error);
+            }
+          }
+          break;
+
+        case 'webrtcOfferCreated':
+          if (this.callbacks.onWebRTCOfferCreated && sessionId && offer && localUser && remoteUser) {
+            try {
+              this.callbacks.onWebRTCOfferCreated(sessionId, offer, localUser, remoteUser);
+            } catch (error) {
+              console.error('WebRTCListener: Error in onWebRTCOfferCreated:', error);
+            }
+          }
+          break;
+
+        case 'webrtcAnswerCreated':
+          if (this.callbacks.onWebRTCAnswerCreated && sessionId && answer && localUser && remoteUser) {
+            try {
+              this.callbacks.onWebRTCAnswerCreated(sessionId, answer, localUser, remoteUser);
+            } catch (error) {
+              console.error('WebRTCListener: Error in onWebRTCAnswerCreated:', error);
+            }
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('WebRTCListener: Error processing event data:', error);
+    }
+  }
+
+  /**
+   * Stops listening to both storage and window events
    */
   stopListening(): void {
-    if (!this.isListening || !this.handleStorageEvent) return;
+    if (!this.isListening) return;
 
-    window.removeEventListener('storage', this.handleStorageEvent);
-    this.handleStorageEvent = null;
+    if (this.handleStorageEvent) {
+      window.removeEventListener('storage', this.handleStorageEvent);
+      this.handleStorageEvent = null;
+    }
+
+    if (this.handleWindowEvent) {
+      window.removeEventListener('webrtc-event', this.handleWindowEvent as EventListener);
+      this.handleWindowEvent = null;
+    }
+
     this.isListening = false;
     console.debug('WebRTCListener: Stopped listening to global WebRTC events');
   }

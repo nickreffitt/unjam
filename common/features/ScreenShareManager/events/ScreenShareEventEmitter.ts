@@ -5,7 +5,8 @@ export type ScreenShareEventType =
   | 'screenShareRequestUpdated'
   | 'screenShareSessionCreated'
   | 'screenShareSessionUpdated'
-  | 'screenShareReloaded';
+  | 'screenShareReloaded'
+  | 'screenShareRemoteStreamAvailable';
 
 /**
  * Event emitter for screen share-related events
@@ -57,7 +58,16 @@ export class ScreenShareEventEmitter {
   }
 
   /**
-   * Emits a storage event for cross-tab communication only
+   * Emits a screen share remote stream available event
+   * @param sessionId - The session ID
+   * @param ticketId - The ticket ID
+   */
+  emitScreenShareRemoteStreamAvailable(sessionId: string, ticketId: string): void {
+    this.emitWindowEvent('screenShareRemoteStreamAvailable', { sessionId, ticketId });
+  }
+
+  /**
+   * Emits events for both same-tab and cross-tab communication
    */
   private emitWindowEvent(type: ScreenShareEventType, data: Record<string, unknown>): void {
     if (typeof window === 'undefined') return; // Skip in non-browser environments
@@ -68,13 +78,19 @@ export class ScreenShareEventEmitter {
       timestamp: Date.now()
     };
 
-    // Use a temporary localStorage key to trigger storage events across tabs
+    // 1. Emit custom window event for same-tab communication
+    const customEvent = new CustomEvent('screenshare-event', {
+      detail: eventPayload
+    });
+    window.dispatchEvent(customEvent);
+
+    // 2. Use localStorage to trigger storage events for cross-tab communication
     const eventKey = 'screenshare-event';
     localStorage.setItem(eventKey, JSON.stringify(eventPayload));
 
     // Clean up immediately to avoid cluttering localStorage
     localStorage.removeItem(eventKey);
 
-    console.debug('ScreenShareEventEmitter: Emitting storage event:', type, data);
+    console.debug('ScreenShareEventEmitter: Emitting both window and storage events:', type, data);
   }
 }
