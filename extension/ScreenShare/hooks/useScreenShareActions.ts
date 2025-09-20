@@ -1,11 +1,12 @@
 import { useCallback, useRef } from 'react';
-import { type UserProfile, type ScreenShareRequest } from '@common/types';
+import { type UserProfile, type ScreenShareRequest, type ScreenShareSession } from '@common/types';
 import { useScreenShareManager } from '@extension/ScreenShare/contexts/ScreenShareManagerContext';
 
 export interface UseScreenShareActionsReturn {
   handleAcceptRequest: (request: ScreenShareRequest, onSessionStarted?: () => void) => Promise<void>;
   handleRejectRequest: (request: ScreenShareRequest) => void;
   handleScreenShareClick: () => Promise<void>;
+  handleEndCall: (session: ScreenShareSession) => void;
 }
 
 export const useScreenShareActions = (
@@ -139,9 +140,29 @@ export const useScreenShareActions = (
     }
   }, []); // Empty dependency array - stable callback
 
+  const handleEndCall = useCallback((session: ScreenShareSession) => {
+    console.debug('Ending screenshare session:', session.id);
+    try {
+      const screenShareManager = createScreenShareManagerRef.current(ticketIdRef.current);
+
+      // End the session - use customer profile since they are the ones ending it
+      screenShareManager.endSession(session.id, customerProfileRef.current);
+      console.debug('Screenshare session ended');
+
+      // Reload the ScreenShareManager to sync with the updated session
+      screenShareManager.reload();
+
+      // Refresh state to update UI
+      refreshStateRef.current();
+    } catch (error) {
+      console.error('Failed to end screenshare session:', error);
+    }
+  }, []); // Empty dependency array - stable callback
+
   return {
     handleAcceptRequest,
     handleRejectRequest,
-    handleScreenShareClick
+    handleScreenShareClick,
+    handleEndCall
   };
 };

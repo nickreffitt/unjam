@@ -5,7 +5,6 @@ import { useScreenShareManager } from '@extension/ScreenShare/contexts/ScreenSha
 export interface UseEngineerScreenShareActionsReturn {
   handleAcceptCustomerRequest: () => void;
   handleRejectCustomerRequest: () => void;
-  handleSubscribeToStream: () => void;
   handleRequestScreenShare: () => void;
 }
 
@@ -77,30 +76,6 @@ export const useEngineerScreenShareActions = (
     })();
   }, [ticketId, createScreenShareManager, incomingRequest]);
 
-  const handleSubscribeToStream = useCallback(() => {
-    if (!activeSession) {
-      console.warn('No active session to subscribe to');
-      return;
-    }
-
-    (async () => {
-      try {
-        console.debug('Engineer subscribing to stream for session:', activeSession.id);
-
-        const screenShareManager = createScreenShareManager(ticketId);
-
-        // Subscribe to the stream (remote stream will be handled via events)
-        await screenShareManager.subscribeToStream(activeSession.id);
-        console.debug('Engineer subscribed to stream successfully');
-
-        // Reload the ScreenShareManager to sync state
-        screenShareManager.reload();
-
-      } catch (error) {
-        console.error('Failed to subscribe to stream:', error);
-      }
-    })();
-  }, [ticketId, createScreenShareManager, activeSession]);
 
   const handleRequestScreenShare = useCallback(() => {
     if (!engineerProfile) {
@@ -140,7 +115,6 @@ export const useEngineerScreenShareActions = (
   return {
     handleAcceptCustomerRequest,
     handleRejectCustomerRequest,
-    handleSubscribeToStream,
     handleRequestScreenShare
   };
 };

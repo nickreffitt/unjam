@@ -38,7 +38,6 @@ const CustomerExtension: React.FC = () => {
   const {
     handleAcceptCustomerRequest,
     handleRejectCustomerRequest,
-    handleSubscribeToStream,
     handleRequestScreenShare
   } = useEngineerScreenShareActions(
     activeTicket?.id || '',
@@ -425,17 +424,6 @@ const CustomerExtension: React.FC = () => {
                         Subscriber: {activeScreenShareSession.subscriber.name}
                       </p>
 
-                      {/* Manual subscription button for debugging */}
-                      {activeScreenShareSession.status === 'active' &&
-                       activeScreenShareSession.subscriber.id === activeTicket?.assignedTo?.id &&
-                       !remoteStream && (
-                        <button
-                          onClick={handleSubscribeToStream}
-                          className="unjam-w-full unjam-text-xs unjam-bg-purple-200 hover:unjam-bg-purple-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-font-medium unjam-mb-2"
-                        >
-                          Manual Subscribe to Stream (Debug)
-                        </button>
-                      )}
 
                       {/* Video element to display the remote stream */}
                       {remoteStream && (

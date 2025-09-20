@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { ScreenShare as ScreenShareIcon, CheckCircle, X } from 'lucide-react';
+import { ScreenShare as ScreenShareIcon, CheckCircle, X, PhoneOff } from 'lucide-react';
 import { useScreenShareState, useScreenShareActions } from '@extension/ScreenShare/hooks';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
 import type { UserProfile } from '@common/types';
@@ -18,8 +18,8 @@ export interface ScreenShareRef {
 
 const ScreenShare = forwardRef<ScreenShareRef, ScreenShareProps>(({ ticketId, engineerProfile, className = '', onCustomerRequestCreated, onSessionStarted }, ref) => {
   const { customerProfile } = useUserProfile();
-  const { activeRequest, refreshState } = useScreenShareState(ticketId);
-  const { handleAcceptRequest, handleRejectRequest, handleScreenShareClick } = useScreenShareActions(
+  const { activeRequest, outgoingRequest, activeSession, refreshState } = useScreenShareState(ticketId);
+  const { handleAcceptRequest, handleRejectRequest, handleScreenShareClick, handleEndCall } = useScreenShareActions(
     ticketId,
     customerProfile,
     engineerProfile,
@@ -57,6 +57,36 @@ const ScreenShare = forwardRef<ScreenShareRef, ScreenShareProps>(({ ticketId, en
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Show "Calling.." state if there's an outgoing pending request
+  if (outgoingRequest && outgoingRequest.status === 'pending') {
+    return (
+      <div data-testid="screen-share" className={`unjam-w-120 unjam-h-16 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border unjam-border-gray-400 unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans ${className}`}>
+        <button
+          disabled
+          className="unjam-w-half unjam-bg-gray-100 unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 unjam-cursor-not-allowed unjam-text-gray-500"
+        >
+          <ScreenShareIcon size={16} />
+          Calling..
+        </button>
+      </div>
+    );
+  }
+
+  // Show "End Call" state if there's an active session
+  if (activeSession && activeSession.status === 'active') {
+    return (
+      <div data-testid="screen-share" className={`unjam-w-120 unjam-h-16 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border unjam-border-red-400 unjam-bg-red-50 unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans ${className}`}>
+        <button
+          onClick={() => handleEndCall(activeSession)}
+          className="unjam-w-half unjam-bg-red-500 unjam-border unjam-border-red-600 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-red-600 unjam-text-white"
+        >
+          <PhoneOff size={16} />
+          End Call
+        </button>
       </div>
     );
   }

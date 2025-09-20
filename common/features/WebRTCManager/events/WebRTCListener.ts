@@ -127,9 +127,31 @@ export class WebRTCListener {
   /**
    * Processes event data from either storage or window events
    */
-  private processEventData(eventData: any): void {
+  private processEventData(eventData: Record<string, unknown>): void {
     try {
-      const { type, sessionId, state, error, streamInfo, candidate, offer, answer, localUser, remoteUser } = eventData;
+      const {
+        type,
+        sessionId,
+        state,
+        error,
+        streamInfo,
+        candidate,
+        offer,
+        answer,
+        localUser,
+        remoteUser
+      } = eventData as {
+        type?: string;
+        sessionId?: string;
+        state?: unknown;
+        error?: unknown;
+        streamInfo?: unknown;
+        candidate?: unknown;
+        offer?: unknown;
+        answer?: unknown;
+        localUser?: { id?: string };
+        remoteUser?: { id?: string };
+      };
 
       console.debug('WebRTCListener: Parsed event data', {
         type,
