@@ -5,6 +5,8 @@ import {
 import { isCustomerProfile, isEngineerProfile } from '@common/util';
 import { type TicketStore } from '@common/features/TicketManager/store';
 
+const AUTO_COMPLETE_TIMEOUT_MINUTES = 30;
+
 export class TicketManager {
   private userProfile: UserProfile;
   private ticketStore: TicketStore;
@@ -110,7 +112,7 @@ export class TicketManager {
     }
 
     // Calculate auto-complete timeout
-    const timeoutMinutes = Number((import.meta as { env?: Record<string, string> }).env?.VITE_AUTO_COMPLETE_TIMEOUT_MINUTES) || 30;
+    const timeoutMinutes = AUTO_COMPLETE_TIMEOUT_MINUTES;
     const now = new Date();
     const autoCompleteTimeoutAt = new Date(now.getTime() + (timeoutMinutes * 60 * 1000));
 

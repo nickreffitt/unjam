@@ -61,3 +61,67 @@ export interface ChatMessage {
   createdAt: Date;
   isRead?: boolean;
 }
+
+export type ScreenShareStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'active' | 'ended';
+
+export interface ScreenShareRequest {
+  id: string;
+  ticketId: string;
+  requestedBy: UserProfile; // Engineer who requested
+  requestedFrom: UserProfile; // Customer who will share
+  status: ScreenShareStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date; // Request expires after 10 seconds
+  autoAccept?: boolean; // True if engineer initiated and should auto-accept
+}
+
+export type SessionStatus = 'initializing' | 'active' | 'ended' | 'error' | 'disconnected';
+
+export interface ScreenShareSession {
+  id: string;
+  ticketId: string;
+  requestId: string; // Links to the ScreenShareRequest that initiated this session
+  publisher: UserProfile; // Customer sharing their screen
+  subscriber: UserProfile; // Engineer viewing the screen
+  status: SessionStatus;
+  streamId?: string; // Optional ID for the media stream
+  errorMessage?: string; // Error details if status is 'error'
+  startedAt: Date;
+  endedAt?: Date;
+  lastActivityAt: Date;
+}
+
+export type WebRTCState =
+  | 'initializing'
+  | 'connecting'
+  | 'connected'
+  | 'streaming'
+  | 'disconnected'
+  | 'failed'
+  | 'closed';
+
+export interface WebRTCError {
+  type: 'connection' | 'media' | 'ice' | 'signaling' | 'configuration';
+  message: string;
+  details?: any;
+}
+
+export interface WebRTCSignal {
+  id: string;
+  sessionId: string;
+  from: UserProfile;
+  to: UserProfile;
+  type: 'offer' | 'answer' | 'ice-candidate';
+  payload: any;
+  createdAt: Date;
+  processed?: boolean;
+}
+
+export type WebRTCEventType =
+  | 'webrtcStateChanged'
+  | 'webrtcError'
+  | 'webrtcRemoteStream'
+  | 'webrtcIceCandidate'
+  | 'webrtcOfferCreated'
+  | 'webrtcAnswerCreated';

@@ -65,10 +65,6 @@ Timer components update elapsed time every second for:
 - Waiting tickets (time since creation)
 - Active tickets (time since claimed)
 
-## Environment Variables
-
-- `VITE_AUTO_COMPLETE_TIMEOUT_MINUTES`: Timeout in minutes before tickets are auto-completed (default: 30)
-
 ## Architecture
 
 The dashboard follows the project's coding standards:
