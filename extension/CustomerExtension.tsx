@@ -1,256 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
+import UnjamButton from '@extension/Ticket/components/UnjamButton/UnjamButton';
 import TicketBox from '@extension/Ticket/components/TicketBox/TicketBox';
 import TicketModal from '@extension/Ticket/components/TicketModal/TicketModal';
 import ChatBox, { type ChatBoxRef } from '@extension/ChatBox/ChatBox';
-import ScreenShare, { type ScreenShareRef } from '@extension/ScreenShare/ScreenShare';
-import type { TicketStatus, Ticket } from '@common/types';
-import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
+import ScreenShare from '@extension/ScreenShare/ScreenShare';
+import DebugScreenShare, { type DebugScreenShareRef } from '@extension/DebugScreenShare/DebugScreenShare';
+import DebugChat, { type DebugChatRef } from '@extension/DebugChat/DebugChat';
+import DebugTicket, { type DebugTicketRef } from '@extension/DebugTicket/DebugTicket';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
 import { useTicketState } from '@extension/Ticket/hooks';
-import { useChatManager } from '@extension/ChatBox/contexts/ChatManagerContext';
-import { useScreenShareManager } from '@extension/ScreenShare/contexts/ScreenShareManagerContext';
-import { useEngineerScreenShareState, useEngineerScreenShareActions } from '@extension/ScreenShare/hooks';
 import '@extension/styles.css';
 
-const AUTO_COMPLETE_TIMEOUT_MINUTES = 30;
-
 const CustomerExtension: React.FC = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isTicketVisible, setIsTicketVisible] = useState(true);
   const chatBoxRef = useRef<ChatBoxRef>(null);
-  const screenShareRef = useRef<ScreenShareRef>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const debugScreenShareRef = useRef<DebugScreenShareRef>(null);
+  const debugChatRef = useRef<DebugChatRef>(null);
+  const debugTicketRef = useRef<DebugTicketRef>(null);
 
-  // Get customer profile and ticket manager from contexts
+  // Get customer profile from context
   const { customerProfile } = useUserProfile();
-  const { ticketManager, ticketStore } = useTicketManager();
-  const { createChatStore } = useChatManager();
-  const { createScreenShareManager } = useScreenShareManager();
 
   // Use dedicated hooks for state and actions (following consistent pattern)
-  const { activeTicket, setActiveTicket, isChatVisible, setIsChatVisible } = useTicketState();
   const {
-    incomingRequest: incomingScreenShareRequest,
-    activeSession: activeScreenShareSession,
-    remoteStream,
-    setRemoteStream
-  } = useEngineerScreenShareState(activeTicket?.id || '', activeTicket);
-  const {
-    handleAcceptCustomerRequest,
-    handleRejectCustomerRequest,
-    handleRequestScreenShare
-  } = useEngineerScreenShareActions(
-    activeTicket?.id || '',
-    incomingScreenShareRequest,
-    activeScreenShareSession,
-    customerProfile,
-    activeTicket?.assignedTo,
-    () => screenShareRef.current?.refreshScreenShareState()
-  );
+    activeTicket,
+    isChatVisible,
+    setIsChatVisible,
+    isTicketVisible,
+    setIsTicketVisible,
+    isModalOpen,
+    setIsModalOpen,
+    handleCreateNewTicketClick,
+    getButtonText
+  } = useTicketState();
 
-  const handleTicketCreated = (ticketId: string) => {
-    console.debug('Ticket created with ID:', ticketId);
-    // Since storage events only work cross-tab, manually get the created ticket and update context
-    const createdTicket = ticketManager.getActiveTicket();
-    if (createdTicket) {
-      console.debug('Setting active ticket in context:', createdTicket.id);
-      setActiveTicket(createdTicket);
-    } else {
-      console.warn('No active ticket found after creation');
-    }
-    // Close the modal and show the ticket
-    setIsTicketVisible(true);
-    setIsModalOpen(false);
-  };
-
-  const handleTicketHide = () => {
-    setIsTicketVisible(false);
-  };
-
-  const handleCreateNewTicketClick = () => {
-    // If ticket exists and is not resolved, just show the existing ticket
-    if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
-      setIsTicketVisible(true);
-    } else {
-      // Only allow creating new ticket if no ticket exists or current ticket is completed
-      setIsModalOpen(true);
-    }
-  };
-
-  const handleMarkFixed = () => {
-    if (activeTicket) {
-      const updatedTicket = {
-        ...activeTicket,
-        status: 'completed' as TicketStatus,
-      };
-      ticketStore.update(activeTicket.id, updatedTicket);
-      // Manually update context for same-tab updates (storage events only work cross-tab)
-      setActiveTicket(updatedTicket);
-      console.debug('Customer marked ticket as fixed');
-    }
-  };
-
-  const handleConfirmFixed = async () => {
-    if (activeTicket) {
-      try {
-        const updatedTicket = await ticketManager.markAsResolved(activeTicket.id);
-        // Manually update context for same-tab updates (storage events only work cross-tab)
-        setActiveTicket(updatedTicket);
-        console.debug('Customer confirmed fix');
-      } catch (error) {
-        console.error('Failed to confirm fix:', error);
-      }
-    }
-  };
-
-  const handleMarkStillBroken = async () => {
-    if (activeTicket) {
-      try {
-        const updatedTicket = await ticketManager.markStillBroken(activeTicket.id);
-        // Manually update context for same-tab updates (storage events only work cross-tab)
-        setActiveTicket(updatedTicket);
-        console.debug('Customer marked as still broken');
-      } catch (error) {
-        console.error('Failed to mark as still broken:', error);
-      }
-    }
-  };
-
-  const handleSubmitRating = (rating: number, feedback?: string) => {
-    console.debug('Rating submitted:', { rating, feedback });
-    setActiveTicket(null);
-    setIsTicketVisible(false);
-  };
-
-
-  // Attach remote stream to video element when available
-  useEffect(() => {
-    if (remoteStream && videoRef.current) {
-      console.debug('Attaching remote stream to video element:', remoteStream.id);
-      console.debug('Stream details:', {
-        active: remoteStream.active,
-        videoTracks: remoteStream.getVideoTracks().length,
-        audioTracks: remoteStream.getAudioTracks().length,
-        videoTrackStates: remoteStream.getVideoTracks().map(track => ({
-          id: track.id,
-          enabled: track.enabled,
-          readyState: track.readyState,
-          muted: track.muted
-        }))
-      });
-
-      // Force video element to reset first
-      videoRef.current.srcObject = null;
-
-      // Wait a tick then set the new stream
-      setTimeout(() => {
-        if (videoRef.current && remoteStream) {
-          videoRef.current.srcObject = remoteStream;
-
-          // Add event listeners to debug video element
-          videoRef.current.onloadedmetadata = () => {
-            console.debug('Video metadata loaded:', {
-              videoWidth: videoRef.current!.videoWidth,
-              videoHeight: videoRef.current!.videoHeight,
-              duration: videoRef.current!.duration,
-              readyState: videoRef.current!.readyState
-            });
-          };
-
-          videoRef.current.onplaying = () => {
-            console.debug('Video started playing');
-          };
-
-          videoRef.current.onerror = (e) => {
-            console.error('Video element error:', e);
-          };
-
-          // Force play after setting srcObject
-          videoRef.current.play().catch(error => {
-            console.error('Error playing video:', error);
-
-            // If autoplay fails, try muted autoplay
-            if (videoRef.current) {
-              videoRef.current.muted = true;
-              videoRef.current.play().catch(err => {
-                console.error('Error playing video even when muted:', err);
-              });
-            }
-          });
-
-          // Log video element state
-          console.debug('Video element state after setting stream:', {
-            srcObject: videoRef.current.srcObject,
-            readyState: videoRef.current.readyState,
-            networkState: videoRef.current.networkState,
-            paused: videoRef.current.paused,
-            muted: videoRef.current.muted,
-            autoplay: videoRef.current.autoplay
-          });
-        }
-      }, 100);
-    } else if (!remoteStream && videoRef.current) {
-      console.debug('Clearing video element stream');
-      videoRef.current.srcObject = null;
-    }
-  }, [remoteStream]);
-
-
-
-
-
-
-
-  const getButtonText = () => {
-    // If ticket exists and is not completed, show "Show Active Ticket"
-    if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
-      return 'Show Active Ticket';
-    }
-    // If no ticket exists or ticket is completed, allow creating new ticket
-    return 'Create New Ticket';
-  };
-
-  const generateRandomMessage = () => {
-    const words = [
-      'thanks', 'for', 'helping', 'me', 'yes', 'that', 'fixed', 'it', 'no', 'still', 'broken',
-      'I', 'see', 'the', 'issue', 'now', 'oh', 'okay', 'let', 'me', 'try', 'that',
-      'working', 'on', 'it', 'hmm', 'interesting', 'perfect', 'great', 'awesome', 'nice',
-      'understood', 'got', 'it', 'makes', 'sense', 'thank', 'you', 'so', 'much'
-    ];
-
-    try {
-      const messageLength = Math.floor(Math.random() * 10) + 2; // 2 to 12 words
-      const selectedWords = [];
-
-      for (let i = 0; i < messageLength; i++) {
-        const randomIndex = Math.floor(Math.random() * words.length);
-        const selectedWord = words[randomIndex];
-        if (selectedWord) {
-          selectedWords.push(selectedWord);
-        }
-      }
-
-      if (selectedWords.length === 0) {
-        return 'Thanks for the help!';
-      }
-
-      return `${selectedWords.join(' ')}.`;
-    } catch (error) {
-      console.error('Error generating random message:', error);
-      return 'Thanks for the help!';
-    }
-  };
-
-  const handleSendRandomEngineerMessage = () => {
-    const randomMessage = generateRandomMessage();
-    console.debug('Generated engineer message:', randomMessage);
-
-    if (randomMessage && typeof randomMessage === 'string' && chatBoxRef.current) {
-      chatBoxRef.current.injectEngineerMessage(randomMessage);
-    } else {
-      console.error('Failed to generate valid message or chat not available');
-    }
-  };
 
   return (
     <div className="unjam-min-h-screen unjam-bg-gray-100 unjam-flex unjam-items-center unjam-justify-center unjam-font-sans">
@@ -259,194 +41,40 @@ const CustomerExtension: React.FC = () => {
           Customer Support
         </h1>
         
-        <button
+        <UnjamButton
           onClick={handleCreateNewTicketClick}
-          className="unjam-bg-blue-600 hover:unjam-bg-blue-700 unjam-text-white unjam-font-semibold unjam-py-3 unjam-px-6 unjam-rounded-lg unjam-shadow-lg unjam-transition-colors"
-        >
-          {getButtonText()}
-        </button>
+          text={getButtonText()}
+        />
 
-        {/* Debug controls for testing different states */}
+        {/* Debug Ticket component for testing different ticket states */}
         {process.env.NODE_ENV === 'development' && activeTicket && (
-          <div className="unjam-mt-8 unjam-p-4 unjam-bg-white unjam-rounded-lg unjam-shadow unjam-max-w-sm unjam-mx-auto">
-            <h3 className="unjam-font-semibold unjam-mb-2">Debug Controls</h3>
-            <div className="unjam-space-y-2">
-              <button
-                onClick={() => {
-                  if (activeTicket) {
-                    const updatedTicket = { ...activeTicket, status: 'waiting' as TicketStatus };
-                    ticketStore.update(activeTicket.id, updatedTicket);
-                    // Manually update context for same-tab updates (storage events only work cross-tab)
-                    setActiveTicket(updatedTicket);
-                  }
-                }}
-                className="unjam-block unjam-w-full unjam-text-sm unjam-bg-orange-200 hover:unjam-bg-orange-300 unjam-px-2 unjam-py-1 unjam-rounded"
-              >
-                Set to Waiting
-              </button>
-              <button
-                onClick={() => {
-                  if (activeTicket) {
-                    const updatedTicket = {
-                      ...activeTicket,
-                      status: 'in-progress' as TicketStatus,
-                      assignedTo: {
-                        id: 'ENG-001',
-                        name: 'John',
-                        type: 'engineer' as const,
-                        email: 'john@engineer.com'
-                      },
-                      claimedAt: new Date()
-                    };
-                    ticketStore.update(activeTicket.id, updatedTicket);
-                    // Manually update context for same-tab updates (storage events only work cross-tab)
-                    setActiveTicket(updatedTicket);
-                  }
-                }}
-                className="unjam-block unjam-w-full unjam-text-sm unjam-bg-blue-200 hover:unjam-bg-blue-300 unjam-px-2 unjam-py-1 unjam-rounded"
-              >
-                Set to In Progress (John)
-              </button>
-              <button
-                onClick={() => {
-                  if (activeTicket) {
-                    // Calculate auto-complete timeout
-                    const timeoutMinutes = AUTO_COMPLETE_TIMEOUT_MINUTES;
-                    const now = new Date();
-                    const autoCompleteTimeoutAt = new Date(now.getTime() + (timeoutMinutes * 60 * 1000));
+          <div className="unjam-mt-4">
+            <DebugTicket ref={debugTicketRef} />
+          </div>
+        )}
 
-                    const updatedTicket: Ticket = { 
-                      ...activeTicket, 
-                      status: 'awaiting-confirmation',
-                      markedAsFixedAt: new Date(),
-                      autoCompleteTimeoutAt,
-                    };
-                    ticketStore.update(activeTicket.id, updatedTicket);
-                    // Manually update context for same-tab updates (storage events only work cross-tab)
-                    setActiveTicket(updatedTicket);
-                  }
-                }}
-                className="unjam-block unjam-w-full unjam-text-sm unjam-bg-green-200 hover:unjam-bg-green-300 unjam-px-2 unjam-py-1 unjam-rounded"
-              >
-                Set to Awaiting Confirmation
-              </button>
-              <button
-                onClick={() => {
-                  if (activeTicket) {
-                    const updatedTicket = {
-                      ...activeTicket,
-                      status: 'completed' as TicketStatus,
-                      resolvedAt: new Date()
-                    };
-                    ticketStore.update(activeTicket.id, updatedTicket);
-                    // Manually update context for same-tab updates (storage events only work cross-tab)
-                    setActiveTicket(updatedTicket);
-                  }
-                }}
-                className="unjam-block unjam-w-full unjam-text-sm unjam-bg-purple-200 hover:unjam-bg-purple-300 unjam-px-2 unjam-py-1 unjam-rounded"
-              >
-                Set to Completed
-              </button>
-              <button
-                onClick={() => setIsChatVisible(!isChatVisible)}
-                className={`unjam-block unjam-w-full unjam-text-sm unjam-px-2 unjam-py-1 unjam-rounded unjam-font-medium ${
-                  isChatVisible
-                    ? 'unjam-bg-red-200 hover:unjam-bg-red-300'
-                    : 'unjam-bg-teal-200 hover:unjam-bg-teal-300'
-                }`}
-              >
-                {isChatVisible ? 'Hide Chat' : 'Show Chat'}
-              </button>
-              {isChatVisible && (
-                <>
-                  <button
-                    onClick={handleSendRandomEngineerMessage}
-                    className="unjam-block unjam-w-full unjam-text-sm unjam-bg-indigo-200 hover:unjam-bg-indigo-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-mt-2 unjam-font-medium"
-                  >
-                    Send Random Engineer Message
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (activeTicket && activeTicket.assignedTo) {
-                        console.debug('Debug: Triggering engineer typing indicator for customer to see');
-                        const chatStore = createChatStore(activeTicket.id);
-                        chatStore.markIsTyping(activeTicket.assignedTo);
-                        // Also trigger same-tab UI update
-                        if (chatBoxRef.current) {
-                          chatBoxRef.current.triggerTypingIndicator(activeTicket.assignedTo);
-                        }
-                      } else {
-                        console.warn('Debug: No active ticket or assigned engineer for typing simulation');
-                      }
-                    }}
-                    className="unjam-block unjam-w-full unjam-text-sm unjam-bg-yellow-200 hover:unjam-bg-yellow-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-mt-2 unjam-font-medium"
-                  >
-                    Trigger Engineer Typing
-                  </button>
-                  <button
-                    onClick={handleRequestScreenShare}
-                    className="unjam-block unjam-w-full unjam-text-sm unjam-bg-green-200 hover:unjam-bg-green-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-mt-2 unjam-font-medium"
-                  >
-                    Engineer Requests Screenshare
-                  </button>
+        {/* Debug Chat component for testing engineer chat behavior */}
+        {process.env.NODE_ENV === 'development' && activeTicket && (
+          <div className="unjam-mt-4">
+            <DebugChat
+              ref={debugChatRef}
+              activeTicket={activeTicket}
+              chatBoxRef={chatBoxRef}
+              isChatVisible={isChatVisible}
+              onToggleChat={() => setIsChatVisible(!isChatVisible)}
+            />
+          </div>
+        )}
 
-                  {/* Engineer-side Accept/Reject UI for customer-initiated requests */}
-                  {incomingScreenShareRequest && incomingScreenShareRequest.status === 'pending' && (
-                    <div className="unjam-mt-2 unjam-p-2 unjam-bg-blue-50 unjam-border unjam-border-blue-200 unjam-rounded">
-                      <p className="unjam-text-xs unjam-text-blue-800 unjam-font-medium unjam-mb-2">
-                        {incomingScreenShareRequest.sender.name} wants to share their screen
-                      </p>
-                      <div className="unjam-flex unjam-gap-1">
-                        <button
-                          onClick={handleAcceptCustomerRequest}
-                          className="unjam-flex-1 unjam-text-xs unjam-bg-green-200 hover:unjam-bg-green-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-font-medium"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={handleRejectCustomerRequest}
-                          className="unjam-flex-1 unjam-text-xs unjam-bg-red-200 hover:unjam-bg-red-300 unjam-px-2 unjam-py-1 unjam-rounded unjam-font-medium"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Screen Share Session Status and Video Display */}
-                  {activeScreenShareSession && (
-                    <div className="unjam-mt-2 unjam-p-2 unjam-bg-purple-50 unjam-border unjam-border-purple-200 unjam-rounded">
-                      <p className="unjam-text-xs unjam-text-purple-800 unjam-font-medium unjam-mb-2">
-                        Screen Share Session: {activeScreenShareSession.status}
-                      </p>
-                      <p className="unjam-text-xs unjam-text-purple-600 unjam-mb-2">
-                        Publisher: {activeScreenShareSession.publisher.name} |
-                        Subscriber: {activeScreenShareSession.subscriber.name}
-                      </p>
-
-
-                      {/* Video element to display the remote stream */}
-                      {remoteStream && (
-                        <div className="unjam-mt-2">
-                          <p className="unjam-text-xs unjam-text-purple-600 unjam-mb-1">
-                            Remote Stream Active
-                          </p>
-                          <video
-                            ref={videoRef}
-                            className="unjam-w-full unjam-h-48 unjam-bg-black unjam-rounded unjam-object-contain"
-                            autoPlay
-                            playsInline
-                            muted
-                            controls
-                            style={{ minHeight: '192px', display: 'block' }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+        {/* Debug ScreenShare component for testing engineer behavior */}
+        {process.env.NODE_ENV === 'development' && activeTicket && activeTicket.assignedTo && (
+          <div className="unjam-mt-4">
+            <DebugScreenShare
+              ref={debugScreenShareRef}
+              ticketId={activeTicket.id}
+              customerProfile={customerProfile}
+              engineerProfile={activeTicket.assignedTo}
+            />
           </div>
         )}
 
@@ -456,7 +84,6 @@ const CustomerExtension: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         customerProfile={customerProfile}
-        onTicketCreated={handleTicketCreated}
       />
 
       {/* Stacked container for ChatBox, ScreenShare, and TicketBox */}
@@ -473,7 +100,6 @@ const CustomerExtension: React.FC = () => {
 
         {activeTicket && activeTicket.assignedTo && (
           <ScreenShare
-            ref={screenShareRef}
             ticketId={activeTicket.id}
             engineerProfile={activeTicket.assignedTo}
           />
@@ -482,13 +108,7 @@ const CustomerExtension: React.FC = () => {
         {activeTicket && isTicketVisible && (
           <TicketBox
             ticket={activeTicket}
-            onHide={handleTicketHide}
-            onMarkFixed={handleMarkFixed}
-            onConfirmFixed={handleConfirmFixed}
-            onMarkStillBroken={handleMarkStillBroken}
-            onSubmitRating={handleSubmitRating}
-            onToggleChat={() => setIsChatVisible(!isChatVisible)}
-            isChatVisible={isChatVisible}
+            onHide={() => setIsTicketVisible(false)}
           />
         )}
       </div>

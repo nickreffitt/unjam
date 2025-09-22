@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import { type CustomerProfile } from '@common/types';
 import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
+import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
 
 interface TicketModalProps {
   isOpen: boolean;
   onClose: () => void;
   customerProfile: CustomerProfile;
-  onTicketCreated?: (ticketId: string) => void;
 }
 
-const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, onTicketCreated }) => {
+const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose }) => {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Use shared TicketManager from context
   const { ticketManager } = useTicketManager();
+
+  // Get state setters from useTicketState
+  const { setActiveTicket, setIsTicketVisible } = useTicketState();
 
   if (!isOpen) return null;
 
@@ -27,12 +30,22 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, onTicketCrea
       // Use TicketManager to create the ticket
       const ticket = await ticketManager.createTicket(description.trim());
 
-      // Clear form and close modal
-      setDescription('');
-      onClose();
+      // Handle post-creation logic internally
+      console.debug('Ticket created with ID:', ticket.id);
 
-      // Notify parent component of the new ticket
-      onTicketCreated?.(ticket.id);
+      // Since storage events only work cross-tab, manually get the created ticket and update context
+      const createdTicket = ticketManager.getActiveTicket();
+      if (createdTicket) {
+        console.debug('Setting active ticket in context:', createdTicket.id);
+        setActiveTicket(createdTicket);
+      } else {
+        console.warn('No active ticket found after creation');
+      }
+
+      // Clear form, close modal, and show the ticket
+      setDescription('');
+      setIsTicketVisible(true);
+      onClose();
     } catch (error) {
       console.error('Failed to create ticket:', error);
       // TODO: Show error message to user

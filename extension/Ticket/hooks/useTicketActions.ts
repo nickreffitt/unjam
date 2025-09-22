@@ -1,11 +1,21 @@
+import { useCallback } from 'react';
+import { type Ticket } from '@common/types';
 import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
 
 export interface UseTicketActionsReturn {
   handleCreateTicket: (problemDescription: string) => Promise<void>;
+  handleMarkFixed: () => void;
+  handleConfirmFixed: () => Promise<void>;
+  handleMarkStillBroken: () => Promise<void>;
+  handleSubmitRating: (rating: number, feedback?: string) => void;
 }
 
-export const useTicketActions = (): UseTicketActionsReturn => {
-  const { ticketManager } = useTicketManager();
+export const useTicketActions = (
+  activeTicket: Ticket | null,
+  setActiveTicket: (ticket: Ticket | null) => void,
+  setIsTicketVisible?: (visible: boolean) => void
+): UseTicketActionsReturn => {
+  const { ticketManager, ticketStore } = useTicketManager();
 
   const handleCreateTicket = async (problemDescription: string): Promise<void> => {
     try {
@@ -18,7 +28,58 @@ export const useTicketActions = (): UseTicketActionsReturn => {
     }
   };
 
+  const handleMarkFixed = useCallback((): void => {
+    if (activeTicket) {
+      const updatedTicket = {
+        ...activeTicket,
+        status: 'completed' as const,
+      };
+      ticketStore.update(activeTicket.id, updatedTicket);
+      // Manually update context for same-tab updates (storage events only work cross-tab)
+      setActiveTicket(updatedTicket);
+      console.debug('Customer marked ticket as fixed');
+    }
+  }, [activeTicket, ticketStore, setActiveTicket]);
+
+  const handleConfirmFixed = useCallback(async (): Promise<void> => {
+    if (activeTicket) {
+      try {
+        const updatedTicket = await ticketManager.markAsResolved(activeTicket.id);
+        // Manually update context for same-tab updates (storage events only work cross-tab)
+        setActiveTicket(updatedTicket);
+        console.debug('Customer confirmed fix');
+      } catch (error) {
+        console.error('Failed to confirm fix:', error);
+      }
+    }
+  }, [activeTicket, ticketManager, setActiveTicket]);
+
+  const handleMarkStillBroken = useCallback(async (): Promise<void> => {
+    if (activeTicket) {
+      try {
+        const updatedTicket = await ticketManager.markStillBroken(activeTicket.id);
+        // Manually update context for same-tab updates (storage events only work cross-tab)
+        setActiveTicket(updatedTicket);
+        console.debug('Customer marked as still broken');
+      } catch (error) {
+        console.error('Failed to mark as still broken:', error);
+      }
+    }
+  }, [activeTicket, ticketManager, setActiveTicket]);
+
+  const handleSubmitRating = useCallback((rating: number, feedback?: string): void => {
+    console.debug('Rating submitted:', { rating, feedback });
+    setActiveTicket(null);
+    if (setIsTicketVisible) {
+      setIsTicketVisible(false);
+    }
+  }, [setActiveTicket, setIsTicketVisible]);
+
   return {
-    handleCreateTicket
+    handleCreateTicket,
+    handleMarkFixed,
+    handleConfirmFixed,
+    handleMarkStillBroken,
+    handleSubmitRating
   };
 };

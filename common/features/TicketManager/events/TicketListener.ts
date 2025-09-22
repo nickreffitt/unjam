@@ -36,13 +36,14 @@ export interface TicketListenerCallbacks {
 }
 
 /**
- * Class that manages listening to global ticket events via storage events
- * Handles the setup and teardown of storage event listeners for cross-tab communication
+ * Class that manages listening to global ticket events
+ * Handles both same-tab (window events) and cross-tab (storage events) communication
  */
 export class TicketListener {
   private callbacks: Partial<TicketListenerCallbacks>;
   private isListening: boolean = false;
   private handleStorageEvent: ((event: StorageEvent) => void) | null = null;
+  private handleWindowEvent: ((event: CustomEvent) => void) | null = null;
 
   constructor(callbacks: Partial<TicketListenerCallbacks>) {
     this.callbacks = callbacks;
@@ -56,17 +57,45 @@ export class TicketListener {
   }
 
   /**
-   * Starts listening to storage events for cross-tab communication
+   * Starts listening to both storage events (cross-tab) and window events (same-tab)
    */
   startListening(): void {
     if (this.isListening || typeof window === 'undefined') return;
 
+    // Listen for storage events (cross-tab communication)
     this.handleStorageEvent = (event: StorageEvent) => {
       // Only process events for our specific key
       if (event.key !== 'ticketstore-event' || !event.newValue) return;
 
       try {
         const eventData = JSON.parse(event.newValue);
+        this.processEventData(eventData);
+      } catch (error) {
+        console.error('TicketListener: Error parsing storage event data:', error);
+      }
+    };
+
+    // Listen for window events (same-tab communication)
+    this.handleWindowEvent = (event: CustomEvent) => {
+      try {
+        this.processEventData(event.detail);
+      } catch (error) {
+        console.error('TicketListener: Error processing window event data:', error);
+      }
+    };
+
+    window.addEventListener('storage', this.handleStorageEvent);
+    window.addEventListener('ticket-event', this.handleWindowEvent as EventListener);
+    this.isListening = true;
+
+    console.debug('TicketListener: Started listening to global ticket events via storage and window events');
+  }
+
+  /**
+   * Processes event data from either storage or window events
+   */
+  private processEventData(eventData: any): void {
+    try {
         const { type, ticket, ticketId, tickets } = eventData;
 
         // Deserialize Date objects if ticket is present
@@ -144,24 +173,27 @@ export class TicketListener {
             }
             break;
         }
-      } catch (error) {
-        console.error('TicketListener: Error parsing storage event data:', error);
-      }
-    };
-
-    window.addEventListener('storage', this.handleStorageEvent);
-    this.isListening = true;
-    console.debug('TicketListener: Started listening to global ticket events via storage');
+    } catch (error) {
+      console.error('TicketListener: Error processing event data:', error);
+    }
   }
 
   /**
-   * Stops listening to storage events
+   * Stops listening to both storage and window events
    */
   stopListening(): void {
-    if (!this.isListening || !this.handleStorageEvent) return;
+    if (!this.isListening) return;
 
-    window.removeEventListener('storage', this.handleStorageEvent);
-    this.handleStorageEvent = null;
+    if (this.handleStorageEvent) {
+      window.removeEventListener('storage', this.handleStorageEvent);
+      this.handleStorageEvent = null;
+    }
+
+    if (this.handleWindowEvent) {
+      window.removeEventListener('ticket-event', this.handleWindowEvent as EventListener);
+      this.handleWindowEvent = null;
+    }
+
     this.isListening = false;
     console.debug('TicketListener: Stopped listening to global ticket events');
   }

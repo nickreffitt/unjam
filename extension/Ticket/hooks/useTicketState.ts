@@ -9,11 +9,19 @@ export interface UseTicketStateReturn {
   setActiveTicket: (ticket: Ticket | null) => void;
   isChatVisible: boolean;
   setIsChatVisible: (visible: boolean) => void;
+  isTicketVisible: boolean;
+  setIsTicketVisible: (visible: boolean) => void;
+  isModalOpen: boolean;
+  setIsModalOpen: (open: boolean) => void;
+  handleCreateNewTicketClick: () => void;
+  getButtonText: () => string;
 }
 
 export const useTicketState = (): UseTicketStateReturn => {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [isChatVisible, setIsChatVisible] = useState<boolean>(false);
+  const [isTicketVisible, setIsTicketVisible] = useState<boolean>(true);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const { customerProfile } = useUserProfile();
   const { ticketManager } = useTicketManager();
 
@@ -104,10 +112,38 @@ export const useTicketState = (): UseTicketStateReturn => {
     console.debug('useTicketState: User manually toggled chat to', visible);
   }, []);
 
+
+  // Handle create new ticket button click
+  const handleCreateNewTicketClick = useCallback(() => {
+    // If ticket exists and is not resolved, just show the existing ticket
+    if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
+      setIsTicketVisible(true);
+    } else {
+      // Only allow creating new ticket if no ticket exists or current ticket is completed
+      setIsModalOpen(true);
+    }
+  }, [activeTicket]);
+
+  // Get appropriate button text based on ticket state
+  const getButtonText = useCallback(() => {
+    // If ticket exists and is not completed, show "Show Active Ticket"
+    if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
+      return 'Show Active Ticket';
+    }
+    // If no ticket exists or ticket is completed, allow creating new ticket
+    return 'Create New Ticket';
+  }, [activeTicket]);
+
   return {
     activeTicket,
     setActiveTicket,
     isChatVisible,
-    setIsChatVisible: handleSetIsChatVisible
+    setIsChatVisible: handleSetIsChatVisible,
+    isTicketVisible,
+    setIsTicketVisible,
+    isModalOpen,
+    setIsModalOpen,
+    handleCreateNewTicketClick,
+    getButtonText
   };
 };

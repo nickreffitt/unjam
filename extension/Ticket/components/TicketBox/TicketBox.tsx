@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, MessageCircle, X, Star } from 'lucide-react';
 import { type Ticket } from '@common/types';
+import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
+import { useTicketActions } from '@extension/Ticket/hooks/useTicketActions';
 
 interface TicketBoxProps {
   ticket: Ticket | null;
-  onHide: () => void;
-  onMarkFixed: () => void;
-  onConfirmFixed: () => void;
-  onMarkStillBroken: () => void;
-  onSubmitRating: (rating: number, feedback?: string) => void;
-  onToggleChat?: () => void;
-  isChatVisible?: boolean;
+  onHide?: () => void;
 }
 
 interface TimerProps {
@@ -44,16 +40,26 @@ const Timer: React.FC<TimerProps> = ({ startTime }) => {
 
 const TicketBox: React.FC<TicketBoxProps> = ({
   ticket,
-  onHide,
-  onMarkFixed,
-  onConfirmFixed,
-  onMarkStillBroken,
-  onSubmitRating,
-  onToggleChat,
-  isChatVisible = false
+  onHide
 }) => {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
+
+  // Get state and actions from hooks
+  const {
+    isChatVisible,
+    setIsChatVisible,
+    isTicketVisible,
+    setIsTicketVisible,
+    setActiveTicket
+  } = useTicketState();
+
+  const {
+    handleMarkFixed,
+    handleConfirmFixed,
+    handleMarkStillBroken,
+    handleSubmitRating
+  } = useTicketActions(ticket, setActiveTicket, setIsTicketVisible);
 
   if (!ticket) return null;
 
@@ -67,7 +73,19 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   };
 
   const handleRatingSubmit = () => {
-    onSubmitRating(rating, feedback);
+    handleSubmitRating(rating, feedback);
+  };
+
+  const handleToggleChat = () => {
+    setIsChatVisible(!isChatVisible);
+  };
+
+  const handleHide = () => {
+    if (onHide) {
+      onHide();
+    } else {
+      setIsTicketVisible(false);
+    }
   };
 
   const renderStars = () => {
@@ -128,7 +146,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         </div>
         <button
           data-testid="ticket-box-close-button"
-          onClick={onHide}
+          onClick={handleHide}
           className="unjam-text-gray-400 hover:unjam-text-gray-600"
         >
           <X size={18} />
@@ -158,14 +176,14 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           
           <div className="unjam-space-y-2">
             <button
-              onClick={onToggleChat}
+              onClick={handleToggleChat}
               className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
             >
               <MessageCircle size={16} />
               {isChatVisible ? 'Hide Chat' : 'Show Chat'}
             </button>
             <button
-              onClick={onMarkFixed}
+              onClick={handleMarkFixed}
               className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
             >
               <CheckCircle size={16} />
@@ -181,14 +199,14 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           
           <div className="unjam-flex unjam-gap-2">
             <button
-              onClick={onConfirmFixed}
+              onClick={handleConfirmFixed}
               className="unjam-flex-1 unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
             >
               <CheckCircle size={14} />
               Yes, it's fixed!
             </button>
             <button
-              onClick={onMarkStillBroken}
+              onClick={handleMarkStillBroken}
               className="unjam-flex-1 unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
             >
               <X size={14} />
