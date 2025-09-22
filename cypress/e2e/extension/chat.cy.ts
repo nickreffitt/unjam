@@ -37,8 +37,8 @@ describe('Extension - Chat Functionality', () => {
     cy.get('[data-testid="chat-send-button"]').click();
 
     // verify message appears in chat
-    cy.contains('Hello engineer, I need help!').should('be.visible');
-    cy.contains('You').should('be.visible'); // Customer message shows "You"
+    cy.get('[data-testid="chat-message-content"]').contains('Hello engineer, I need help!').should('be.visible');
+    cy.get('[data-testid="chat-message"]').contains('You').should('be.visible'); // Customer message shows "You"
   });
 
   it('allows manual toggle of chat visibility when ticket is in-progress', () => {

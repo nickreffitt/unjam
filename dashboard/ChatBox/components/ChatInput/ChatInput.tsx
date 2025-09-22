@@ -21,6 +21,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <div className="unjam-flex unjam-items-center unjam-gap-3">
       <input
+        data-testid="chat-input"
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -47,6 +48,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         "
       />
       <button
+        data-testid="chat-send-button"
         onClick={onSend}
         disabled={disabled || !value.trim()}
         className="

@@ -94,7 +94,7 @@ const DebugTicket = forwardRef<DebugTicketRef, DebugTicketProps>(({
 
   return (
     <div data-testid="debug-ticket" className={`unjam-w-120 unjam-bg-white unjam-rounded-lg unjam-shadow unjam-border unjam-border-gray-300 unjam-p-4 unjam-font-sans ${className}`}>
-      <h3 className="unjam-font-semibold unjam-mb-3 unjam-text-gray-800">Debug Ticket Controls</h3>
+      <h3 className="unjam-font-semibold unjam-mb-3 unjam-text-gray-800">Debug Controls</h3>
 
       <div className="unjam-space-y-3">
         <button

@@ -87,8 +87,12 @@ describe('TicketEventEmitter', () => {
       });
       expect(eventData.timestamp).toBeTypeOf('number');
 
-      // Window events should NOT be dispatched (storage events only for cross-tab)
-      expect(mockWindow.dispatchEvent).not.toHaveBeenCalled();
+      // Window events should be dispatched for same-tab communication
+      expect(mockWindow.dispatchEvent).toHaveBeenCalledTimes(1);
+      const customEvent = mockWindow.dispatchEvent.mock.calls[0][0];
+      expect(customEvent.type).toBe('ticket-event');
+      expect(customEvent.detail.type).toBe('ticketCreated');
+      expect(customEvent.detail.ticket).toEqual(mockTicket);
     });
   });
 
@@ -114,8 +118,12 @@ describe('TicketEventEmitter', () => {
       });
       expect(eventData.timestamp).toBeTypeOf('number');
 
-      // Window events should NOT be dispatched (storage events only for cross-tab)
-      expect(mockWindow.dispatchEvent).not.toHaveBeenCalled();
+      // Window events should be dispatched for same-tab communication
+      expect(mockWindow.dispatchEvent).toHaveBeenCalledTimes(1);
+      const customEvent = mockWindow.dispatchEvent.mock.calls[0][0];
+      expect(customEvent.type).toBe('ticket-event');
+      expect(customEvent.detail.type).toBe('ticketUpdated');
+      expect(customEvent.detail.ticket).toEqual(mockTicket);
     });
   });
 
@@ -141,8 +149,12 @@ describe('TicketEventEmitter', () => {
       expect(eventData.ticketId).toBe(ticketId);
       expect(eventData.timestamp).toBeTypeOf('number');
 
-      // Window events should NOT be dispatched (storage events only for cross-tab)
-      expect(mockWindow.dispatchEvent).not.toHaveBeenCalled();
+      // Window events should be dispatched for same-tab communication
+      expect(mockWindow.dispatchEvent).toHaveBeenCalledTimes(1);
+      const customEvent = mockWindow.dispatchEvent.mock.calls[0][0];
+      expect(customEvent.type).toBe('ticket-event');
+      expect(customEvent.detail.type).toBe('ticketDeleted');
+      expect(customEvent.detail.ticketId).toBe(ticketId);
     });
   });
 
@@ -164,8 +176,11 @@ describe('TicketEventEmitter', () => {
       expect(eventData.type).toBe('ticketsCleared');
       expect(eventData.timestamp).toBeTypeOf('number');
 
-      // Window events should NOT be dispatched (storage events only for cross-tab)
-      expect(mockWindow.dispatchEvent).not.toHaveBeenCalled();
+      // Window events should be dispatched for same-tab communication
+      expect(mockWindow.dispatchEvent).toHaveBeenCalledTimes(1);
+      const customEvent = mockWindow.dispatchEvent.mock.calls[0][0];
+      expect(customEvent.type).toBe('ticket-event');
+      expect(customEvent.detail.type).toBe('ticketsCleared');
     });
   });
 
@@ -218,8 +233,12 @@ describe('TicketEventEmitter', () => {
         timestamp: expect.any(Number)
       });
 
-      // Window events should NOT be dispatched (storage events only for cross-tab)
-      expect(mockWindow.dispatchEvent).not.toHaveBeenCalled();
+      // Window events should be dispatched for same-tab communication
+      expect(mockWindow.dispatchEvent).toHaveBeenCalledTimes(1);
+      const customEvent = mockWindow.dispatchEvent.mock.calls[0][0];
+      expect(customEvent.type).toBe('ticket-event');
+      expect(customEvent.detail.type).toBe('ticketCreated');
+      expect(customEvent.detail.ticket).toEqual(mockTicket);
     });
   });
 });

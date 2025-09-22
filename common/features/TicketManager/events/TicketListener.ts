@@ -96,6 +96,11 @@ export class TicketListener {
    */
   private processEventData(eventData: any): void {
     try {
+        if (!eventData || typeof eventData !== 'object') {
+          console.warn('TicketListener: Invalid event data received:', eventData);
+          return;
+        }
+
         const { type, ticket, ticketId, tickets } = eventData;
 
         // Deserialize Date objects if ticket is present

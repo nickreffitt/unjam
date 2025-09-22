@@ -287,10 +287,14 @@ describe('TicketListener', () => {
       const partialCallbacks = {
         onTicketCreated: vi.fn(),
       };
+
+      // Clear previous mocks
+      vi.clearAllMocks();
+
       const partialListener = new TicketListener(partialCallbacks);
       partialListener.startListening();
 
-      const eventHandler = mockWindow.addEventListener.mock.calls[1][1]; // Second call
+      const eventHandler = mockWindow.addEventListener.mock.calls[0][1]; // First call (storage event)
 
       // When various storage events are received
       const events = [
@@ -319,14 +323,18 @@ describe('TicketListener', () => {
           throw new Error('Callback error');
         }),
       };
-      const errorListener = new TicketListener(errorCallbacks);
-      errorListener.startListening();
+
+      // Clear previous mocks
+      vi.clearAllMocks();
 
       // Mock console.error
       const originalError = console.error;
       console.error = vi.fn();
 
-      const eventHandler = mockWindow.addEventListener.mock.calls[1][1]; // Second call
+      const errorListener = new TicketListener(errorCallbacks);
+      errorListener.startListening();
+
+      const eventHandler = mockWindow.addEventListener.mock.calls[0][1]; // First call (storage event)
 
       // When storage event is received and callback throws
       const mockEvent = {

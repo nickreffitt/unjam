@@ -1,7 +1,63 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ScreenShareManager } from './ScreenShareManager';
 import { ScreenShareRequestStore, ScreenShareSessionStore } from './store';
 import { type UserProfile } from '@common/types';
+
+// Mock WebRTC dependencies
+vi.mock('@common/features/WebRTCManager', () => {
+  const mockMediaStream = {
+    id: 'mock-stream-id',
+    getTracks: vi.fn(() => []),
+    getVideoTracks: vi.fn(() => []),
+    getAudioTracks: vi.fn(() => []),
+  };
+
+  const mockWebRTCManager = {
+    getState: vi.fn(() => 'connected'),
+    initializeConnection: vi.fn().mockResolvedValue(undefined),
+    startScreenShare: vi.fn().mockResolvedValue({
+      type: 'offer',
+      sdp: 'mock-offer-sdp'
+    }),
+    startScreenSharing: vi.fn().mockResolvedValue(mockMediaStream),
+    acceptScreenShare: vi.fn().mockResolvedValue({
+      type: 'answer',
+      sdp: 'mock-answer-sdp'
+    }),
+    handleAnswer: vi.fn().mockResolvedValue(undefined),
+    handleICECandidate: vi.fn().mockResolvedValue(undefined),
+    disconnect: vi.fn().mockResolvedValue(undefined),
+    dispose: vi.fn(),
+  };
+
+  const createWebRTCManager = vi.fn().mockResolvedValue(mockWebRTCManager);
+
+  const WebRTCSignalingStore = vi.fn().mockImplementation(() => ({
+    clear: vi.fn(),
+    getOfferBySessionId: vi.fn(),
+    getAnswerBySessionId: vi.fn(),
+    getICECandidatesBySessionId: vi.fn(),
+    saveOffer: vi.fn(),
+    saveAnswer: vi.fn(),
+    saveICECandidate: vi.fn(),
+  }));
+
+  return {
+    createWebRTCManager,
+    WebRTCSignalingStore,
+    WebRTCManager: vi.fn().mockImplementation(() => mockWebRTCManager),
+  };
+});
+
+// Mock WebRTC Listener
+vi.mock('@common/features/WebRTCManager/events', () => ({
+  WebRTCListener: vi.fn().mockImplementation(() => ({
+    startListening: vi.fn(),
+    stopListening: vi.fn(),
+    getIsListening: vi.fn().mockReturnValue(false),
+    updateCallbacks: vi.fn(),
+  })),
+}));
 
 describe('ScreenShareManager', () => {
   let manager: ScreenShareManager;
