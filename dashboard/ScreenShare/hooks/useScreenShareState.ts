@@ -184,7 +184,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
     onScreenShareSessionEnded: useCallback((session: ScreenShareSession) => {
       if (session.ticketId === ticketId) {
         console.debug('Screen share session ended', session.id);
-        screenShareManager.dispose();
+        screenShareManager.reset();
         screenShareManager.reload();
 
         // Clear the current session and return to idle state

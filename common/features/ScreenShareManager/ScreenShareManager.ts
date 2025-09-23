@@ -716,6 +716,16 @@ export class ScreenShareManager {
   }
 
   /**
+   * Reset manager state without destroying listeners (for reuse)
+   */
+  reset(): void {
+    this.stopScreenSharing();
+    this.signalingStore.clear();
+    this.currentSessionId = null;
+    this.webrtcState = 'initializing';
+  }
+
+  /**
    * Cleanup WebRTC resources when manager is destroyed
    */
   dispose(): void {
