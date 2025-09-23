@@ -40,11 +40,30 @@ export const useScreenShareActions = (
     try {
       const screenShareManager = createScreenShareManagerRef.current(ticketIdRef.current);
 
-      // Just respond to the request to mark it as accepted - don't start session automatically
+      // First, respond to the request to mark it as accepted
       screenShareManager.respondToRequest(request, 'accepted', customerProfileRef.current);
-      console.debug('Screenshare request accepted - waiting for manual session start');
+      console.debug('Screenshare request accepted');
 
-      // Reload the ScreenShareManager to sync with the updated request in localStorage
+      // Then immediately start the session
+      if (request.sender.type === 'engineer' && engineerProfileRef.current) {
+        console.debug('Starting session for accepted engineer request:', request.id);
+
+        await screenShareManager.startSession(
+          request.id,
+          customerProfileRef.current,   // publisher (customer shares screen)
+          engineerProfileRef.current    // subscriber (engineer views)
+        );
+
+        console.debug('Screen share session started with automatic publishing after accepting engineer request');
+
+        // Notify parent that session has started (for same-tab updates)
+        if (onSessionStarted) {
+          console.debug('Notifying parent that session has started');
+          onSessionStarted();
+        }
+      }
+
+      // Reload the ScreenShareManager to sync with the updated request/session in localStorage
       screenShareManager.reload();
     } catch (error) {
       console.error('Failed to accept screenshare request:', error);
