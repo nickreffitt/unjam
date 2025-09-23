@@ -44,40 +44,30 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-  # Functional test job with Cypress
+  # Functional test job with Cypress using official GitHub Action
   functional-tests:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      # Checkout the repository code
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # Setup Node.js environment
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # Run Cypress tests using the official GitHub Action
+      # This action handles:
+      # - Installing dependencies
+      # - Starting the dev server
+      # - Waiting for the server to be ready
+      # - Running the tests
+      - name: Cypress run
+        uses: cypress-io/github-action@v6
         with:
-          node-version: '18'
-          cache: 'npm'
-
-      # Install npm dependencies
-      - name: Install dependencies
-        run: npm ci
-
-      # Start unified dev server in background
-      - name: Start unified dev server
-        run: |
-          npm run dev:unified &
-          echo "Started dev:unified server in background"
-
-      # Wait for server to be ready (port 5175 is configured in vite.unified.config.ts)
-      - name: Wait for server to start
-        run: |
-          echo "Waiting for server to be ready on port 5175..."
-          npx wait-on http://localhost:5175 --timeout 60000
-          echo "Server is ready!"
-
-      # Run Cypress tests
-      - name: Run Cypress tests
-        run: npm run cypress:run
+          # Start the unified dev server (will wait for it automatically)
+          start: npm run dev:unified
+          # Wait for the server to be ready on port 5175
+          wait-on: 'http://localhost:5175'
+          # Timeout for waiting (in seconds)
+          wait-on-timeout: 120
+          # Browser to use for testing
+          browser: chrome
+          # Command to run tests (uses cypress:run script)
+          command: npm run cypress:run

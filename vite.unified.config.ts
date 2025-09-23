@@ -36,6 +36,7 @@ export default defineConfig({
   },
   server: {
     port: 5175,
+    host: true, // Listen on all addresses, including network
   },
   resolve: {
     alias: {
