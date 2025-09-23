@@ -9,7 +9,9 @@ export type ScreenShareUIState =
   | 'requesting'        // Engineer sent request, waiting for customer response
   | 'incoming_call'     // Customer initiated call, waiting for engineer response
   | 'active_session'    // Screen share session is active
-  | 'loading';          // Request accepted, setting up session
+  | 'loading'           // Request accepted, setting up session
+  | 'connection_lost'   // Connection was lost, showing reconnect option
+  | 'connection_failed'; // Connection failed permanently
 
 export interface UseScreenShareStateReturn {
   currentRequest: ScreenShareRequest | null;
@@ -170,6 +172,32 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
     onScreenShareSessionUpdated: useCallback((session: ScreenShareSession) => {
       screenShareManager.reload();
       if (session.ticketId === ticketId) {
+        // Handle connection loss scenarios
+        if (session.status === 'disconnected' || session.status === 'error') {
+          console.debug('Screen share session connection lost or failed:', session.id, 'status:', session.status);
+
+          // Set appropriate UI state based on error type
+          const errorUIState = session.status === 'disconnected' ? 'connection_lost' : 'connection_failed';
+          setUIState(errorUIState);
+          setRemoteStream(null); // Clear stream immediately
+
+          // Reset the manager after a short delay to allow UI to show error state
+          setTimeout(() => {
+            screenShareManager.reset();
+            screenShareManager.reload();
+
+            // Clear all state and return to idle
+            setCurrentSession(null);
+            setCurrentRequest(null);
+            setUIState('idle');
+            clearExpirationTimer();
+
+            console.debug('Dashboard screen share reset due to connection loss');
+          }, 3000); // Show error state for 3 seconds
+
+          return;
+        }
+
         setCurrentSession(session);
 
         if (session.status === 'active') {
@@ -179,7 +207,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
 
         setUIState(deriveUIState(currentRequest, session));
       }
-    }, [screenShareManager, ticketId, deriveUIState, currentRequest]),
+    }, [screenShareManager, ticketId, deriveUIState, currentRequest, clearExpirationTimer]),
 
     onScreenShareSessionEnded: useCallback((session: ScreenShareSession) => {
       if (session.ticketId === ticketId) {

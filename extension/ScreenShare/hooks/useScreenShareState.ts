@@ -245,6 +245,17 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
       console.debug('useScreenShareState: Screen share session updated', session.id, 'for ticket', session.ticketId, 'status:', session.status);
       // Only handle sessions for our ticket
       if (session.ticketId === ticketIdRef.current) {
+        // Handle connection loss scenarios - immediate reset for both disconnected and error
+        if (session.status === 'disconnected' || session.status === 'error') {
+          console.debug('Extension: Screen share connection lost or failed:', session.id, 'status:', session.status);
+
+          // Reset manager and UI immediately
+          screenShareManager.reset();
+          screenShareManager.reload();
+          refreshStateRef.current();
+          return;
+        }
+
         console.debug('useScreenShareState: Refreshing state due to session update for our ticket');
         refreshStateRef.current();
       } else {

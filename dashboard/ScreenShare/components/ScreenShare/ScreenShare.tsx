@@ -138,6 +138,30 @@ const ScreenShare: React.FC<ScreenShareProps> = ({ ticketId, customer }) => {
               </div>
             );
 
+          case 'connection_lost':
+            return (
+              <div className="unjam-space-y-3">
+                <div className="unjam-text-center unjam-text-yellow-700 unjam-mb-4">
+                  <p className="unjam-font-medium">Connection Lost</p>
+                  <p className="unjam-text-sm unjam-text-yellow-600 unjam-mt-1">
+                    Screen share connection was lost. Returning to main view...
+                  </p>
+                </div>
+              </div>
+            );
+
+          case 'connection_failed':
+            return (
+              <div className="unjam-space-y-3">
+                <div className="unjam-text-center unjam-text-red-700 unjam-mb-4">
+                  <p className="unjam-font-medium">Connection Failed</p>
+                  <p className="unjam-text-sm unjam-text-red-600 unjam-mt-1">
+                    Screen share connection failed. Returning to main view...
+                  </p>
+                </div>
+              </div>
+            );
+
           case 'requesting':
           case 'loading':
           case 'active_session':
@@ -153,6 +177,8 @@ const ScreenShare: React.FC<ScreenShareProps> = ({ ticketId, customer }) => {
                 {uiState === 'requesting' && 'Requesting...'}
                 {uiState === 'loading' && 'Loading...'}
                 {uiState === 'active_session' && 'Session Active'}
+                {uiState === 'connection_lost' && 'Connection Lost'}
+                {uiState === 'connection_failed' && 'Connection Failed'}
                 {uiState === 'idle' && 'Request Screenshare'}
               </button>
             );
