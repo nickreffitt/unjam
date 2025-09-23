@@ -7,6 +7,7 @@ import { useUserProfile } from '@extension/shared/UserProfileContext';
 export interface UseScreenShareStateReturn {
   activeRequest: ScreenShareRequest | undefined;
   outgoingRequest: ScreenShareRequest | undefined;
+  acceptedRequest: ScreenShareRequest | undefined;
   activeSession: ScreenShareSession | undefined;
   refreshState: () => void;
 }
@@ -14,6 +15,7 @@ export interface UseScreenShareStateReturn {
 export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn => {
   const [activeRequest, setActiveRequest] = useState<ScreenShareRequest | undefined>();
   const [outgoingRequest, setOutgoingRequest] = useState<ScreenShareRequest | undefined>();
+  const [acceptedRequest, setAcceptedRequest] = useState<ScreenShareRequest | undefined>();
   const [activeSession, setActiveSession] = useState<ScreenShareSession | undefined>();
   const { createScreenShareManager } = useScreenShareManager();
   const { customerProfile } = useUserProfile();
@@ -99,6 +101,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
         setActiveSession(session);
         setActiveRequest(undefined);
         setOutgoingRequest(undefined);
+        setAcceptedRequest(undefined);
         clearExpirationTimer();
         clearOutgoingExpirationTimer();
       } else {
@@ -106,23 +109,52 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
         setActiveSession(undefined);
 
         if (request) {
-          // Determine if this is an incoming or outgoing request
+          console.debug('Request', request);
+          // Determine if this is an incoming, outgoing, or accepted request
           if (request.sender.type === 'engineer' && request.receiver.id === customerProfile.id) {
-            // Incoming request (engineer to customer)
-            setActiveRequest(request);
-            setExpirationTimer(request);
-            setOutgoingRequest(undefined);
-            clearOutgoingExpirationTimer();
-          } else if (request.sender.id === customerProfile.id && request.status === 'pending') {
+            if (request.status === 'pending') {
+              // Incoming pending request (engineer to customer)
+              setActiveRequest(request);
+              setExpirationTimer(request);
+              setOutgoingRequest(undefined);
+              setAcceptedRequest(undefined);
+              clearOutgoingExpirationTimer();
+            } else if (request.status === 'accepted') {
+              console.debug('Accepted engineer request - ');
+              setAcceptedRequest(undefined);
+              setActiveRequest(undefined);
+              setOutgoingRequest(undefined);
+              clearExpirationTimer();
+              clearOutgoingExpirationTimer();
+            } else {
+              // Other statuses (rejected, expired, etc.)
+              setActiveRequest(undefined);
+              setOutgoingRequest(undefined);
+              setAcceptedRequest(undefined);
+              clearExpirationTimer();
+              clearOutgoingExpirationTimer();
+            }
+          } else if (request.sender.id === customerProfile.id) {
             // Outgoing request (customer to engineer) - only show "Calling.." if still pending
-            setOutgoingRequest(request);
-            setOutgoingExpirationTimer(request);
-            setActiveRequest(undefined);
-            clearExpirationTimer();
+            if (request.status === 'pending') {
+              setOutgoingRequest(request);
+              setOutgoingExpirationTimer(request);
+              setActiveRequest(undefined);
+              setAcceptedRequest(undefined);
+              clearExpirationTimer();
+            } else if (request.status === 'accepted') {
+              console.debug('Accepted engineer request - ');
+              setAcceptedRequest(request);
+              setActiveRequest(undefined);
+              setOutgoingRequest(undefined);
+              clearExpirationTimer();
+              clearOutgoingExpirationTimer();
+            }
           } else {
             // Request not relevant for UI state (e.g., customer request that's no longer pending)
             setActiveRequest(undefined);
             setOutgoingRequest(undefined);
+            setAcceptedRequest(undefined);
             clearExpirationTimer();
             clearOutgoingExpirationTimer();
           }
@@ -130,6 +162,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
           // No active request
           setActiveRequest(undefined);
           setOutgoingRequest(undefined);
+          setAcceptedRequest(undefined);
           clearExpirationTimer();
           clearOutgoingExpirationTimer();
         }
@@ -166,6 +199,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
     console.debug('useScreenShareState: Creating listener callbacks for ticket:', ticketId);
     return {
     onScreenShareRequestCreated: (request: ScreenShareRequest) => {
+      screenShareManager.reload();
       console.debug('useScreenShareState: Screen share request created', request.id, 'for ticket', request.ticketId);
       // Only refresh if it's for our ticket
       if (request.ticketId === ticketIdRef.current) {
@@ -176,28 +210,10 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
       }
     },
     onScreenShareRequestUpdated: async (request: ScreenShareRequest) => {
-      console.debug('useScreenShareState: Screen share request updated', request.id, 'for ticket', request.ticketId);
+      screenShareManager.reload();
+      console.debug('useScreenShareState: Screen share request updated', request, 'for ticket', request.ticketId);
       // Only refresh if it's for our ticket
       if (request.ticketId === ticketIdRef.current) {
-        if (request.sender.id === customerProfile.id && request.status === 'accepted') {
-          // Customer-initiated request was accepted by engineer, start session
-          console.debug('useScreenShareState: Customer request accepted, starting session and publishing stream');
-
-          try {
-            const manager = screenShareManager;
-
-            // Find the engineer from the request (receiver for customer-initiated requests)
-            const engineerProfile = request.receiver;
-
-            // Start session: customer publishes, engineer subscribes
-            const session = await manager.startSession(request.id, customerProfile, engineerProfile);
-            console.debug('useScreenShareState: Session started with automatic publishing:', session.id);
-
-          } catch (error) {
-            console.error('useScreenShareState: Failed to start session and publish stream:', error);
-          }
-        }
-
         console.debug('useScreenShareState: Refreshing state due to updated request for our ticket');
         refreshStateRef.current();
       } else {
@@ -205,6 +221,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
       }
     },
     onScreenShareSessionCreated: async (session: ScreenShareSession) => {
+      screenShareManager.reload();
       console.debug('useScreenShareState: Screen share session created', session.id, 'for ticket', session.ticketId);
       // Only handle sessions for our ticket
       if (session.ticketId === ticketIdRef.current) {
@@ -224,6 +241,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
       }
     },
     onScreenShareSessionUpdated: async (session: ScreenShareSession) => {
+      screenShareManager.reload();
       console.debug('useScreenShareState: Screen share session updated', session.id, 'for ticket', session.ticketId, 'status:', session.status);
       // Only handle sessions for our ticket
       if (session.ticketId === ticketIdRef.current) {
@@ -234,9 +252,11 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
       }
     },
     onScreenShareSessionEnded: async (session: ScreenShareSession) => {
+      screenShareManager.reload();
       console.debug('useScreenShareState: Screen share session ended', session.id, 'for ticket', session.ticketId);
       // Only handle sessions for our ticket
       if (session.ticketId === ticketIdRef.current) {
+        screenShareManager.reset();
         console.debug('useScreenShareState: Session ended, refreshing state');
         refreshStateRef.current();
       } else {
@@ -252,6 +272,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
   return {
     activeRequest,
     outgoingRequest,
+    acceptedRequest,
     activeSession,
     refreshState
   };

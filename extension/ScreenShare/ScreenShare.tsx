@@ -18,8 +18,8 @@ export interface ScreenShareRef {
 
 const ScreenShare = forwardRef<ScreenShareRef, ScreenShareProps>(({ ticketId, engineerProfile, className = '', onCustomerRequestCreated, onSessionStarted }, ref) => {
   const { customerProfile } = useUserProfile();
-  const { activeRequest, outgoingRequest, activeSession, refreshState } = useScreenShareState(ticketId);
-  const { handleAcceptRequest, handleRejectRequest, handleScreenShareClick, handleEndCall } = useScreenShareActions(
+  const { activeRequest, outgoingRequest, acceptedRequest, activeSession, refreshState } = useScreenShareState(ticketId);
+  const { handleAcceptRequest, handleRejectRequest, handleScreenShareClick, handleStartSession, handleEndCall } = useScreenShareActions(
     ticketId,
     customerProfile,
     engineerProfile,
@@ -57,6 +57,21 @@ const ScreenShare = forwardRef<ScreenShareRef, ScreenShareProps>(({ ticketId, en
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Show "Present Screen" button if there's an accepted request waiting to start
+  if (acceptedRequest && acceptedRequest.status === 'accepted') {
+    return (
+      <div data-testid="screen-share" className={`unjam-w-120 unjam-h-16 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border unjam-border-green-400 unjam-bg-green-50 unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans ${className}`}>
+        <button
+          onClick={() => handleStartSession(acceptedRequest, onSessionStarted)}
+          className="unjam-w-half unjam-bg-green-600 hover:unjam-bg-green-700 unjam-border unjam-border-green-700 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 unjam-text-white"
+        >
+          <ScreenShareIcon size={16} />
+          Present Screen
+        </button>
       </div>
     );
   }
