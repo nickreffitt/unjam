@@ -5,6 +5,7 @@ export type ScreenShareEventType =
   | 'screenShareRequestUpdated'
   | 'screenShareSessionCreated'
   | 'screenShareSessionUpdated'
+  | 'screenShareSessionEnded'
   | 'screenShareReloaded'
   | 'screenShareRemoteStreamAvailable';
 
@@ -47,6 +48,14 @@ export class ScreenShareEventEmitter {
    */
   emitScreenShareSessionUpdated(session: ScreenShareSession): void {
     this.emitWindowEvent('screenShareSessionUpdated', { session });
+  }
+
+  /**
+   * Emits a screen share session ended event
+   * @param session - The ended session
+   */
+  emitScreenShareSessionEnded(session: ScreenShareSession): void {
+    this.emitWindowEvent('screenShareSessionEnded', { session });
   }
 
   /**

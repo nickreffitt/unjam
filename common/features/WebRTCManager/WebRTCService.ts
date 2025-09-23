@@ -1,7 +1,7 @@
 import type { UserProfile, WebRTCState, WebRTCError, WebRTCSignal } from '@common/types';
 import type { WebRTCSignalingStore } from './store';
 import { ICEServerService } from './ICEServerService';
-import { WebRTCEventEmitter } from './events';
+import { WebRTCEventEmitter, WebRTCListener } from './events';
 
 export interface WebRTCServiceConfig {
   sessionId: string;
@@ -18,6 +18,7 @@ export class WebRTCService {
   private readonly isPublisher: boolean;
   private readonly signalingStore: WebRTCSignalingStore;
   private readonly eventEmitter: WebRTCEventEmitter;
+  private readonly eventListener: WebRTCListener;
 
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
@@ -33,6 +34,22 @@ export class WebRTCService {
     this.isPublisher = config.isPublisher;
     this.signalingStore = config.signalingStore;
     this.eventEmitter = new WebRTCEventEmitter();
+
+    // Create WebRTC listener to sync signaling store when cross-tab events are received
+    this.eventListener = new WebRTCListener({
+      onWebRTCOfferCreated: () => {
+        console.debug('WebRTCService: Reloading signaling store due to offer created event');
+        this.signalingStore.reload();
+      },
+      onWebRTCAnswerCreated: () => {
+        console.debug('WebRTCService: Reloading signaling store due to answer created event');
+        this.signalingStore.reload();
+      },
+      onWebRTCIceCandidate: () => {
+        console.debug('WebRTCService: Reloading signaling store due to ICE candidate event');
+        this.signalingStore.reload();
+      }
+    });
 
     console.debug(`WebRTCService: Created for session ${this.sessionId}`, {
       localUser: `${this.localUser.id} (${this.localUser.type})`,
@@ -83,6 +100,9 @@ export class WebRTCService {
 
       // Set up event listeners
       this.setupPeerConnectionEventListeners();
+
+      // Start listening for cross-tab WebRTC events
+      this.eventListener.startListening();
 
       // Start polling for signals
       this.startSignalPolling();
@@ -313,6 +333,9 @@ export class WebRTCService {
   dispose(): void {
     console.debug(`WebRTCService: Disposing service for ${this.localUser.type} ${this.localUser.id} (${this.isPublisher ? 'PUBLISHER' : 'SUBSCRIBER'}) in session ${this.sessionId}`);
 
+    // Stop WebRTC event listener
+    this.eventListener.stopListening();
+
     // Stop signal polling
     if (this.signalPollingInterval) {
       console.debug(`WebRTCService: Stopping signal polling for ${this.localUser.type} ${this.localUser.id} (${this.isPublisher ? 'PUBLISHER' : 'SUBSCRIBER'}) in session ${this.sessionId}`);
@@ -369,9 +392,27 @@ export class WebRTCService {
       const connectionState = this.peerConnection!.connectionState;
       console.debug('WebRTCService: Connection state changed to', connectionState);
 
+      // Log detailed peer connection state for debugging
+      console.debug('WebRTCService: Peer connection diagnostics', {
+        connectionState: this.peerConnection!.connectionState,
+        iceConnectionState: this.peerConnection!.iceConnectionState,
+        iceGatheringState: this.peerConnection!.iceGatheringState,
+        signalingState: this.peerConnection!.signalingState,
+        localStreamTracks: this.localStream?.getTracks().length || 0,
+        remoteStreamTracks: this.remoteStream?.getTracks().length || 0,
+        senders: this.peerConnection!.getSenders().length,
+        receivers: this.peerConnection!.getReceivers().length
+      });
+
       switch (connectionState) {
         case 'connected':
-          this.setState('connected');
+          // If we have a remote stream, stay in streaming state
+          if (this.remoteStream && this.remoteStream.active) {
+            console.debug('WebRTCService: Connection established with active remote stream, maintaining streaming state');
+            this.setState('streaming');
+          } else {
+            this.setState('connected');
+          }
           break;
         case 'disconnected':
           this.setState('disconnected');
@@ -404,11 +445,26 @@ export class WebRTCService {
 
     // Remote stream
     this.peerConnection.ontrack = (event) => {
-      console.debug('WebRTCService: Received remote track');
+      console.debug('WebRTCService: Received remote track', {
+        tracks: event.track,
+        streams: event.streams?.length || 0,
+        streamIds: event.streams?.map(s => s.id) || [],
+        trackKind: event.track.kind,
+        trackId: event.track.id,
+        trackEnabled: event.track.enabled,
+        trackReadyState: event.track.readyState
+      });
 
       if (event.streams && event.streams[0]) {
         this.remoteStream = event.streams[0];
         this.setState('streaming');
+
+        console.debug('WebRTCService: Remote stream set', {
+          streamId: this.remoteStream.id,
+          active: this.remoteStream.active,
+          videoTracks: this.remoteStream.getVideoTracks().length,
+          audioTracks: this.remoteStream.getAudioTracks().length
+        });
 
         // Emit event for cross-tab communication
         this.eventEmitter.emitWebRTCRemoteStream(
@@ -417,6 +473,11 @@ export class WebRTCService {
           this.localUser,
           this.remoteUser
         );
+      } else {
+        console.warn('WebRTCService: Received track but no streams available', {
+          track: event.track,
+          streams: event.streams
+        });
       }
     };
   }

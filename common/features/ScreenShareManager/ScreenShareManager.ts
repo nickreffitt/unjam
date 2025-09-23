@@ -10,9 +10,9 @@ export class ScreenShareManager {
   private readonly sessionStore: ScreenShareSessionStore;
   private readonly signalingStore: WebRTCSignalingStore;
 
-  // WebRTC connection state - support both publisher and subscriber
-  private publisherWebrtcManager: WebRTCManager | null = null;
-  private subscriberWebrtcManager: WebRTCManager | null = null;
+  // WebRTC connection state - single manager per role
+  private webrtcManager: WebRTCManager | null = null;
+  private isPublisher: boolean | null = null; // null = no role set yet
   private webrtcState: WebRTCState = 'initializing';
   private currentSessionId: string | null = null;
   private webrtcListener!: WebRTCListener;
@@ -277,20 +277,22 @@ export class ScreenShareManager {
     });
 
     try {
-      // Initialize WebRTC connection immediately
-      console.debug('ScreenShareManager: Initializing WebRTC connection for session', session.id);
+      // Initialize WebRTC connection for publisher (customer side)
+      console.debug('ScreenShareManager: Initializing WebRTC connection for publisher in session', session.id);
 
       // Create WebRTC manager instance for publisher
-      this.publisherWebrtcManager = await createWebRTCManager(
+      this.webrtcManager = await createWebRTCManager(
         session.id,
-        publisher,  // local user (publisher)
-        subscriber, // remote user (subscriber)
+        publisher,  // local user (publisher/customer)
+        subscriber, // remote user (subscriber/engineer)
         true,       // isPublisher = true for customer
         this.signalingStore
       );
 
+      this.isPublisher = true;
+
       // Initialize the WebRTC connection
-      await this.publisherWebrtcManager.initializeConnection();
+      await this.webrtcManager.initializeConnection();
 
       // Track current session for WebRTC events
       this.currentSessionId = session.id;
@@ -303,7 +305,7 @@ export class ScreenShareManager {
       // Now automatically start screen capture and publishing
       console.debug('ScreenShareManager: Starting screen capture for session', session.id);
 
-      const mediaStream = await this.publisherWebrtcManager.startScreenSharing();
+      const mediaStream = await this.webrtcManager.startScreenSharing();
 
       // Update session to active with stream details
       const activeSession = this.sessionStore.update(session.id, {
@@ -327,14 +329,11 @@ export class ScreenShareManager {
       this.webrtcState = 'failed';
       this.syncSessionWithWebRTCState(this.webrtcState);
 
-      // Cleanup WebRTC managers
-      if (this.publisherWebrtcManager) {
-        this.publisherWebrtcManager.dispose();
-        this.publisherWebrtcManager = null;
-      }
-      if (this.subscriberWebrtcManager) {
-        this.subscriberWebrtcManager.dispose();
-        this.subscriberWebrtcManager = null;
+      // Cleanup WebRTC manager
+      if (this.webrtcManager) {
+        this.webrtcManager.dispose();
+        this.webrtcManager = null;
+        this.isPublisher = null;
       }
 
       throw new Error(`Failed to initialize and start screen sharing: ${error instanceof Error ? error.message : String(error)}`);
@@ -365,12 +364,12 @@ export class ScreenShareManager {
     try {
       console.debug('ScreenShareManager: Setting up WebRTC subscription for session', sessionId);
 
-      // If subscriber WebRTC manager doesn't exist, initialize it for the subscriber (engineer)
-      if (!this.subscriberWebrtcManager) {
+      // If WebRTC manager doesn't exist, initialize it for the subscriber (engineer)
+      if (!this.webrtcManager) {
         console.debug('ScreenShareManager: Initializing WebRTC connection for subscriber (engineer)');
 
         // Create WebRTC manager instance for the subscriber
-        this.subscriberWebrtcManager = await createWebRTCManager(
+        this.webrtcManager = await createWebRTCManager(
           sessionId,
           session.subscriber,  // local user (engineer)
           session.publisher,   // remote user (customer)
@@ -378,8 +377,10 @@ export class ScreenShareManager {
           this.signalingStore
         );
 
+        this.isPublisher = false;
+
         // Initialize the WebRTC connection
-        await this.subscriberWebrtcManager.initializeConnection();
+        await this.webrtcManager.initializeConnection();
 
         // Track current session for WebRTC events
         this.currentSessionId = sessionId;
@@ -400,7 +401,8 @@ export class ScreenShareManager {
 
       this.webrtcState = 'failed';
       this.syncSessionWithWebRTCState(this.webrtcState);
-      this.subscriberWebrtcManager = null;
+      this.webrtcManager = null;
+      this.isPublisher = null;
 
       throw new Error(`Failed to setup stream subscription: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -430,15 +432,15 @@ export class ScreenShareManager {
 
     try {
       // Cleanup WebRTC resources first
-      if (this.publisherWebrtcManager) {
-        console.debug('ScreenShareManager: Cleaning up publisher WebRTC resources for session', sessionId);
-        this.publisherWebrtcManager.stopScreenSharing();
-        this.publisherWebrtcManager = null;
-      }
-      if (this.subscriberWebrtcManager) {
-        console.debug('ScreenShareManager: Cleaning up subscriber WebRTC resources for session', sessionId);
-        this.subscriberWebrtcManager.dispose();
-        this.subscriberWebrtcManager = null;
+      if (this.webrtcManager) {
+        console.debug('ScreenShareManager: Cleaning up WebRTC resources for session', sessionId);
+        if (this.isPublisher) {
+          this.webrtcManager.stopScreenSharing();
+        } else {
+          this.webrtcManager.dispose();
+        }
+        this.webrtcManager = null;
+        this.isPublisher = null;
       }
 
       this.webrtcState = 'closed';
@@ -458,13 +460,10 @@ export class ScreenShareManager {
       const endedSession = this.sessionStore.endSession(sessionId);
 
       // Cleanup WebRTC state regardless
-      if (this.publisherWebrtcManager) {
-        this.publisherWebrtcManager.dispose();
-        this.publisherWebrtcManager = null;
-      }
-      if (this.subscriberWebrtcManager) {
-        this.subscriberWebrtcManager.dispose();
-        this.subscriberWebrtcManager = null;
+      if (this.webrtcManager) {
+        this.webrtcManager.dispose();
+        this.webrtcManager = null;
+        this.isPublisher = null;
       }
       this.webrtcState = 'closed';
 
@@ -583,6 +582,10 @@ export class ScreenShareManager {
         // Session becomes active when WebRTC is connected
         newSessionStatus = 'active';
         break;
+      case 'streaming':
+        // Session is active and streaming when WebRTC is streaming
+        newSessionStatus = 'active';
+        break;
       case 'failed':
         // Session goes to error state when WebRTC fails
         newSessionStatus = 'error';
@@ -616,13 +619,14 @@ export class ScreenShareManager {
    * Stop screen sharing and cleanup WebRTC connection
    */
   stopScreenSharing(): void {
-    if (this.publisherWebrtcManager) {
-      this.publisherWebrtcManager.stopScreenSharing();
-      this.publisherWebrtcManager = null;
-    }
-    if (this.subscriberWebrtcManager) {
-      this.subscriberWebrtcManager.dispose();
-      this.subscriberWebrtcManager = null;
+    if (this.webrtcManager) {
+      if (this.isPublisher) {
+        this.webrtcManager.stopScreenSharing();
+      } else {
+        this.webrtcManager.dispose();
+      }
+      this.webrtcManager = null;
+      this.isPublisher = null;
     }
 
     this.webrtcState = 'closed';
@@ -635,8 +639,8 @@ export class ScreenShareManager {
    * @returns The local media stream or null
    */
   getLocalStream(): MediaStream | null {
-    // Local stream comes from the publisher WebRTC manager
-    return this.publisherWebrtcManager?.getLocalStream() || null;
+    // Local stream comes from the WebRTC manager when acting as publisher
+    return (this.isPublisher && this.webrtcManager) ? this.webrtcManager.getLocalStream() : null;
   }
 
   /**
@@ -644,8 +648,8 @@ export class ScreenShareManager {
    * @returns The remote media stream or null
    */
   getRemoteStream(): MediaStream | null {
-    // Remote stream comes from the subscriber WebRTC manager
-    return this.subscriberWebrtcManager?.getRemoteStream() || null;
+    // Remote stream comes from the WebRTC manager when acting as subscriber
+    return (this.isPublisher === false && this.webrtcManager) ? this.webrtcManager.getRemoteStream() : null;
   }
 
 
@@ -671,8 +675,8 @@ export class ScreenShareManager {
         if (sessionId === this.currentSessionId) {
           console.debug('ScreenShareManager: Remote stream received for session', sessionId, streamInfo);
 
-          // Get the actual MediaStream object from the subscriber WebRTC manager
-          const remoteStream = this.subscriberWebrtcManager?.getRemoteStream();
+          // Get the actual MediaStream object from the WebRTC manager (when subscriber)
+          const remoteStream = this.getRemoteStream();
           if (remoteStream) {
             console.debug('ScreenShareManager: Remote stream available, emitting event');
             // Emit event instead of using callback

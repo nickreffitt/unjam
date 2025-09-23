@@ -170,10 +170,26 @@ export class ScreenShareSessionStore {
    * @returns The ended session if found
    */
   endSession(sessionId: string): ScreenShareSession | undefined {
-    return this.update(sessionId, {
+    const session = this.sessions.get(sessionId);
+
+    if (!session) {
+      console.warn('ScreenShareSessionStore: Session not found for ending', sessionId);
+      return undefined;
+    }
+
+    // Update the session to ended status
+    const updatedSession = this.update(sessionId, {
       status: 'ended',
       endedAt: new Date(),
     });
+
+    // Emit specific session ended event (in addition to the updated event from update())
+    if (updatedSession) {
+      console.debug('ScreenShareSessionStore: Session ended, emitting screenShareSessionEnded event', sessionId);
+      this.eventEmitter.emitScreenShareSessionEnded(updatedSession);
+    }
+
+    return updatedSession;
   }
 
   /**

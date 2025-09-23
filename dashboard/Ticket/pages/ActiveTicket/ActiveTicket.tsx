@@ -230,6 +230,7 @@ const ActiveTicket: React.FC = () => {
         showEstimatedTime
         chatActive
         chatBoxRef={chatBoxRef}
+        screenShareActive
       />
     </>
   );

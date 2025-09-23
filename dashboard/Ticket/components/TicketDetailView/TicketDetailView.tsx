@@ -6,6 +6,7 @@ import TicketDetailsCard from '@dashboard/Ticket/components/TicketDetailsCard/Ti
 import TicketStatusBanner from '@dashboard/Ticket/components/TicketStatusBanner/TicketStatusBanner';
 import ChatBox, { type ChatBoxRef } from '@dashboard/ChatBox/ChatBox';
 import { ChatManagerProvider } from '@dashboard/ChatBox/contexts/ChatManagerContext';
+import ScreenShare from '@dashboard/ScreenShare/components/ScreenShare/ScreenShare';
 
 interface NotFoundConfig {
   title?: string;
@@ -37,6 +38,7 @@ interface TicketDetailViewProps {
   showEstimatedTime?: boolean;
   chatActive?: boolean;
   chatBoxRef?: React.RefObject<ChatBoxRef>;
+  screenShareActive?: boolean;
 }
 
 const TicketDetailView: React.FC<TicketDetailViewProps> = ({
@@ -47,7 +49,8 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
   showAssignedTo = false,
   showEstimatedTime = false,
   chatActive = false,
-  chatBoxRef
+  chatBoxRef,
+  screenShareActive = false
 }) => {
   if (!ticket) {
     return (
@@ -81,6 +84,9 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
       <div className="unjam-grid unjam-grid-cols-1 lg:unjam-grid-cols-3 unjam-gap-6">
         {/* Ticket Details */}
         <div className="lg:unjam-col-span-2">
+          {screenShareActive && ticket.createdBy && (
+            <ScreenShare ticketId={ticket.id} customer={ticket.createdBy} />
+          )}
           <TicketDetailsCard
             ticket={ticket}
             showAssignedTo={showAssignedTo}

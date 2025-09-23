@@ -31,6 +31,12 @@ export interface ScreenShareListenerCallbacks {
   onScreenShareSessionUpdated?(session: ScreenShareSession): void;
 
   /**
+   * Called when a screen share session has ended
+   * @param session - The ended session
+   */
+  onScreenShareSessionEnded?(session: ScreenShareSession): void;
+
+  /**
    * Called when screen share data is reloaded from storage
    * @param ticketId - The ticket ID for the screen share that was reloaded
    */
@@ -162,6 +168,15 @@ export class ScreenShareListener {
                 this.callbacks.onScreenShareSessionUpdated(deserializedSession);
               } catch (error) {
                 console.error('ScreenShareListener: Error in onScreenShareSessionUpdated:', error);
+              }
+            }
+            break;
+          case 'screenShareSessionEnded':
+            if (this.callbacks.onScreenShareSessionEnded && deserializedSession) {
+              try {
+                this.callbacks.onScreenShareSessionEnded(deserializedSession);
+              } catch (error) {
+                console.error('ScreenShareListener: Error in onScreenShareSessionEnded:', error);
               }
             }
             break;

@@ -89,11 +89,6 @@ export class WebRTCListener {
 
     // Listen for storage events (cross-tab communication)
     this.handleStorageEvent = (event: StorageEvent) => {
-      console.debug('WebRTCListener: Received storage event', {
-        key: event.key,
-        hasNewValue: !!event.newValue,
-        targetKey: 'webrtcstore-event'
-      });
 
       // Only process events for our specific key
       if (event.key !== 'webrtcstore-event' || !event.newValue) return;

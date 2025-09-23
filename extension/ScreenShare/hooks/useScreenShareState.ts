@@ -86,6 +86,8 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
   const refreshState = useCallback(() => {
     console.debug('useScreenShareState: Refreshing state for ticket', ticketId);
     try {
+      screenShareManager.reload();
+
       const request = screenShareManager.getActiveRequest();
       const session = screenShareManager.getActiveSession();
       console.debug('useScreenShareState: Retrieved request from manager:', request);
@@ -229,6 +231,16 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
         refreshStateRef.current();
       } else {
         console.debug('useScreenShareState: Ignoring session update for different ticket:', session.ticketId, 'vs our ticket:', ticketIdRef.current);
+      }
+    },
+    onScreenShareSessionEnded: async (session: ScreenShareSession) => {
+      console.debug('useScreenShareState: Screen share session ended', session.id, 'for ticket', session.ticketId);
+      // Only handle sessions for our ticket
+      if (session.ticketId === ticketIdRef.current) {
+        console.debug('useScreenShareState: Session ended, refreshing state');
+        refreshStateRef.current();
+      } else {
+        console.debug('useScreenShareState: Ignoring ended session for different ticket:', session.ticketId, 'vs our ticket:', ticketIdRef.current);
       }
     }
   };

@@ -4,7 +4,6 @@ import TicketBox from '@extension/Ticket/components/TicketBox/TicketBox';
 import TicketModal from '@extension/Ticket/components/TicketModal/TicketModal';
 import ChatBox, { type ChatBoxRef } from '@extension/ChatBox/ChatBox';
 import ScreenShare from '@extension/ScreenShare/ScreenShare';
-import DebugScreenShare, { type DebugScreenShareRef } from '@extension/DebugScreenShare/DebugScreenShare';
 import DebugChat, { type DebugChatRef } from '@extension/DebugChat/DebugChat';
 import DebugTicket, { type DebugTicketRef } from '@extension/DebugTicket/DebugTicket';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
@@ -13,7 +12,6 @@ import '@extension/styles.css';
 
 const CustomerExtension: React.FC = () => {
   const chatBoxRef = useRef<ChatBoxRef>(null);
-  const debugScreenShareRef = useRef<DebugScreenShareRef>(null);
   const debugChatRef = useRef<DebugChatRef>(null);
   const debugTicketRef = useRef<DebugTicketRef>(null);
 
@@ -62,18 +60,6 @@ const CustomerExtension: React.FC = () => {
               chatBoxRef={chatBoxRef}
               isChatVisible={isChatVisible}
               onToggleChat={() => setIsChatVisible(!isChatVisible)}
-            />
-          </div>
-        )}
-
-        {/* Debug ScreenShare component for testing engineer behavior */}
-        {process.env.NODE_ENV === 'development' && activeTicket && activeTicket.assignedTo && (
-          <div className="unjam-mt-4">
-            <DebugScreenShare
-              ref={debugScreenShareRef}
-              ticketId={activeTicket.id}
-              customerProfile={customerProfile}
-              engineerProfile={activeTicket.assignedTo}
             />
           </div>
         )}
