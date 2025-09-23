@@ -13,6 +13,30 @@ import { TicketManagerProvider } from '@dashboard/Ticket/contexts/TicketManagerC
 import { TicketListManagerProvider } from '@dashboard/TicketList/contexts/TicketListManagerContext';
 import { ChatManagerProvider } from '@dashboard/ChatBox/contexts/ChatManagerContext';
 import { ScreenShareManagerProvider } from '@dashboard/ScreenShare/contexts/ScreenShareManagerContext';
+import { useGlobalTicketListener } from '@dashboard/shared/hooks/useGlobalTicketListener';
+
+const DashboardContent: React.FC = () => {
+  // Initialize global ticket listener that works across all pages
+  useGlobalTicketListener();
+
+  return (
+    <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
+      <Sidebar />
+      <div className="unjam-flex-1 unjam-overflow-hidden">
+        <Routes>
+          <Route path="/new" element={<NewTicketsList />} />
+          <Route path="/new/:ticketId" element={<TicketPreview />} />
+          <Route path="/active" element={<ActiveTicketsList />} />
+          <Route path="/active/:ticketId" element={<ActiveTicket />} />
+          <Route path="/completed" element={<CompletedTicketsList />} />
+          <Route path="/completed/:ticketId" element={<CompletedTicket />} />
+          <Route path="/chat-demo" element={<ChatBoxDemo />} />
+          <Route path="/" element={<Navigate to="/new" replace />} />
+        </Routes>
+      </div>
+    </div>
+  );
+};
 
 const EngineerDashboard: React.FC = () => {
   return (
@@ -21,21 +45,7 @@ const EngineerDashboard: React.FC = () => {
         <TicketListManagerProvider>
           <ChatManagerProvider>
             <ScreenShareManagerProvider>
-              <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
-                <Sidebar />
-                <div className="unjam-flex-1 unjam-overflow-hidden">
-                  <Routes>
-                    <Route path="/new" element={<NewTicketsList />} />
-                    <Route path="/new/:ticketId" element={<TicketPreview />} />
-                    <Route path="/active" element={<ActiveTicketsList />} />
-                    <Route path="/active/:ticketId" element={<ActiveTicket />} />
-                    <Route path="/completed" element={<CompletedTicketsList />} />
-                    <Route path="/completed/:ticketId" element={<CompletedTicket />} />
-                    <Route path="/chat-demo" element={<ChatBoxDemo />} />
-                    <Route path="/" element={<Navigate to="/new" replace />} />
-                  </Routes>
-                </div>
-              </div>
+              <DashboardContent />
             </ScreenShareManagerProvider>
           </ChatManagerProvider>
         </TicketListManagerProvider>

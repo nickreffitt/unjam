@@ -4,6 +4,7 @@ import ChatHeader from '@extension/ChatBox/components/ChatHeader/ChatHeader';
 import ChatMessage from '@extension/ChatBox/components/ChatMessage/ChatMessage';
 import ChatInput from '@extension/ChatBox/components/ChatInput/ChatInput';
 import TypingIndicator from '@extension/ChatBox/components/TypingIndicator/TypingIndicator';
+import ScreenShare from '@extension/ScreenShare/ScreenShare';
 import { useChatState } from '@extension/ChatBox/hooks/useChatState';
 import { useChatActions } from '@extension/ChatBox/hooks/useChatActions';
 
@@ -64,8 +65,13 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ ticketId, engineerName, 
         <div ref={messagesEndRef} />
       </div>
 
+      <ScreenShare
+          ticketId={ticketId}
+          engineerProfile={engineerProfile}
+        />
+
       {/* Input Area */}
-      <div className="unjam-p-4">
+      <div className="unjam-p-4 unjam-space-y-2">
         <ChatInput
           value={inputValue}
           onChange={handleInputChange}
@@ -73,6 +79,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ ticketId, engineerName, 
           onKeyPress={handleKeyPress}
           placeholder="Type your message..."
         />
+        
       </div>
     </div>
   );

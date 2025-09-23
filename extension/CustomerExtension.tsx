@@ -3,7 +3,6 @@ import UnjamButton from '@extension/Ticket/components/UnjamButton/UnjamButton';
 import TicketBox from '@extension/Ticket/components/TicketBox/TicketBox';
 import TicketModal from '@extension/Ticket/components/TicketModal/TicketModal';
 import ChatBox, { type ChatBoxRef } from '@extension/ChatBox/ChatBox';
-import ScreenShare from '@extension/ScreenShare/ScreenShare';
 import DebugChat, { type DebugChatRef } from '@extension/DebugChat/DebugChat';
 import DebugTicket, { type DebugTicketRef } from '@extension/DebugTicket/DebugTicket';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
@@ -72,9 +71,9 @@ const CustomerExtension: React.FC = () => {
         customerProfile={customerProfile}
       />
 
-      {/* Stacked container for ChatBox, ScreenShare, and TicketBox */}
+      {/* Stacked container for ChatBox and TicketBox */}
       <div className="unjam-fixed unjam-bottom-4 unjam-right-4 unjam-flex unjam-flex-col unjam-gap-4">
-        {isChatVisible && activeTicket && activeTicket.assignedTo && (
+        {isChatVisible && activeTicket && activeTicket.status === 'in-progress' && activeTicket.assignedTo && (
           <ChatBox
             ref={chatBoxRef}
             ticketId={activeTicket.id}
@@ -84,17 +83,12 @@ const CustomerExtension: React.FC = () => {
           />
         )}
 
-        {activeTicket && activeTicket.assignedTo && (
-          <ScreenShare
-            ticketId={activeTicket.id}
-            engineerProfile={activeTicket.assignedTo}
-          />
-        )}
-
         {activeTicket && isTicketVisible && (
           <TicketBox
             ticket={activeTicket}
             onHide={() => setIsTicketVisible(false)}
+            isChatVisible={isChatVisible}
+            onToggleChat={() => setIsChatVisible(!isChatVisible)}
           />
         )}
       </div>

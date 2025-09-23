@@ -65,6 +65,7 @@ export const useTicketState = (): UseTicketStateReturn => {
         const existingActiveTicket = ticketManager.getActiveTicket();
         if (existingActiveTicket) {
           setActiveTicket(existingActiveTicket);
+          setIsTicketVisible(true); // Show TicketBox when loading existing ticket
           console.debug('useTicketState: Found existing active ticket', existingActiveTicket.id);
         } else {
           console.debug('useTicketState: No active ticket found');
@@ -84,6 +85,7 @@ export const useTicketState = (): UseTicketStateReturn => {
       console.debug('useTicketState: New ticket created:', ticket.id);
       ticketManager.reload();
       setActiveTicket(ticket);
+      setIsTicketVisible(true); // Ensure TicketBox is visible when new ticket is created
     }
   }, [customerProfile.id, ticketManager]);
 

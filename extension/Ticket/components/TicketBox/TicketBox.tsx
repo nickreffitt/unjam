@@ -7,6 +7,8 @@ import { useTicketActions } from '@extension/Ticket/hooks/useTicketActions';
 interface TicketBoxProps {
   ticket: Ticket | null;
   onHide?: () => void;
+  isChatVisible?: boolean;
+  onToggleChat?: () => void;
 }
 
 interface TimerProps {
@@ -40,19 +42,23 @@ const Timer: React.FC<TimerProps> = ({ startTime }) => {
 
 const TicketBox: React.FC<TicketBoxProps> = ({
   ticket,
-  onHide
+  onHide,
+  isChatVisible: chatVisibleProp,
+  onToggleChat
 }) => {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
 
   // Get state and actions from hooks
   const {
-    isChatVisible,
+    isChatVisible: localChatVisible,
     setIsChatVisible,
-    isTicketVisible,
     setIsTicketVisible,
     setActiveTicket
   } = useTicketState();
+
+  // Use prop values if provided, otherwise fall back to local state
+  const isChatVisible = chatVisibleProp !== undefined ? chatVisibleProp : localChatVisible;
 
   const {
     handleMarkFixed,
@@ -77,7 +83,12 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   };
 
   const handleToggleChat = () => {
-    setIsChatVisible(!isChatVisible);
+    // Use prop handler if provided, otherwise use local state
+    if (onToggleChat) {
+      onToggleChat();
+    } else {
+      setIsChatVisible(!isChatVisible);
+    }
   };
 
   const handleHide = () => {
@@ -173,15 +184,17 @@ const TicketBox: React.FC<TicketBoxProps> = ({
             <Timer startTime={getTimerStartTime()} />
           </div>
           <p className="unjam-text-xs unjam-text-gray-500 unjam-mb-4">ETA is ~2:30</p>
-          
+
           <div className="unjam-space-y-2">
-            <button
-              onClick={handleToggleChat}
-              className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
-            >
-              <MessageCircle size={16} />
-              {isChatVisible ? 'Hide Chat' : 'Show Chat'}
-            </button>
+            {ticket.assignedTo && (
+              <button
+                onClick={handleToggleChat}
+                className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
+              >
+                <MessageCircle size={16} />
+                {isChatVisible ? 'Hide Chat' : 'Show Chat'}
+              </button>
+            )}
             <button
               onClick={handleMarkFixed}
               className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"

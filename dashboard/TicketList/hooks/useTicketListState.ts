@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { type Ticket, type TicketStatus, type TicketListItem } from '@common/types';
 import { useTicketListManager } from '@dashboard/TicketList/contexts/TicketListManagerContext';
-import { useTicketListener } from '@common/features/TicketManager/hooks/useTicketListener';
 
 export interface UseTicketListStateReturn {
   tickets: Ticket[];
@@ -60,37 +59,41 @@ export const useTicketListState = (filterStatuses: TicketStatus[]): UseTicketLis
     refreshTickets();
   }, [refreshTickets]);
 
-  // Create stable callback functions to prevent TicketListener recreation
-  const handleTicketCreated = useCallback((ticket: Ticket) => {
-    console.debug('useTicketsList: New ticket created, refreshing list:', ticket.id);
-    // Reload from storage to sync with other tabs, then refresh
-    ticketListManagerRef.current.reload();
-    // Only refresh if the new ticket matches our filter
-    if (memoizedFilterStatusesRef.current.includes(ticket.status)) {
+  // Listen for global ticket events emitted by the global listener
+  useEffect(() => {
+    const handleGlobalTicketCreated = (event: CustomEvent<Ticket>) => {
+      const ticket = event.detail;
+      console.debug('useTicketsList: Global ticket created event received:', ticket.id);
+      // Only refresh if the new ticket matches our filter
+      if (memoizedFilterStatusesRef.current.includes(ticket.status)) {
+        refreshTickets();
+      }
+    };
+
+    const handleGlobalTicketUpdated = (event: CustomEvent<Ticket>) => {
+      const ticket = event.detail;
+      console.debug('useTicketsList: Global ticket updated event received:', ticket.id);
+      // Always refresh on updates as ticket might move between lists
       refreshTickets();
-    }
-  }, []);
+    };
 
-  const handleTicketUpdated = useCallback((ticket: Ticket) => {
-    console.debug('useTicketsList: Ticket updated, refreshing list:', ticket.id);
-    // Reload from storage to sync with other tabs, then refresh
-    ticketListManagerRef.current.reload();
-    refreshTickets();
-  }, []);
+    const handleGlobalTicketsCleared = () => {
+      console.debug('useTicketsList: Global tickets cleared event received');
+      refreshTickets();
+    };
 
-  const handleTicketsCleared = useCallback(() => {
-    console.debug('useTicketsList: All tickets cleared, refreshing list');
-    // Reload from storage to sync with other tabs, then refresh
-    ticketListManagerRef.current.reload();
-    refreshTickets();
-  }, []);
+    // Add event listeners for global ticket events
+    window.addEventListener('globalTicketCreated', handleGlobalTicketCreated as EventListener);
+    window.addEventListener('globalTicketUpdated', handleGlobalTicketUpdated as EventListener);
+    window.addEventListener('globalTicketsCleared', handleGlobalTicketsCleared);
 
-  // Listen for global ticket events and refresh when tickets change
-  useTicketListener({
-    onTicketCreated: handleTicketCreated,
-    onTicketUpdated: handleTicketUpdated,
-    onTicketsCleared: handleTicketsCleared
-  });
+    // Cleanup listeners on unmount
+    return () => {
+      window.removeEventListener('globalTicketCreated', handleGlobalTicketCreated as EventListener);
+      window.removeEventListener('globalTicketUpdated', handleGlobalTicketUpdated as EventListener);
+      window.removeEventListener('globalTicketsCleared', handleGlobalTicketsCleared);
+    };
+  }, [refreshTickets]);
 
   return {
     tickets,
