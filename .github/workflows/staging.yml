@@ -67,13 +67,16 @@ jobs:
 
       # Start unified dev server in background
       - name: Start unified dev server
-        run: npm run dev:unified &
+        run: |
+          npm run dev:unified &
+          echo "Started dev:unified server in background"
 
-      # Wait for server to be ready
+      # Wait for server to be ready (port 5175 is configured in vite.unified.config.ts)
       - name: Wait for server to start
         run: |
-          echo "Waiting for server to be ready..."
-          npx wait-on http://localhost:5173 --timeout 60000
+          echo "Waiting for server to be ready on port 5175..."
+          npx wait-on http://localhost:5175 --timeout 60000
+          echo "Server is ready!"
 
       # Run Cypress tests
       - name: Run Cypress tests
