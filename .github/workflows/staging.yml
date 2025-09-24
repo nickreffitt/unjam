@@ -16,7 +16,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build-and-test:
+  staging:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -43,12 +43,6 @@ jobs:
       # Run unit tests
       - name: Run unit tests
         run: npm test
-
-  # Functional test job with Cypress using official GitHub Action
-  functional-test:
-    runs-on: ubuntu-latest
-    needs: [build-and-test]
-    steps:
       # Run Cypress tests using the official GitHub Action
       # This action handles:
       # - Installing dependencies
