@@ -90,6 +90,16 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/${{ env.APP_NAME }}.tar
+
+      - name: Copy Docker image to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SVR_HOST }}
+          username: ${{ secrets.SVR_USERNAME }}
+          key: ${{ secrets.SVR_PRIVATE_KEY }}
+          source: "/tmp/${{ env.APP_NAME }}.tar"
+          target: "/tmp/"
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
@@ -97,7 +107,9 @@ jobs:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
-          envs: REGISTRY,IMAGE_NAME,APP_NAME,DOMAIN,GITHUB_TOKEN,GITHUB_ACTOR,LETSENCRYPT_EMAIL
+          envs: APP_NAME,DOMAIN
+          env:
+            LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
           script: |
             # Update system packages
             apt update
@@ -137,18 +149,18 @@ jobs:
               echo "Certbot already installed"
             fi
 
-            # Login to GitHub Container Registry
-            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-
-            # Pull the latest image
-            docker pull "$REGISTRY/$IMAGE_NAME:latest"
+            # Load Docker image from tar file
+            docker load -i "/tmp/$APP_NAME.tar"
 
             # Stop and remove existing container
             docker stop "$APP_NAME" || true
             docker rm "$APP_NAME" || true
 
             # Run the new container
-            docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 "$REGISTRY/$IMAGE_NAME:latest"
+            docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 "$APP_NAME:latest"
+
+            # Clean up any broken nginx symlinks
+            find /etc/nginx/sites-enabled -type l -exec test ! -e {} \; -delete
 
             # Set up nginx configuration if it doesn't exist
             if [ ! -f "/etc/nginx/sites-available/$DOMAIN" ]; then
@@ -175,5 +187,6 @@ jobs:
               certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$LETSENCRYPT_EMAIL"
             fi
 
-            # Clean up old images
+            # Clean up transferred tar file and old images
+            rm -f "/tmp/$APP_NAME.tar"
             docker image prune -f
