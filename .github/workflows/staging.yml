@@ -23,6 +23,8 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
+      APP_NAME: unjam-frontend
+      DOMAIN: unjam.nickreffitt.com
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -39,6 +41,21 @@ jobs:
       # Install npm dependencies
       - name: Install dependencies
         run: npm ci
+
+      # Run unit tests
+      - name: Run unit tests
+        run: npm test
+
+      # Run Cypress tests using the official GitHub Action
+      - name: Cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          start: npm run dev:unified
+          wait-on: 'http://localhost:5175'
+          wait-on-timeout: 120
+          browser: chrome
+          command: npm run cypress:run
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -80,6 +97,7 @@ jobs:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
+          envs: REGISTRY,IMAGE_NAME,APP_NAME,DOMAIN,GITHUB_TOKEN,GITHUB_ACTOR,LETSENCRYPT_EMAIL
           script: |
             # Update system packages
             apt update
@@ -120,28 +138,24 @@ jobs:
             fi
 
             # Login to GitHub Container Registry
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
             # Pull the latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            docker pull "$REGISTRY/$IMAGE_NAME:latest"
 
             # Stop and remove existing container
-            docker stop ${{ env.APP_NAME }} || true
-            docker rm ${{ env.APP_NAME }} || true
+            docker stop "$APP_NAME" || true
+            docker rm "$APP_NAME" || true
 
             # Run the new container
-            docker run -d \
-              --name ${{ env.APP_NAME }} \
-              --restart unless-stopped \
-              -p 3000:80 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 "$REGISTRY/$IMAGE_NAME:latest"
 
             # Set up nginx configuration if it doesn't exist
-            if [ ! -f /etc/nginx/sites-available/${{ env.DOMAIN }} ]; then
-              tee /etc/nginx/sites-available/${{ env.DOMAIN }} > /dev/null <<EOF
+            if [ ! -f "/etc/nginx/sites-available/$DOMAIN" ]; then
+              tee "/etc/nginx/sites-available/$DOMAIN" > /dev/null <<EOF
             server {
                 listen 80;
-                server_name ${{ env.DOMAIN }};
+                server_name $DOMAIN;
 
                 location / {
                     proxy_pass http://localhost:3000;
@@ -154,11 +168,11 @@ jobs:
             EOF
 
               # Enable the site
-              ln -sf /etc/nginx/sites-available/${{ env.DOMAIN }} /etc/nginx/sites-enabled/
+              ln -sf "/etc/nginx/sites-available/$DOMAIN" /etc/nginx/sites-enabled/
               nginx -t && systemctl reload nginx
 
               # Get SSL certificate
-              certbot --nginx -d ${{ env.DOMAIN }} --non-interactive --agree-tos --email ${{ secrets.LETSENCRYPT_EMAIL }}
+              certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$LETSENCRYPT_EMAIL"
             fi
 
             # Clean up old images
