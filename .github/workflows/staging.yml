@@ -78,15 +78,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build Docker image for local export
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./deploy/Dockerfile
-          platforms: linux/amd64
-          push: false
-          tags: ${{ env.APP_NAME }}:latest
-          outputs: type=docker,dest=/tmp/${{ env.APP_NAME }}.tar
+      - name: Build Docker image locally
+        run: |
+          docker build -f ./deploy/Dockerfile -t ${{ env.APP_NAME }}:latest .
+          docker save ${{ env.APP_NAME }}:latest -o /tmp/image.tar
 
       - name: Copy Docker image to server
         uses: appleboy/scp-action@v0.1.7
@@ -94,7 +89,7 @@ jobs:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
-          source: "/tmp/${{ env.APP_NAME }}.tar"
+          source: "/tmp/image.tar"
           target: "/tmp/"
 
       - name: Deploy to server
@@ -144,7 +139,7 @@ jobs:
             fi
 
             # Load Docker image from tar file
-            docker load -i "/tmp/$APP_NAME.tar"
+            docker load -i "/tmp/image.tar"
 
             # Stop and remove existing container
             docker stop "$APP_NAME" || true
@@ -182,5 +177,5 @@ jobs:
             fi
 
             # Clean up transferred tar file and old images
-            rm -f "/tmp/$APP_NAME.tar"
+            rm -f "/tmp/image.tar"
             docker image prune -f
