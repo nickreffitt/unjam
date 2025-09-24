@@ -43,58 +43,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./deploy/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       - name: Build Docker image locally
         run: |
           docker build -f ./deploy/Dockerfile -t ${{ env.APP_NAME }}:latest .
           docker save ${{ env.APP_NAME }}:latest -o /tmp/image.tar
           ls -la /tmp/image.tar
 
-      - name: Copy Docker image to server via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SVR_HOST }}
-          username: ${{ secrets.SVR_USERNAME }}
-          key: ${{ secrets.SVR_PRIVATE_KEY }}
-          script: |
-            echo "Creating directory for image transfer"
-            mkdir -p /tmp/
-
-      - name: Transfer Docker image
+      - name: Transfer Docker image to server
         run: |
           echo "${{ secrets.SVR_PRIVATE_KEY }}" > /tmp/ssh_key
           chmod 600 /tmp/ssh_key
