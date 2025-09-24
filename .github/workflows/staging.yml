@@ -82,15 +82,24 @@ jobs:
         run: |
           docker build -f ./deploy/Dockerfile -t ${{ env.APP_NAME }}:latest .
           docker save ${{ env.APP_NAME }}:latest -o /tmp/image.tar
+          ls -la /tmp/image.tar
 
-      - name: Copy Docker image to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Copy Docker image to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
-          source: "/tmp/image.tar"
-          target: "/tmp/"
+          script: |
+            echo "Creating directory for image transfer"
+            mkdir -p /tmp/
+
+      - name: Transfer Docker image
+        run: |
+          echo "${{ secrets.SVR_PRIVATE_KEY }}" > /tmp/ssh_key
+          chmod 600 /tmp/ssh_key
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no /tmp/image.tar ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/tmp/
+          rm /tmp/ssh_key
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
