@@ -73,3 +73,93 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SVR_HOST }}
+          username: ${{ secrets.SVR_USERNAME }}
+          key: ${{ secrets.SVR_PRIVATE_KEY }}
+          script: |
+            # Update system packages
+            apt update
+
+            # Install Docker if not installed
+            if ! command -v docker &> /dev/null; then
+              echo "Installing Docker..."
+              apt install -y apt-transport-https ca-certificates curl software-properties-common
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+              apt update
+              apt install -y docker-ce docker-ce-cli containerd.io
+              systemctl start docker
+              systemctl enable docker
+              echo "Docker installed successfully"
+            else
+              echo "Docker already installed"
+            fi
+
+            # Install Nginx if not installed
+            if ! command -v nginx &> /dev/null; then
+              echo "Installing Nginx..."
+              apt install -y nginx
+              systemctl start nginx
+              systemctl enable nginx
+              echo "Nginx installed successfully"
+            else
+              echo "Nginx already installed"
+            fi
+
+            # Install Certbot if not installed
+            if ! command -v certbot &> /dev/null; then
+              echo "Installing Certbot..."
+              apt install -y certbot python3-certbot-nginx
+              echo "Certbot installed successfully"
+            else
+              echo "Certbot already installed"
+            fi
+
+            # Login to GitHub Container Registry
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull the latest image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+            # Stop and remove existing container
+            docker stop ${{ env.APP_NAME }} || true
+            docker rm ${{ env.APP_NAME }} || true
+
+            # Run the new container
+            docker run -d \
+              --name ${{ env.APP_NAME }} \
+              --restart unless-stopped \
+              -p 3000:80 \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+            # Set up nginx configuration if it doesn't exist
+            if [ ! -f /etc/nginx/sites-available/${{ env.DOMAIN }} ]; then
+              tee /etc/nginx/sites-available/${{ env.DOMAIN }} > /dev/null <<EOF
+            server {
+                listen 80;
+                server_name ${{ env.DOMAIN }};
+
+                location / {
+                    proxy_pass http://localhost:3000;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
+                }
+            }
+            EOF
+
+              # Enable the site
+              ln -sf /etc/nginx/sites-available/${{ env.DOMAIN }} /etc/nginx/sites-enabled/
+              nginx -t && systemctl reload nginx
+
+              # Get SSL certificate
+              certbot --nginx -d ${{ env.DOMAIN }} --non-interactive --agree-tos --email ${{ secrets.LETSENCRYPT_EMAIL }}
+            fi
+
+            # Clean up old images
+            docker image prune -f
