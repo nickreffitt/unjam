@@ -13,8 +13,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:ui": "vitest --ui",
-    "cypress:open": "cypress open",
-    "cypress:run": "cypress run"
+    "cypress:run": "node --loader tsx/esm ./node_modules/.bin/cypress run",
+    "cypress:open": "node --loader tsx/esm ./node_modules/.bin/cypress open"
+
   },
   "dependencies": {
     "lucide-react": "^0.544.0",
