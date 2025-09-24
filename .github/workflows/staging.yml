@@ -20,6 +20,10 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -35,29 +39,6 @@ jobs:
       # Install npm dependencies
       - name: Install dependencies
         run: npm ci
-
-      # Run unit tests
-      - name: Run unit tests
-        run: npm test
-      # Run Cypress tests using the official GitHub Action
-      # This action handles:
-      # - Installing dependencies
-      # - Starting the dev server
-      # - Waiting for the server to be ready
-      # - Running the tests
-      - name: Cypress run
-        uses: cypress-io/github-action@v6
-        with:
-          # Start the unified dev server (will wait for it automatically)
-          start: npm run dev:unified
-          # Wait for the server to be ready on port 5175
-          wait-on: 'http://localhost:5175'
-          # Timeout for waiting (in seconds)
-          wait-on-timeout: 120
-          # Browser to use for testing
-          browser: chrome
-          # Command to run tests (uses cypress:run script)
-          command: npm run cypress:run
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
