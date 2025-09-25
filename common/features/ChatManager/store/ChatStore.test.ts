@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ChatStore } from './ChatStore';
-import { ChatEventEmitter } from '../events/ChatEventEmitter';
+import { ChatStore } from '@common/features/ChatManager/store/ChatStore';
+import { ChatEventEmitter } from '@common/features/ChatManager/events/ChatEventEmitter';
 import { type ChatMessage, type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('ChatStore', () => {

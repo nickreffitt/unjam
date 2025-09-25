@@ -1,23 +1,18 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from '@dashboard/shared/components/Sidebar/Sidebar';
-import NewTicketsList from '@dashboard/TicketList/pages/NewTicketsList/NewTicketsList';
-import ActiveTicketsList from '@dashboard/TicketList/pages/ActiveTicketsList/ActiveTicketsList';
-import CompletedTicketsList from '@dashboard/TicketList/pages/CompletedTicketsList/CompletedTicketsList';
-import TicketPreview from '@dashboard/Ticket/pages/TicketPreview/TicketPreview';
-import ActiveTicket from '@dashboard/Ticket/pages/ActiveTicket/ActiveTicket';
-import CompletedTicket from '@dashboard/Ticket/pages/CompletedTicket/CompletedTicket';
-import ChatBoxDemo from '@dashboard/ChatBox/pages/ChatBoxDemo/ChatBoxDemo';
+import NewTicketsList from '@dashboard/pages/NewTicketsList/NewTicketsList';
+import ActiveTicketsList from '@dashboard/pages/ActiveTicketsList/ActiveTicketsList';
+import CompletedTicketsList from '@dashboard/pages/CompletedTicketsList/CompletedTicketsList';
+import TicketPreview from '@dashboard/pages/TicketPreview/TicketPreview';
+import ActiveTicket from '@dashboard/pages/ActiveTicket/ActiveTicket';
+import CompletedTicket from '@dashboard/pages/CompletedTicket/CompletedTicket';
 import { UserProfileProvider } from '@dashboard/shared/UserProfileContext';
 import { TicketManagerProvider } from '@dashboard/Ticket/contexts/TicketManagerContext';
 import { TicketListManagerProvider } from '@dashboard/TicketList/contexts/TicketListManagerContext';
 import { ChatManagerProvider } from '@dashboard/ChatBox/contexts/ChatManagerContext';
 import { ScreenShareManagerProvider } from '@dashboard/ScreenShare/contexts/ScreenShareManagerContext';
-import { useGlobalTicketListener } from '@dashboard/shared/hooks/useGlobalTicketListener';
-
 const DashboardContent: React.FC = () => {
-  // Initialize global ticket listener that works across all pages
-  useGlobalTicketListener();
 
   return (
     <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
@@ -30,7 +25,6 @@ const DashboardContent: React.FC = () => {
           <Route path="/active/:ticketId" element={<ActiveTicket />} />
           <Route path="/completed" element={<CompletedTicketsList />} />
           <Route path="/completed/:ticketId" element={<CompletedTicket />} />
-          <Route path="/chat-demo" element={<ChatBoxDemo />} />
           <Route path="/" element={<Navigate to="/new" replace />} />
         </Routes>
       </div>

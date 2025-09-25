@@ -1,5 +1,5 @@
 import { type ScreenShareSession, type SessionStatus } from '@common/types';
-import { ScreenShareEventEmitter } from '../events/ScreenShareEventEmitter';
+import { ScreenShareEventEmitter } from '@common/features/ScreenShareManager/events/ScreenShareEventEmitter';
 
 export class ScreenShareSessionStore {
   private sessions: Map<string, ScreenShareSession> = new Map();

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ScreenShareListener, type ScreenShareListenerCallbacks } from '../events';
+import { ScreenShareListener, type ScreenShareListenerCallbacks } from '@common/features/ScreenShareManager/events';
 
 /**
  * Hook that listens to global screen share events via window events

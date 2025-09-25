@@ -1,5 +1,5 @@
 import { type ScreenShareStatus, type ScreenShareRequest } from '@common/types';
-import { ScreenShareEventEmitter } from '../events';
+import { ScreenShareEventEmitter } from '@common/features/ScreenShareManager/events';
 
 export class ScreenShareRequestStore {
   private requests: Map<string, ScreenShareRequest> = new Map();
