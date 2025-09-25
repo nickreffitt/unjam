@@ -1,4 +1,5 @@
 {
+  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -28,6 +29,6 @@
       "@common/*": ["common/*"]
     }
   },
-  "include": ["extension/**/*", "dashboard/**/*", "common/**/*", "types/**/*"],
+  "include": ["extension/**/*", "dashboard/**/*", "common/**/*", "types/**/*", "entrypoints/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

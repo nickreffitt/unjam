@@ -12,22 +12,41 @@ dist
 dist-ssr
 *.local
 
+# WXT Framework
+.DS_Store
+.env
+.env.*
+.idea
+.output
+.webextrc
+.wxt
+.wxt-runner
+/docs/.vitepress/cache
+docs/.vitepress/.temp
+coverage
+TODOs.md
+web-ext.config.js
+web-ext.config.ts
+templates/*/pnpm-lock.yaml
+templates/*/yarn.lock
+templates/*/package-lock.json
+docs/api/reference
+stats.html
+.tool-versions
+.cache
+*-stats.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-
 dist_extension/
 dist-extension/
-.env
-.env.local
 .env.staging
 dist_extension.zip
 
