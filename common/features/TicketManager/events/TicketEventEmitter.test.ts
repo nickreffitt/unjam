@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TicketEventEmitter } from './TicketEventEmitter';
+import { TicketEventEmitterLocal } from './TicketEventEmitterLocal';
 import { type Ticket } from '@common/types';
 
 // Mock localStorage and window
@@ -19,7 +19,7 @@ const originalLocalStorage = global.localStorage;
 const originalWindow = global.window;
 
 describe('TicketEventEmitter', () => {
-  let emitter: TicketEventEmitter;
+  let emitter: TicketEventEmitterLocal;
   let mockTicket: Ticket;
 
   beforeEach(() => {
@@ -39,7 +39,7 @@ describe('TicketEventEmitter', () => {
       configurable: true
     });
 
-    emitter = new TicketEventEmitter();
+    emitter = new TicketEventEmitterLocal();
 
     mockTicket = {
       id: 'test-ticket-1',
@@ -194,7 +194,7 @@ describe('TicketEventEmitter', () => {
       });
 
       // When creating emitter and emitting events
-      const emitter = new TicketEventEmitter();
+      const emitter = new TicketEventEmitterLocal();
 
       expect(() => {
         emitter.emitTicketCreated(mockTicket);

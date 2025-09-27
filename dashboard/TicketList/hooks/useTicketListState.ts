@@ -37,10 +37,10 @@ export const useTicketListState = (filterStatuses: TicketStatus[]): UseTicketLis
       if (currentFilterStatuses.includes('waiting')) {
         // Use newTicketList from context for waiting tickets (real-time updated)
         ticketListItems = newTicketList;
-      } else if (currentFilterStatuses.includes('in-progress')) {
+      } else if (currentFilterStatuses.includes('in-progress') && manager) {
         // Use TicketListManager for active tickets
         ticketListItems = await manager.listActiveTickets();
-      } else if (currentFilterStatuses.some(status => ['completed', 'auto-completed'].includes(status))) {
+      } else if (currentFilterStatuses.some(status => ['completed', 'auto-completed'].includes(status)) && manager) {
         // Use TicketListManager for completed tickets
         ticketListItems = await manager.listCompletedTickets();
       }

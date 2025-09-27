@@ -19,10 +19,10 @@ const ActiveTicketsList: React.FC = () => {
   );
 
   return (
-    <div>
+    <div className="unjam-h-full unjam-overflow-y-auto">
       {/* Debug Toggle */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="unjam-fixed unjam-bottom-4 unjam-left-4 unjam-z-50 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-p-3 unjam-border unjam-border-gray-200">
+        <div className="unjam-fixed unjam-bottom-4 unjam-right-4 unjam-z-50 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-p-3 unjam-border unjam-border-gray-200">
           <button
             onClick={() => setShowEmpty(!showEmpty)}
             className="unjam-flex unjam-items-center unjam-gap-2 unjam-text-sm unjam-text-gray-700 hover:unjam-text-gray-900"

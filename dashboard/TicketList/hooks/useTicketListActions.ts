@@ -43,6 +43,11 @@ export const useTicketListActions = (): UseTicketListActionsReturn => {
   };
 
   const createTestTicket = (refreshTickets: () => void) => {
+    if (!ticketStore) {
+      console.error('No ticket store available');
+      return;
+    }
+
     const timestamp = Date.now();
     const testTicket: Ticket = {
       id: `TKT-TEST-${timestamp}`,

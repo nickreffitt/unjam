@@ -37,7 +37,7 @@ const NewTicketsList: React.FC = () => {
   );
 
   return (
-    <div>
+    <div className="unjam-h-full unjam-overflow-y-auto">
       {/* Error Display */}
       {claimError && (
         <div className="unjam-mt-8 unjam-mb-6 unjam-bg-red-50 unjam-border unjam-border-red-200 unjam-rounded-lg unjam-p-4 unjam-max-w-6xl unjam-mx-auto unjam-px-8">
@@ -69,7 +69,7 @@ const NewTicketsList: React.FC = () => {
 
       {/* Debug Controls */}
       {(process.env.NODE_ENV === 'development') && (
-        <div className="unjam-fixed unjam-bottom-4 unjam-left-4 unjam-z-50 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-p-3 unjam-border unjam-border-gray-200 unjam-space-y-2">
+        <div className="unjam-fixed unjam-bottom-4 unjam-right-4 unjam-z-50 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-p-3 unjam-border unjam-border-gray-200 unjam-space-y-2">
           <button
             onClick={() => setShowEmpty(!showEmpty)}
             className="unjam-flex unjam-items-center unjam-gap-2 unjam-text-sm unjam-text-gray-700 hover:unjam-text-gray-900 unjam-w-full"

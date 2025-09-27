@@ -1,4 +1,4 @@
-import { type ChatMessage, type ChatEventType, type UserProfile } from '@common/types';
+import { type ChatMessage, type UserProfile } from '@common/types';
 
 /**
  * Interface for objects that listen to chat store events
@@ -33,112 +33,27 @@ export interface ChatListenerCallbacks {
 }
 
 /**
- * Class that manages listening to global chat events via storage events
- * Handles the setup and teardown of storage event listeners for cross-tab communication
+ * Interface for chat listener implementations
+ * Defines the contract that all chat listener implementations must follow
  */
-export class ChatListener {
-  private callbacks: Partial<ChatListenerCallbacks>;
-  private isListening: boolean = false;
-  private handleStorageEvent: ((event: StorageEvent) => void) | null = null;
-
-  constructor(callbacks: Partial<ChatListenerCallbacks>) {
-    this.callbacks = callbacks;
-  }
-
+export interface ChatListener {
   /**
    * Updates the callbacks (useful for React hooks that need to update callbacks)
    */
-  updateCallbacks(callbacks: Partial<ChatListenerCallbacks>): void {
-    this.callbacks = callbacks;
-  }
+  updateCallbacks(callbacks: Partial<ChatListenerCallbacks>): void;
 
   /**
-   * Starts listening to storage events for cross-tab communication
+   * Starts listening to chat events for cross-tab/cross-client communication
    */
-  startListening(): void {
-    if (this.isListening || typeof window === 'undefined') return;
-
-    this.handleStorageEvent = (event: StorageEvent) => {
-      // Only process events for our specific key
-      if (event.key !== 'chatstore-event' || !event.newValue) return;
-
-      try {
-        const eventData = JSON.parse(event.newValue);
-        const { type, message, messageIds, ticketId, user } = eventData;
-
-        // Deserialize Date objects if message is present
-        let deserializedMessage = message;
-        if (message) {
-          deserializedMessage = {
-            ...message,
-            createdAt: message.createdAt ? new Date(message.createdAt) : new Date(),
-          };
-        }
-
-        switch (type as ChatEventType) {
-          case 'chatMessageSent':
-            if (this.callbacks.onChatMessageReceived && deserializedMessage) {
-              try {
-                this.callbacks.onChatMessageReceived(deserializedMessage);
-              } catch (error) {
-                console.error('ChatListener: Error in onChatMessageReceived:', error);
-              }
-            }
-            break;
-          case 'chatMessagesRead':
-            if (this.callbacks.onChatMessagesRead && messageIds && ticketId) {
-              try {
-                this.callbacks.onChatMessagesRead(messageIds, ticketId);
-              } catch (error) {
-                console.error('ChatListener: Error in onChatMessagesRead:', error);
-              }
-            }
-            break;
-          case 'chatReloaded':
-            if (this.callbacks.onChatReloaded && ticketId) {
-              try {
-                this.callbacks.onChatReloaded(ticketId);
-              } catch (error) {
-                console.error('ChatListener: Error in onChatReloaded:', error);
-              }
-            }
-            break;
-          case 'chatSenderIsTyping':
-            if (this.callbacks.onChatReceiverIsTyping && ticketId && user) {
-              try {
-                this.callbacks.onChatReceiverIsTyping(ticketId, user);
-              } catch (error) {
-                console.error('ChatListener: Error in onChatReceiverIsTyping:', error);
-              }
-            }
-            break;
-        }
-      } catch (error) {
-        console.error('ChatListener: Error parsing storage event data:', error);
-      }
-    };
-
-    window.addEventListener('storage', this.handleStorageEvent);
-    this.isListening = true;
-    console.debug('ChatListener: Started listening to global chat events via storage');
-  }
+  startListening(): void;
 
   /**
-   * Stops listening to storage events
+   * Stops listening to chat events
    */
-  stopListening(): void {
-    if (!this.isListening || !this.handleStorageEvent) return;
-
-    window.removeEventListener('storage', this.handleStorageEvent);
-    this.handleStorageEvent = null;
-    this.isListening = false;
-    console.debug('ChatListener: Stopped listening to global chat events');
-  }
+  stopListening(): void;
 
   /**
    * Returns whether the listener is currently active
    */
-  getIsListening(): boolean {
-    return this.isListening;
-  }
+  getIsListening(): boolean;
 }

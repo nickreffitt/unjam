@@ -169,7 +169,7 @@ const ActiveTicket: React.FC = () => {
     <>
       {/* Debug Controls */}
       {(process.env.NODE_ENV === 'development') && ticket && (
-        <div className="unjam-fixed unjam-bottom-4 unjam-left-4 unjam-z-50 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-p-3 unjam-border unjam-border-gray-200 unjam-space-y-2">
+        <div className="unjam-fixed unjam-bottom-4 unjam-right-4 unjam-z-50 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-p-3 unjam-border unjam-border-gray-200 unjam-space-y-2">
           {ticket.status === 'in-progress' && (
             <>
               <button

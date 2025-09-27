@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ChatListener, type ChatListenerCallbacks } from './ChatListener';
+import { ChatListenerLocal } from './ChatListenerLocal';
+import { type ChatListenerCallbacks } from './ChatListener';
 import { type ChatMessage, type UserProfile } from '@common/types';
 
 // Mock window object
@@ -13,7 +14,7 @@ const mockWindow = {
 const originalWindow = global.window;
 
 describe('ChatListener', () => {
-  let listener: ChatListener;
+  let listener: ChatListenerLocal;
   let mockCallbacks: ChatListenerCallbacks;
   let mockMessage: ChatMessage;
   let mockUser: UserProfile;
@@ -63,7 +64,7 @@ describe('ChatListener', () => {
       email: 'john@example.com'
     };
 
-    listener = new ChatListener(mockCallbacks);
+    listener = new ChatListenerLocal(mockCallbacks);
   });
 
   afterEach(() => {
@@ -110,7 +111,7 @@ describe('ChatListener', () => {
         writable: true,
       });
 
-      const listenerInNonBrowser = new ChatListener(mockCallbacks);
+      const listenerInNonBrowser = new ChatListenerLocal(mockCallbacks);
 
       // when starting to listen
       listenerInNonBrowser.startListening();

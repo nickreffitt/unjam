@@ -1,11 +1,28 @@
 export type TicketStatus = 'waiting' | 'in-progress' | 'awaiting-confirmation' | 'marked-resolved' | 'completed' | 'auto-completed';
 export type UserType = 'customer' | 'engineer';
+export type AuthUserStatus = 'loading' | 'not-signed-in' | 'requires-profile' | 'signed-in';
+export interface AuthUser {
+  status: AuthUserStatus, 
+  user?: User,
+  profile?: UserProfile
+}
+
+export interface User {
+  id: string;
+  createdAt: Date;
+  email?: string;
+  confirmedAt?: Date;
+  lastSignInAt?: Date;
+  displayName?: string;
+}
 
 export interface CustomerProfile {
   id: string;
   name: string;
   type: 'customer';
   email?: string;
+  profileId?: string;      // The profile ID for auth system integration
+  authId?: string;         // The auth system ID (e.g., Supabase Auth user ID)
 }
 
 export interface EngineerProfile {
@@ -14,6 +31,10 @@ export interface EngineerProfile {
   type: 'engineer';
   email?: string;
   specialties?: string[];
+  githubUsername?: string;
+  profileId?: string;      // The profile ID for auth system integration
+  authId?: string;         // The auth system ID (e.g., Supabase Auth user ID)
+  user?: User;             // 1:1 mapping with User from auth system
 }
 
 export type UserProfile = CustomerProfile | EngineerProfile;

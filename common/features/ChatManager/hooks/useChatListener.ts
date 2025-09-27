@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ChatListener, type ChatListenerCallbacks } from '@common/features/ChatManager/events';
+import { type ChatListener, ChatListenerLocal, type ChatListenerCallbacks } from '@common/features/ChatManager/events';
 
 /**
  * Hook that listens to global chat events via window events
@@ -28,7 +28,7 @@ export function useChatListener(callbacks: Partial<ChatListenerCallbacks>): void
   useEffect(() => {
     // Create the listener on first render
     if (!chatListenerRef.current) {
-      chatListenerRef.current = new ChatListener(callbacks);
+      chatListenerRef.current = new ChatListenerLocal(callbacks);
       chatListenerRef.current.startListening();
     } else {
       // Update callbacks on subsequent renders

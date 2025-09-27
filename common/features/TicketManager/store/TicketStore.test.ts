@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TicketStore } from './TicketStore';
+import { TicketStoreLocal } from './TicketStoreLocal';
+import { type TicketStore } from './TicketStore';
 import { type CustomerProfile, type EngineerProfile, type Ticket } from '@common/types';
 
-describe('TicketStore', () => {
+describe('TicketStoreLocal', () => {
   let ticketStore: TicketStore;
 
   // Mock user profiles for testing
@@ -36,7 +37,7 @@ describe('TicketStore', () => {
 
   beforeEach(() => {
     // Create a fresh store for each test
-    ticketStore = new TicketStore();
+    ticketStore = new TicketStoreLocal();
     ticketStore.clear(); // Clear the mock data for isolated testing
   });
 

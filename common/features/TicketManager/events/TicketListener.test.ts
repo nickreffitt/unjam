@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TicketListener, type TicketListenerCallbacks } from './TicketListener';
+import { TicketListenerLocal } from './TicketListenerLocal';
+import { type TicketListenerCallbacks } from './TicketListener';
 import { type Ticket } from '@common/types';
 
 // Mock window object
@@ -13,7 +14,7 @@ const mockWindow = {
 const originalWindow = global.window;
 
 describe('TicketListener', () => {
-  let listener: TicketListener;
+  let listener: TicketListenerLocal;
   let mockCallbacks: TicketListenerCallbacks;
   let mockTicket: Ticket;
 
@@ -52,7 +53,7 @@ describe('TicketListener', () => {
       elapsedTime: 0
     };
 
-    listener = new TicketListener(mockCallbacks);
+    listener = new TicketListenerLocal(mockCallbacks);
   });
 
   afterEach(() => {
@@ -72,7 +73,7 @@ describe('TicketListener', () => {
       const callbacks = { onTicketCreated: vi.fn() };
 
       // When creating a TicketListener
-      const listener = new TicketListener(callbacks);
+      const listener = new TicketListenerLocal(callbacks);
 
       // Then it should be created but not listening yet
       expect(listener.getIsListening()).toBe(false);
@@ -113,7 +114,7 @@ describe('TicketListener', () => {
         writable: true,
         configurable: true
       });
-      const listener = new TicketListener(mockCallbacks);
+      const listener = new TicketListenerLocal(mockCallbacks);
 
       // When trying to start listening
       listener.startListening();
@@ -291,7 +292,7 @@ describe('TicketListener', () => {
       // Clear previous mocks
       vi.clearAllMocks();
 
-      const partialListener = new TicketListener(partialCallbacks);
+      const partialListener = new TicketListenerLocal(partialCallbacks);
       partialListener.startListening();
 
       const eventHandler = mockWindow.addEventListener.mock.calls[0][1]; // First call (storage event)
@@ -331,7 +332,7 @@ describe('TicketListener', () => {
       const originalError = console.error;
       console.error = vi.fn();
 
-      const errorListener = new TicketListener(errorCallbacks);
+      const errorListener = new TicketListenerLocal(errorCallbacks);
       errorListener.startListening();
 
       const eventHandler = mockWindow.addEventListener.mock.calls[0][1]; // First call (storage event)
@@ -351,7 +352,7 @@ describe('TicketListener', () => {
 
       // Then error should be logged
       expect(console.error).toHaveBeenCalledWith(
-        'TicketListener: Error in onTicketCreated:',
+        'TicketListenerLocal: Error in onTicketCreated:',
         expect.any(Error)
       );
 

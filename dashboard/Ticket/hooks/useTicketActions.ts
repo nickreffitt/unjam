@@ -15,6 +15,11 @@ export const useTicketActions = (): UseTicketActionsReturn => {
   const { ticketManager } = useTicketManager();
 
   const handleClaimTicket = async (ticket: Ticket) => {
+    if (!ticketManager) {
+      console.error('No ticket manager available');
+      return;
+    }
+
     try {
       console.debug('Claiming ticket:', ticket.id);
       // Use the real TicketManager to claim the ticket
@@ -35,6 +40,11 @@ export const useTicketActions = (): UseTicketActionsReturn => {
     setTicket: (ticket: Ticket) => void,
     setTimeoutRemaining: (time: number) => void
   ) => {
+    if (!ticketManager) {
+      console.error('No ticket manager available');
+      return;
+    }
+
     try {
       console.debug('Marking ticket as fixed:', ticket.id);
       // Use the real TicketManager to mark ticket as fixed
@@ -58,6 +68,11 @@ export const useTicketActions = (): UseTicketActionsReturn => {
   };
 
   const handleAbandonTask = async (ticketId: string) => {
+    if (!ticketManager) {
+      console.error('No ticket manager available');
+      return;
+    }
+
     if (window.confirm('Are you sure you want to abandon this ticket? It will be returned to the queue.')) {
       try {
         console.debug('Abandoning ticket:', ticketId);
@@ -79,6 +94,11 @@ export const useTicketActions = (): UseTicketActionsReturn => {
     setTicket: (ticket: Ticket) => void,
     setTimeoutRemaining: (time: number) => void
   ) => {
+    if (!ticketManager) {
+      console.error('No ticket manager available');
+      return;
+    }
+
     if (ticket.status === 'awaiting-confirmation') {
       try {
         console.debug('Simulating customer confirmation for ticket:', ticket.id);
@@ -96,6 +116,11 @@ export const useTicketActions = (): UseTicketActionsReturn => {
     setTicket: (ticket: Ticket) => void,
     setTimeoutRemaining: (time: number) => void
   ) => {
+    if (!ticketManager) {
+      console.error('No ticket manager available');
+      return;
+    }
+
     if (ticket.status === 'awaiting-confirmation') {
       try {
         console.debug('Simulating auto-complete timer for ticket:', ticket.id);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ChatEventEmitter } from './ChatEventEmitter';
+import { ChatEventEmitterLocal } from './ChatEventEmitterLocal';
 import { type ChatMessage, type UserProfile } from '@common/types';
 
 // Mock localStorage and window
@@ -19,7 +19,7 @@ const originalLocalStorage = global.localStorage;
 const originalWindow = global.window;
 
 describe('ChatEventEmitter', () => {
-  let emitter: ChatEventEmitter;
+  let emitter: ChatEventEmitterLocal;
   let mockMessage: ChatMessage;
   let mockUser: UserProfile;
 
@@ -38,7 +38,7 @@ describe('ChatEventEmitter', () => {
       writable: true,
     });
 
-    emitter = new ChatEventEmitter();
+    emitter = new ChatEventEmitterLocal();
 
     // Create a mock chat message
     mockMessage = {
@@ -207,7 +207,7 @@ describe('ChatEventEmitter', () => {
 
     it('should emit again after sufficient time has passed', async () => {
       // given a fresh emitter and ticket ID and user
-      const freshEmitter = new ChatEventEmitter();
+      const freshEmitter = new ChatEventEmitterLocal();
       const ticketId = 'TKT-456';
 
       // Clear any previous calls
@@ -222,7 +222,7 @@ describe('ChatEventEmitter', () => {
       expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(1); // Still 1
 
       // and waiting for throttle to expire (simulate by creating new fresh emitter)
-      const anotherFreshEmitter = new ChatEventEmitter();
+      const anotherFreshEmitter = new ChatEventEmitterLocal();
       anotherFreshEmitter.emitChatSenderIsTyping(ticketId, mockUser);
 
       // then should emit the second time
@@ -238,7 +238,7 @@ describe('ChatEventEmitter', () => {
         writable: true,
       });
 
-      const emitterInNonBrowser = new ChatEventEmitter();
+      const emitterInNonBrowser = new ChatEventEmitterLocal();
 
       // when emitting an event
       emitterInNonBrowser.emitChatMessageSent(mockMessage);

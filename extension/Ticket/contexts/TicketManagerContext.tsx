@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { TicketManager } from '@common/features/TicketManager';
-import { TicketStore } from '@common/features/TicketManager/store';
+import { type TicketStore, TicketStoreLocal } from '@common/features/TicketManager/store';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
 import { type Ticket } from '@common/types';
 
@@ -20,7 +20,7 @@ export const TicketManagerProvider: React.FC<TicketManagerProviderProps> = ({ ch
 
   // Create shared instances using centralized customer profile
   const { ticketStore, ticketManager } = useMemo(() => {
-    const store = new TicketStore();
+    const store = new TicketStoreLocal();
     const manager = new TicketManager(customerProfile, store);
     return { ticketStore: store, ticketManager: manager };
   }, [customerProfile]);

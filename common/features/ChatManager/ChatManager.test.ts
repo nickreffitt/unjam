@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ChatManager } from './ChatManager';
 import { ChatStore } from './store';
-import { ChatEventEmitter } from './events/ChatEventEmitter';
+import { ChatEventEmitterLocal } from './events/ChatEventEmitterLocal';
 import { type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('ChatManager', () => {
@@ -29,7 +29,7 @@ describe('ChatManager', () => {
     // Reset console mocks
     vi.clearAllMocks();
     // Create ChatStore and ChatManager instances
-    const eventEmitter = new ChatEventEmitter();
+    const eventEmitter = new ChatEventEmitterLocal();
     chatStore = new ChatStore(ticketId, eventEmitter);
     chatManager = new ChatManager(ticketId, mockCustomer, mockEngineer, chatStore);
   });
@@ -42,7 +42,7 @@ describe('ChatManager', () => {
     });
 
     it('should create ChatManager with engineer as sender', () => {
-      const engineerEventEmitter = new ChatEventEmitter();
+      const engineerEventEmitter = new ChatEventEmitterLocal();
       const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
       const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
       expect(engineerChatManager.getSender()).toEqual(mockEngineer);
@@ -201,7 +201,7 @@ describe('ChatManager', () => {
       await chatManager.send('Initial message');
 
       // Simulate another tab/instance adding messages
-      const anotherEventEmitter = new ChatEventEmitter();
+      const anotherEventEmitter = new ChatEventEmitterLocal();
       const anotherChatStore = new ChatStore(ticketId, anotherEventEmitter);
       const anotherChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, anotherChatStore);
       await anotherChatManager.send('Message from engineer');
@@ -220,13 +220,13 @@ describe('ChatManager', () => {
   describe('cross-tab communication', () => {
     it('should allow chat between customer and engineer', async () => {
       // Customer sends a message
-      const customerEventEmitter = new ChatEventEmitter();
+      const customerEventEmitter = new ChatEventEmitterLocal();
       const customerChatStore = new ChatStore(ticketId, customerEventEmitter);
       const customerChat = new ChatManager(ticketId, mockCustomer, mockEngineer, customerChatStore);
       await customerChat.send('Hello, I need help');
 
       // Engineer loads the chat
-      const engineerEventEmitter = new ChatEventEmitter();
+      const engineerEventEmitter = new ChatEventEmitterLocal();
       const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
       const engineerChat = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
       let messages = await engineerChat.getRecent();
@@ -260,7 +260,7 @@ describe('ChatManager', () => {
 
     it('should work for engineer chat manager', () => {
       // Arrange
-      const engineerEventEmitter = new ChatEventEmitter();
+      const engineerEventEmitter = new ChatEventEmitterLocal();
       const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
       const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
 

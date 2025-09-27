@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ChatStore } from '@common/features/ChatManager/store/ChatStore';
-import { ChatEventEmitter } from '@common/features/ChatManager/events/ChatEventEmitter';
+import { ChatEventEmitterLocal } from '@common/features/ChatManager/events/ChatEventEmitterLocal';
 import { type ChatMessage, type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('ChatStore', () => {
@@ -37,7 +37,7 @@ describe('ChatStore', () => {
     // Reset console mocks
     vi.clearAllMocks();
     // Create new instance with event emitter
-    const eventEmitter = new ChatEventEmitter();
+    const eventEmitter = new ChatEventEmitterLocal();
     chatStore = new ChatStore(ticketId, eventEmitter);
   });
 

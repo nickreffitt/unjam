@@ -1,35 +1,16 @@
 import { type Ticket, type TicketStatus, type EngineerProfile } from '@common/types';
-import { TicketEventEmitter } from '@common/features/TicketManager/events';
 
-export class TicketStore {
-  private tickets: Ticket[] = [];
-  private readonly storageKey: string = 'ticketStore-tickets';
-  private readonly eventEmitter: TicketEventEmitter;
-
-  constructor() {
-    this.eventEmitter = new TicketEventEmitter();
-    this.loadTicketsFromStorage();
-  }
-
+/**
+ * Interface for ticket storage implementations
+ * Defines the contract that all ticket store implementations must follow
+ */
+export interface TicketStore {
   /**
    * Creates a new ticket
    * @param ticket - The ticket to create
    * @returns The created ticket with any modifications (like generated ID)
    */
-  create(ticket: Ticket): Ticket {
-    const newTicket = { ...ticket };
-
-    // Add to the beginning of the array (most recent first)
-    this.tickets.unshift(newTicket);
-    this.saveTicketsToStorage();
-
-    console.debug('TicketStore: Created ticket', newTicket.id);
-
-    // Emit event for ticket creation
-    this.eventEmitter.emitTicketCreated(newTicket);
-
-    return newTicket;
-  }
+  create(ticket: Ticket): Ticket;
 
   /**
    * Gets all tickets by status with pagination
@@ -38,32 +19,14 @@ export class TicketStore {
    * @param offset - Number of tickets to skip (for pagination)
    * @returns Array of tickets matching the status(es)
    */
-  getAllByStatus(ticketStatuses: TicketStatus | TicketStatus[], size: number, offset: number = 0): Ticket[] {
-    const statusArray = Array.isArray(ticketStatuses) ? ticketStatuses : [ticketStatuses];
-    const filteredTickets = this.tickets.filter(ticket => statusArray.includes(ticket.status));
-
-    const paginatedTickets = filteredTickets.slice(offset, offset + size);
-
-    console.debug(`TicketStore: Found ${paginatedTickets.length} tickets with status '${statusArray.join(', ')}' (${offset}-${offset + size - 1} of ${filteredTickets.length})`);
-    return paginatedTickets;
-  }
+  getAllByStatus(ticketStatuses: TicketStatus | TicketStatus[], size: number, offset?: number): Ticket[];
 
   /**
    * Gets a single ticket by ID
    * @param ticketId - The ID of the ticket to retrieve
    * @returns The ticket if found, null otherwise
    */
-  get(ticketId: string): Ticket | null {
-    const ticket = this.tickets.find(t => t.id === ticketId);
-
-    if (ticket) {
-      console.debug('TicketStore: Found ticket', ticketId);
-      return { ...ticket }; // Return a copy to prevent external mutations
-    } else {
-      console.debug('TicketStore: Ticket not found', ticketId);
-      return null;
-    }
-  }
+  get(ticketId: string): Ticket | null;
 
   /**
    * Updates an existing ticket
@@ -72,27 +35,7 @@ export class TicketStore {
    * @returns The updated ticket
    * @throws Error if ticket is not found
    */
-  update(ticketId: string, updatedTicket: Ticket): Ticket {
-    const ticketIndex = this.tickets.findIndex(t => t.id === ticketId);
-
-    if (ticketIndex === -1) {
-      throw new Error(`Ticket with ID ${ticketId} not found`);
-    }
-
-    // Ensure the ID matches
-    const ticketToUpdate = { ...updatedTicket, id: ticketId };
-
-    // Replace the ticket at the found index
-    this.tickets[ticketIndex] = ticketToUpdate;
-    this.saveTicketsToStorage();
-
-    console.debug('TicketStore: Updated ticket', ticketId);
-
-    // Emit event for ticket update
-    this.eventEmitter.emitTicketUpdated(ticketToUpdate);
-
-    return { ...ticketToUpdate };
-  }
+  update(ticketId: string, updatedTicket: Ticket): Ticket;
 
   /**
    * Gets tickets assigned to a specific engineer with specific status(es)
@@ -107,20 +50,8 @@ export class TicketStore {
     engineerProfile: EngineerProfile,
     ticketStatuses: TicketStatus | TicketStatus[],
     size: number,
-    offset: number = 0
-  ): Ticket[] {
-    const statusArray = Array.isArray(ticketStatuses) ? ticketStatuses : [ticketStatuses];
-    const filteredTickets = this.tickets.filter(ticket =>
-      statusArray.includes(ticket.status) &&
-      ticket.assignedTo &&
-      ticket.assignedTo.id === engineerProfile.id
-    );
-
-    const paginatedTickets = filteredTickets.slice(offset, offset + size);
-
-    console.debug(`TicketStore: Found ${paginatedTickets.length} tickets with status '${statusArray.join(', ')}' for engineer '${engineerProfile.name}' (${offset}-${offset + size - 1} of ${filteredTickets.length})`);
-    return paginatedTickets;
-  }
+    offset?: number
+  ): Ticket[];
 
   /**
    * Gets the total count of tickets with a specific status
@@ -128,9 +59,7 @@ export class TicketStore {
    * @param ticketStatus - The status to count
    * @returns Number of tickets with that status
    */
-  getCountByStatus(ticketStatus: TicketStatus): number {
-    return this.tickets.filter(ticket => ticket.status === ticketStatus).length;
-  }
+  getCountByStatus(ticketStatus: TicketStatus): number;
 
   /**
    * Gets the active ticket for a specific customer
@@ -138,91 +67,22 @@ export class TicketStore {
    * @param customerId - The ID of the customer to find an active ticket for
    * @returns The active ticket if found, null otherwise
    */
-  getActiveTicketByCustomer(customerId: string): Ticket | null {
-    const activeStatuses: TicketStatus[] = ['waiting', 'in-progress', 'awaiting-confirmation', 'marked-resolved'];
-
-    const activeTicket = this.tickets.find(ticket =>
-      ticket.createdBy.id === customerId &&
-      activeStatuses.includes(ticket.status)
-    );
-
-    if (activeTicket) {
-      console.debug('TicketStore: Found active ticket for customer', customerId, activeTicket.id);
-      return { ...activeTicket }; // Return a copy to prevent external mutations
-    } else {
-      console.debug('TicketStore: No active ticket found for customer', customerId);
-      return null;
-    }
-  }
+  getActiveTicketByCustomer(customerId: string): Ticket | null;
 
   /**
    * Gets all tickets (mainly for testing purposes)
    * @returns All tickets in the store
    */
-  getAll(): Ticket[] {
-    return [...this.tickets];
-  }
+  getAll(): Ticket[];
 
   /**
-   * Reloads tickets from localStorage
-   * Used when we need to sync with changes made by other tabs
+   * Reloads tickets from storage
+   * Used when we need to sync with changes made by other tabs/sources
    */
-  reload(): void {
-    this.loadTicketsFromStorage();
-  }
-
-  /**
-   * Loads tickets from localStorage
-   * If no data exists, initializes with mock data
-   */
-  private loadTicketsFromStorage(): void {
-    try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (stored) {
-        const parsedTickets = JSON.parse(stored);
-        // Convert date strings back to Date objects
-        this.tickets = parsedTickets.map((ticket: Ticket) => ({
-          ...ticket,
-          createdAt: ticket.createdAt ? new Date(ticket.createdAt) : undefined,
-          claimedAt: ticket.claimedAt ? new Date(ticket.claimedAt) : undefined,
-          resolvedAt: ticket.resolvedAt ? new Date(ticket.resolvedAt) : undefined,
-          abandonedAt: ticket.abandonedAt ? new Date(ticket.abandonedAt) : undefined,
-        }));
-        console.debug('TicketStore: Loaded tickets from localStorage');
-      } else {
-        // Initialize with mock data if no stored data exists
-        this.tickets = [];
-        this.saveTicketsToStorage();
-        console.debug('TicketStore: Initialized with mock data and saved to localStorage');
-      }
-    } catch (error) {
-      console.error('TicketStore: Error loading tickets from localStorage', error);
-      this.tickets = [];
-    }
-  }
-
-  /**
-   * Saves tickets to localStorage
-   */
-  private saveTicketsToStorage(): void {
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.tickets));
-      console.debug('TicketStore: Saved tickets to localStorage');
-    } catch (error) {
-      console.error('TicketStore: Error saving tickets to localStorage:', error);
-    }
-  }
-
+  reload(): void;
 
   /**
    * Clears all tickets (mainly for testing purposes)
    */
-  clear(): void {
-    this.tickets = [];
-    this.saveTicketsToStorage();
-    console.debug('TicketStore: Cleared all tickets');
-
-    // Emit event for clearing tickets
-    this.eventEmitter.emitTicketsCleared();
-  }
+  clear(): void;
 }

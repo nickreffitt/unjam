@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { TicketListener, type TicketListenerCallbacks } from '@common/features/TicketManager/events';
+import { type TicketListener, TicketListenerLocal, type TicketListenerCallbacks } from '@common/features/TicketManager/events';
 
 /**
  * Hook that listens to global ticket events via window events
@@ -25,15 +25,18 @@ export function useTicketListener(callbacks: Partial<TicketListenerCallbacks>): 
   // Create a TicketListener instance and keep it stable across re-renders
   const ticketListenerRef = useRef<TicketListener | null>(null);
 
+  // Update callbacks when they change, but don't restart the listener
   useEffect(() => {
-    // Create the listener on first render
-    if (!ticketListenerRef.current) {
-      ticketListenerRef.current = new TicketListener(callbacks);
-      ticketListenerRef.current.startListening();
-    } else {
-      // Update callbacks on subsequent renders
+    if (ticketListenerRef.current) {
       ticketListenerRef.current.updateCallbacks(callbacks);
     }
+  }, [callbacks]);
+
+  // Initialize and cleanup listener (only on mount/unmount)
+  useEffect(() => {
+    // Create and start the listener on mount
+    ticketListenerRef.current = new TicketListenerLocal(callbacks);
+    ticketListenerRef.current.startListening();
 
     // Cleanup on unmount
     return () => {
@@ -42,5 +45,5 @@ export function useTicketListener(callbacks: Partial<TicketListenerCallbacks>): 
         ticketListenerRef.current = null;
       }
     };
-  }, [callbacks]);
+  }, []); // Empty dependency array - only run on mount/unmount
 }

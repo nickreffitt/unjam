@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { ChatManager } from '@common/features/ChatManager';
 import { ChatStore } from '@common/features/ChatManager/store';
-import { useUserProfile } from '@dashboard/shared/UserProfileContext';
-import { ChatEventEmitter } from '@common/features/ChatManager/events';
+import { useUserProfile } from '@dashboard/shared/contexts/AuthManagerContext';
+import { ChatEventEmitterLocal } from '@common/features/ChatManager/events';
 
 interface ChatManagerContextType {
   createChatManager: (ticketId: string, receiverProfile: any) => ChatManager;
@@ -16,22 +16,25 @@ interface ChatManagerProviderProps {
 }
 
 export const ChatManagerProvider: React.FC<ChatManagerProviderProps> = ({ children }) => {
-  const { engineerProfile } = useUserProfile();
+  const { currentProfile } = useUserProfile();
 
   // Create factory functions for chat manager and store instances
   const contextValue = useMemo(() => {
     const createChatStore = (ticketId: string) => {
-      const eventEmitter = new ChatEventEmitter();
+      const eventEmitter = new ChatEventEmitterLocal();
       return new ChatStore(ticketId, eventEmitter);
     };
 
     const createChatManager = (ticketId: string, receiverProfile: any) => {
+      if (!currentProfile) {
+        throw new Error('No user profile available for chat manager');
+      }
       const chatStore = createChatStore(ticketId);
-      return new ChatManager(ticketId, engineerProfile, receiverProfile, chatStore);
+      return new ChatManager(ticketId, currentProfile, receiverProfile, chatStore);
     };
 
     return { createChatManager, createChatStore };
-  }, [engineerProfile]);
+  }, [currentProfile]);
 
   return (
     <ChatManagerContext.Provider value={contextValue}>

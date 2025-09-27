@@ -24,12 +24,12 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
 
   // Load ticket on mount
   useEffect(() => {
-    if (!ticketId) return;
+    if (!ticketId || !ticketStore) return;
 
     const foundTicket = ticketStore.get(ticketId);
     if (foundTicket) {
       // If the ticket is waiting and we're in active context, claim it using TicketManager
-      if (foundTicket.status === 'waiting' && window.location.pathname.includes('/active/')) {
+      if (foundTicket.status === 'waiting' && window.location.pathname.includes('/active/') && ticketManager) {
         ticketManager.claimTicket(ticketId).then(claimedTicket => {
           setTicket(claimedTicket);
           setElapsedTime(0);
@@ -51,6 +51,8 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
     if (updatedTicket.id === ticketId) {
       console.debug('useTicketState: Received ticket update for', ticketId, 'with status', updatedTicket.status);
       // Reload from store to get the latest data
+      if (!ticketStore) return;
+
       ticketStore.reload();
       const freshTicket = ticketStore.get(ticketId);
       if (freshTicket) {

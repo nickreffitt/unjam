@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TicketListManager } from './TicketListManager';
-import { TicketStore } from '@common/features/TicketManager/store';
+import { type TicketStore, TicketStoreLocal } from '@common/features/TicketManager/store';
 import { type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('TicketListManager', () => {
@@ -24,7 +24,7 @@ describe('TicketListManager', () => {
 
   beforeEach(() => {
     // Create a fresh store for each test and populate with mock data
-    ticketStore = new TicketStore();
+    ticketStore = new TicketStoreLocal();
     ticketStore.clear(); // Clear any existing data from localStorage
 
     // Create test tickets

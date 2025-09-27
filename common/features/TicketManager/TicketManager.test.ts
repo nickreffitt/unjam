@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TicketManager } from './TicketManager';
-import { TicketStore } from '@common/features/TicketManager/store';
+import { type TicketStore, TicketStoreLocal } from '@common/features/TicketManager/store';
 import { type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('TicketManager', () => {
@@ -31,7 +31,7 @@ describe('TicketManager', () => {
 
   beforeEach(() => {
     // Create a fresh store for each test
-    ticketStore = new TicketStore();
+    ticketStore = new TicketStoreLocal();
     ticketStore.clear(); // Clear the mock data for isolated testing
   });
 
