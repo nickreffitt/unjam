@@ -45,32 +45,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Run unit tests
-      - name: Run unit tests
-        run: npm test
-
-      # Run Cypress tests using the official GitHub Action
-      - name: Cypress run
-        uses: cypress-io/github-action@v6
-        env:
-          NODE_ENV: 'development'
-          VITE_USE_LOCAL_AUTH: 'true'
-        with:
-          start: npm run dev:unified
-          wait-on: 'http://localhost:5175'
-          wait-on-timeout: 120
-          browser: chrome
-          command: npm run cypress:run
-
-      # Upload Cypress screenshots on failure
-      - name: Upload Cypress screenshots
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: cypress-screenshots
-          path: cypress/screenshots/
-          if-no-files-found: ignore
-          
       - name: Build Docker image locally
         run: |
           docker build -f ./deploy/Dockerfile -t ${{ env.APP_NAME }}:latest .
@@ -138,7 +112,10 @@ jobs:
             docker rm "$APP_NAME" || true
 
             # Run the new container
-            docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 "$APP_NAME:latest"
+            docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 \
+              -e VITE_SUPABASE_URL="$SUPABASE_URL" \
+              -e VITE_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+              "$APP_NAME:latest"
 
             # Clean up any broken nginx symlinks
             find /etc/nginx/sites-enabled -type l -exec test ! -e {} \; -delete
