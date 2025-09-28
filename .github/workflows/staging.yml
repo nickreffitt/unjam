@@ -50,6 +50,9 @@ jobs:
       # Run Cypress tests using the official GitHub Action
       - name: Cypress run
         uses: cypress-io/github-action@v6
+        env:
+          NODE_ENV: 'development'
+          VITE_USE_LOCAL_AUTH: 'true'
         with:
           start: npm run dev:unified
           wait-on: 'http://localhost:5175'
