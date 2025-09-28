@@ -39,8 +39,6 @@ Cypress.Commands.add('loginFakeUser', () => {
     // 2. Click "Send magic link"
     cy.contains('button', 'Send magic link').click();
 
-    cy.wait(2000);
-
     // 3. Should redirect to Complete Your Profile page
     cy.contains('Complete Your Profile', { timeout: 10000 }).should('be.visible');
 

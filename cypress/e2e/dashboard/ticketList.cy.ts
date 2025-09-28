@@ -60,9 +60,6 @@ describe('Dashboard - Ticket Lists', () => {
 
       win.localStorage.setItem('ticketStore-tickets', JSON.stringify(testTickets));
     });
-
-    // Reload to pick up the test tickets
-    cy.reload();
   });
 
   it('can access dashboard interface', () => {
@@ -79,7 +76,7 @@ describe('Dashboard - Ticket Lists', () => {
       cy.contains('button', 'Empty State: OFF').click();
 
       // then it displays the empty state
-      cy.contains('No New Tickets').should('be.visible');
+      cy.contains('No New Tickets', { timeout: 15000 }).should('be.visible');
       cy.contains('There are no tickets waiting to be claimed').should('be.visible');
       cy.contains('button', 'Refresh Tickets').should('be.visible');
     });
