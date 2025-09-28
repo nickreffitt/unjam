@@ -1,13 +1,14 @@
 describe('Dashboard - Individual Ticket Pages', () => {
   beforeEach(() => {
-    // Use local auth for testing
-    cy.useLocalAuth();
-
     // Clear localStorage before each test to ensure clean state
     cy.window().then((win) => {
       win.localStorage.clear();
+    });
 
-      // Seed test data directly into localStorage
+    cy.loginFakeUser();
+
+    // Seed test data directly into localStorage after auth is complete
+    cy.window().then((win) => {
       const testTickets = [
         {
           id: 'TKT-TEST-001',
@@ -60,18 +61,8 @@ describe('Dashboard - Individual Ticket Pages', () => {
       win.localStorage.setItem('ticketStore-tickets', JSON.stringify(testTickets));
     });
 
-    // Set up fake authenticated user for testing
-    cy.createFakeAuthenticatedUser(
-      { email: 'engineer@test.com' },
-      { name: 'Test Engineer', type: 'engineer' }
-    );
-
-    // Navigate to dashboard
-    cy.visit('/app');
-
-    // Navigate to New Tickets and wait for data to load
-    cy.contains('New Tickets').click();
-    cy.wait(1000); // Wait for tickets to load from localStorage
+    // Reload to pick up the test tickets
+    cy.reload();
   });
 
   it('shows ticket preview when preview icon is tapped from new tickets list', () => {

@@ -168,7 +168,6 @@ export class AuthManager {
     const profileId = crypto.randomUUID();
     const fullProfileData = {
       id: profileId, // For UserProfile compatibility
-      profileId,
       authId: currentUser.id,
       name: profileData.name,
       type: profileData.type,
@@ -205,6 +204,7 @@ export class AuthManager {
         console.debug('[AuthManager] User signed in event received, converting to UserProfile');
         try {
           const userProfile = await this.convertUserToUserProfile(user);
+          console.debug('AuthManager: userProfile', userProfile);
           if (userProfile) {
             this.currentAuthUser = {
               status: 'signed-in',
@@ -233,10 +233,12 @@ export class AuthManager {
         console.debug('[AuthManager] Emitted UserProfile signed out event');
       },
       onAuthStateChanged: async (user: User | null) => {
-        console.debug('[AuthManager] Auth state changed event received');
+        console.debug('[AuthManager] Auth state changed event received with user', user);
+        console.debug('[AuthManager] Call stack:', new Error().stack);
         try {
           if (user) {
             const userProfile = await this.convertUserToUserProfile(user);
+            console.debug('userProfile', userProfile);
             if (userProfile) {
               this.currentAuthUser = {
                 status: 'signed-in',
@@ -275,16 +277,20 @@ export class AuthManager {
    */
   private async convertUserToUserProfile(user: User): Promise<UserProfile | null> {
     try {
+      console.debug(`[AuthManager] convertUserToUserProfile: Looking for profile with authId: ${user.id}`);
       // First, try to get the existing profile from the store using auth ID
       const existingProfile = await this.authProfileStore.getByAuthId(user.id);
+      console.debug(`[AuthManager] convertUserToUserProfile: Found profile:`, existingProfile);
 
       if (existingProfile) {
         // Set the user property to establish 1:1 mapping (only for EngineerProfile)
         if (existingProfile.type === 'engineer') {
           existingProfile.user = user;
         }
+        console.debug(`[AuthManager] convertUserToUserProfile: Returning profile with user attached`);
         return existingProfile;
       }
+      console.debug(`[AuthManager] convertUserToUserProfile: No profile found, returning null`);
     } catch (error) {
       console.error('AuthManager: Error converting user to user profile:', error);
     }

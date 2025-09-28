@@ -279,7 +279,6 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       id: row.profile_id as string,  // Use profile_id as the id for UserProfile
       name: row.name as string,
       email: row.email as string | undefined,
-      profileId: row.profile_id as string,
       authId: row.auth_id as string,
     };
 

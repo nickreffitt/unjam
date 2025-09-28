@@ -27,7 +27,7 @@ export class AuthProfileStoreLocal implements AuthProfileStore {
     const newProfile = { ...profile };
 
     // Validate required fields
-    if (!newProfile.profileId) {
+    if (!newProfile.id) {
       throw new Error('profileId is required for profile creation');
     }
     if (!newProfile.authId) {
@@ -35,8 +35,8 @@ export class AuthProfileStoreLocal implements AuthProfileStore {
     }
 
     // Check for duplicate profileId
-    if (this.getByProfileId(newProfile.profileId)) {
-      throw new Error(`Profile with ID ${newProfile.profileId} already exists`);
+    if (this.getByProfileId(newProfile.id)) {
+      throw new Error(`Profile with ID ${newProfile.id} already exists`);
     }
 
     // Check for duplicate authId
@@ -48,7 +48,7 @@ export class AuthProfileStoreLocal implements AuthProfileStore {
     this.profiles.push(newProfile);
     this.saveProfilesToStorage();
 
-    console.debug('AuthProfileStoreLocal: Created profile', newProfile.profileId);
+    console.debug('AuthProfileStoreLocal: Created profile', newProfile.id);
     return newProfile;
   }
 
@@ -58,7 +58,7 @@ export class AuthProfileStoreLocal implements AuthProfileStore {
    * @returns The user profile if found, null otherwise
    */
   getByProfileId(profileId: string): UserProfile | null {
-    return this.profiles.find(profile => profile.profileId === profileId) || null;
+    return this.profiles.find(profile => profile.id === profileId) || null;
   }
 
   /**
@@ -88,7 +88,7 @@ export class AuthProfileStoreLocal implements AuthProfileStore {
    * @throws Error if profile is not found
    */
   update(profileId: string, updatedProfile: UserProfile): UserProfile {
-    const profileIndex = this.profiles.findIndex(profile => profile.profileId === profileId);
+    const profileIndex = this.profiles.findIndex(profile => profile.id === profileId);
 
     if (profileIndex === -1) {
       throw new Error(`Profile with ID ${profileId} not found`);

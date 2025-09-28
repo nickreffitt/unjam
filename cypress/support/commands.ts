@@ -13,7 +13,6 @@ interface FakeUserOptions {
  * Interface for fake user profile creation options
  */
 interface FakeUserProfileOptions {
-  profileId?: string;
   authId?: string;
   name?: string;
   type?: 'customer' | 'engineer';
@@ -24,96 +23,40 @@ interface FakeUserProfileOptions {
 declare global {
   namespace Cypress {
     interface Chainable {
-      /**
-       * Creates a fake authenticated user in localStorage for testing
-       * This bypasses the authentication flow and directly sets up an authenticated state
-       *
-       * @param userOptions - Optional user properties to override defaults
-       * @param profileOptions - Optional profile properties to override defaults
-       *
-       * @example
-       * cy.createFakeAuthenticatedUser()
-       *
-       * @example
-       * cy.createFakeAuthenticatedUser(
-       *   { email: 'test@example.com' },
-       *   { name: 'Test Engineer', type: 'engineer' }
-       * )
-       */
-      createFakeAuthenticatedUser(
-        userOptions?: FakeUserOptions,
-        profileOptions?: FakeUserProfileOptions
-      ): Chainable<void>;
-
-      /**
-       * Clears all authentication data from localStorage
-       * Useful for ensuring a clean slate before tests
-       */
-      clearAuthData(): Chainable<void>;
-
-      /**
-       * Sets the environment to use local storage auth instead of Supabase
-       * Should be called before visiting pages that initialize auth
-       */
-      useLocalAuth(): Chainable<void>;
+      loginFakeUser(): Chainable<void>;
     }
   }
 }
 
-Cypress.Commands.add('createFakeAuthenticatedUser', (userOptions = {}, profileOptions = {}) => {
-  const defaultUser = {
-    id: 'cypress-user-' + Date.now(),
-    email: 'cypress.user@example.com',
-    createdAt: new Date(),
-    ...userOptions
-  };
+Cypress.Commands.add('loginFakeUser', () => {
+    // Visit the app root, which will redirect to auth (VITE_USE_LOCAL_AUTH=true is set in .env)
+    cy.visit('/app');
 
-  const defaultProfile = {
-    profileId: 'cypress-profile-' + Date.now(),
-    authId: defaultUser.id,
-    name: 'Cypress Test User',
-    type: 'engineer' as const,
-    email: defaultUser.email,
-    githubUsername: 'cypress-user',
-    ...profileOptions
-  };
+    // Complete the engineer sign-up flow
+    // 1. Enter test engineer's email
+    cy.get('#email', { timeout: 10000 }).should('be.visible').type('engineer@test.com');
 
-  // Set up localStorage entries
-  cy.window().then((win) => {
-    // Set the authenticated user
-    win.localStorage.setItem('authUserStore-currentUser', JSON.stringify(defaultUser));
+    // 2. Click "Send magic link"
+    cy.contains('button', 'Send magic link').click();
 
-    // Set the user profile
-    win.localStorage.setItem('authProfileStore-profiles', JSON.stringify([defaultProfile]));
+    // 3. Should redirect to Complete Your Profile page
+    cy.contains('Complete Your Profile', { timeout: 10000 }).should('be.visible');
 
-    // Log what we've set up
-    cy.log('Created fake authenticated user:', defaultUser.email);
-    cy.log('Created fake user profile:', defaultProfile.name);
-  });
-});
+    // 4. Select "Engineer" radio button
+    cy.get('input[value="engineer"]').click();
+    cy.wait(500); // Wait for form to update
 
-Cypress.Commands.add('clearAuthData', () => {
-  cy.window().then((win) => {
-    // Clear all auth-related localStorage entries
-    win.localStorage.removeItem('authUserStore-currentUser');
-    win.localStorage.removeItem('authProfileStore-profiles');
+    // 5. Enter fake full name
+    cy.get('#name').type('Test Engineer');
 
-    // Clear any auth events
-    win.localStorage.removeItem('authUserStore-events');
-    win.localStorage.removeItem('authEventStore-events');
+    // 6. Enter fake github username
+    cy.get('#githubUsername').should('be.visible').type('testengineer');
 
-    cy.log('Cleared all authentication data');
-  });
-});
+    // 7. Click "Complete Profile"
+    cy.contains('button', 'Complete Profile').click();
 
-Cypress.Commands.add('useLocalAuth', () => {
-  // Set environment variable to use local storage auth
-  cy.window().then((win) => {
-    // We can't actually set import.meta.env at runtime, but we can set a flag
-    // that the AuthManagerContext can check
-    (win as any).CYPRESS_USE_LOCAL_AUTH = true;
-    cy.log('Set flag to use local storage auth');
-  });
+    // Wait for profile creation success and redirect
+    cy.url({ timeout: 15000 }).should('include', '/app/new');
 });
 
 export {};

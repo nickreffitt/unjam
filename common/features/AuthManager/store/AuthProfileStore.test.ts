@@ -13,7 +13,6 @@ describe('AuthProfileStore', () => {
 
   const createTestEngineerProfile = (): UserProfile => ({
     id: 'prof-eng-123',
-    profileId: 'prof-eng-123',
     authId: 'auth-123',
     type: 'engineer',
     name: 'John Engineer',
@@ -24,7 +23,6 @@ describe('AuthProfileStore', () => {
 
   const createTestCustomerProfile = (): UserProfile => ({
     id: 'prof-cust-456',
-    profileId: 'prof-cust-456',
     authId: 'auth-456',
     type: 'customer',
     name: 'Jane Customer',
@@ -37,7 +35,7 @@ describe('AuthProfileStore', () => {
       const createdProfile = store.create(profile);
 
       expect(createdProfile).toEqual(profile);
-      expect(store.getByProfileId(profile.profileId!)).toEqual(profile);
+      expect(store.getByProfileId(profile.id!)).toEqual(profile);
     });
 
     it('creates a new customer profile successfully', () => {
@@ -45,13 +43,12 @@ describe('AuthProfileStore', () => {
       const createdProfile = store.create(profile);
 
       expect(createdProfile).toEqual(profile);
-      expect(store.getByProfileId(profile.profileId!)).toEqual(profile);
+      expect(store.getByProfileId(profile.id!)).toEqual(profile);
     });
 
     it('throws error when creating engineer without GitHub username', () => {
       const profile: UserProfile = {
         id: 'prof-eng-no-github',
-        profileId: 'prof-eng-no-github',
         authId: 'auth-no-github',
         type: 'engineer',
         name: 'Engineer No GitHub',
@@ -73,7 +70,6 @@ describe('AuthProfileStore', () => {
       const profile2: UserProfile = {
         ...profile1,
         id: 'different-profile-id',
-        profileId: 'different-profile-id'
       };
 
       store.create(profile1);
@@ -86,7 +82,7 @@ describe('AuthProfileStore', () => {
       const profile = createTestEngineerProfile();
       store.create(profile);
 
-      const foundProfile = store.getByProfileId(profile.profileId);
+      const foundProfile = store.getByProfileId(profile.id);
       expect(foundProfile).toEqual(profile);
     });
 
@@ -150,9 +146,9 @@ describe('AuthProfileStore', () => {
         specialties: ['TypeScript', 'Node.js']
       };
 
-      const result = store.update(profile.profileId, updatedProfile);
+      const result = store.update(profile.id, updatedProfile);
       expect(result).toEqual(updatedProfile);
-      expect(store.getByProfileId(profile.profileId)).toEqual(updatedProfile);
+      expect(store.getByProfileId(profile.id)).toEqual(updatedProfile);
     });
 
     it('throws error when updating engineer profile to remove GitHub username', () => {
@@ -164,7 +160,7 @@ describe('AuthProfileStore', () => {
         githubUsername: undefined
       };
 
-      expect(() => store.update(profile.profileId, updatedProfile))
+      expect(() => store.update(profile.id, updatedProfile))
         .toThrow('GitHub username is required for engineer profiles');
     });
 
@@ -182,7 +178,6 @@ describe('AuthProfileStore', () => {
       store.create(createTestCustomerProfile());
       store.create({
         id: 'prof-eng-456',
-        profileId: 'prof-eng-456',
         authId: 'auth-eng-456',
         type: 'engineer',
         name: 'Another Engineer',
@@ -209,7 +204,7 @@ describe('AuthProfileStore', () => {
 
       expect(firstPage).toHaveLength(1);
       expect(secondPage).toHaveLength(1);
-      expect(firstPage[0].profileId).not.toBe(secondPage[0].profileId);
+      expect(firstPage[0].id).not.toBe(secondPage[0].id);
     });
   });
 
@@ -268,7 +263,7 @@ describe('AuthProfileStore', () => {
 
       // Create a new store instance to test loading from storage
       const newStore = new AuthProfileStoreLocal();
-      const loadedProfile = newStore.getByProfileId(profile.profileId);
+      const loadedProfile = newStore.getByProfileId(profile.id);
 
       expect(loadedProfile).toEqual(profile);
     });

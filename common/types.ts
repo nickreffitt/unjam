@@ -21,7 +21,6 @@ export interface CustomerProfile {
   name: string;
   type: 'customer';
   email?: string;
-  profileId?: string;      // The profile ID for auth system integration
   authId?: string;         // The auth system ID (e.g., Supabase Auth user ID)
 }
 
@@ -32,7 +31,6 @@ export interface EngineerProfile {
   email?: string;
   specialties?: string[];
   githubUsername?: string;
-  profileId?: string;      // The profile ID for auth system integration
   authId?: string;         // The auth system ID (e.g., Supabase Auth user ID)
   user?: User;             // 1:1 mapping with User from auth system
 }

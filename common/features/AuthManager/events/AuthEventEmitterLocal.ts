@@ -20,7 +20,10 @@ export class AuthEventEmitterLocal implements AuthEventEmitter {
    * @param authUser - The AuthUser who needs to complete their profile
    */
   emitUserRequiresProfile(authUser: AuthUser): void {
-    this.emitWindowEvent('userRequiresProfile', { authUser });
+    const emitterId = Math.random().toString(36).substr(2, 9);
+    console.debug(`[AuthEventEmitterLocal-${emitterId}] emitUserRequiresProfile called with:`, authUser);
+    console.debug(`[AuthEventEmitterLocal-${emitterId}] Call stack:`, new Error().stack);
+    this.emitWindowEvent('userRequiresProfile', { authUser, emitterId });
   }
 
   /**

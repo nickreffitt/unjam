@@ -2,15 +2,16 @@ describe('Dashboard - Chat Functionality', () => {
   beforeEach(() => {
     // Set a larger viewport to ensure all elements are visible
     cy.viewport(1400, 900);
-
-    // Use local auth for testing
-    cy.useLocalAuth();
-
+    
     // Clear localStorage before each test to ensure clean state
     cy.window().then((win) => {
       win.localStorage.clear();
+    });
 
-      // Seed test data with one ticket
+    cy.loginFakeUser();
+
+    // Seed test data with one ticket after auth is complete
+    cy.window().then((win) => {
       const testTicket = {
         id: 'TKT-TEST-001',
         status: 'waiting',
@@ -30,19 +31,13 @@ describe('Dashboard - Chat Functionality', () => {
       win.localStorage.setItem('ticketStore-tickets', JSON.stringify([testTicket]));
     });
 
-    // Set up fake authenticated user for testing
-    cy.createFakeAuthenticatedUser(
-      { email: 'engineer@test.com' },
-      { name: 'Test Engineer', type: 'engineer' }
-    );
+    // Reload to pick up the test ticket
+    cy.reload();
 
-    // Navigate to dashboard and claim the ticket
-    cy.visit('/app');
-    cy.contains('New Tickets').click();
-    cy.wait(1000); // Wait for tickets to load
+    cy.contains('New Tickets', { timeout: 15000 }).should('be.visible');
+
     cy.contains('button', 'Claim').click();
-    cy.wait(2000); // Wait for navigation and ticket update
-
+   
     // Verify we're on the active ticket page
     cy.url().should('include', '/active/');
   });

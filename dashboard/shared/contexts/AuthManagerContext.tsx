@@ -100,6 +100,7 @@ const initializeAuthManager = (): { authManager: AuthManager | null; error?: str
  * Uses singleton pattern to prevent multiple Supabase client instances
  */
 export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ children }) => {
+  console.debug('[AuthManagerProvider] Component mounting/rendering');
   const [authUser, setAuthUser] = useState<AuthUser>({ status: 'not-signed-in' });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<ErrorDisplay | null>(null);
@@ -122,26 +123,31 @@ export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ childr
   // Listen to auth events
   useAuthListener({
     onUserRequiresProfile: (authUserEvent: AuthUser) => {
+      console.debug('[AuthManagerContext] onUserRequiresProfile received:', authUserEvent);
       setAuthUser(authUserEvent);
       setIsLoading(false);
       setError(null);
     },
     onUserProfileCreated: (authUserEvent: AuthUser) => {
+      console.debug('[AuthManagerContext] onUserProfileCreated received:', authUserEvent);
       setAuthUser(authUserEvent);
       setIsLoading(false);
       setError(null);
     },
     onUserSignedIn: (authUserEvent: AuthUser) => {
+      console.debug('[AuthManagerContext] onUserSignedIn received:', authUserEvent);
       setAuthUser(authUserEvent);
       setIsLoading(false);
       setError(null);
     },
     onUserSignedOut: () => {
+      console.debug('[AuthManagerContext] onUserSignedOut received');
       setAuthUser({ status: 'not-signed-in' });
       setIsLoading(false);
       setError(null);
     },
     onAuthStateChanged: (authUserEvent: AuthUser) => {
+      console.debug('[AuthManagerContext] onAuthStateChanged received:', authUserEvent);
       setAuthUser(authUserEvent);
       setIsLoading(false);
     },

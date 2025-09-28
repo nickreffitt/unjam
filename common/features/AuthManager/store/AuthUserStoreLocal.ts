@@ -29,8 +29,9 @@ export class AuthUserStoreLocal implements AuthUserStore {
    */
   async signInWithMagicLink(email: string, _redirectUrl?: string): Promise<void> {
     console.debug('AuthUserStoreLocal: Simulating magic link send to:', email);
-    // In local implementation, this just logs the action
-    // The actual "verification" would happen in verifyMagicLink
+    // In local implementation, immediately simulate the user clicking the magic link
+    const fakeToken = `fake-token-${Date.now()}`;
+    await this.verifyMagicLink(fakeToken);
   }
 
   /**
@@ -41,7 +42,14 @@ export class AuthUserStoreLocal implements AuthUserStore {
   async verifyMagicLink(tokenHash: string): Promise<User> {
     console.debug('AuthUserStoreLocal: Simulating magic link verification for token:', tokenHash);
 
-    // Create a fake user for testing
+    // Check if we already have a user stored, reuse it instead of creating a new one
+    if (this.currentUser) {
+      console.debug('AuthUserStoreLocal: Reusing existing user for magic link verification');
+      this.authUserEventEmitter.emitUserSignedIn(this.currentUser);
+      return this.currentUser;
+    }
+
+    // Create a fake user for testing only if no user exists
     const fakeUser: User = {
       id: `test-user-${Date.now()}`,
       email: 'test@example.com',

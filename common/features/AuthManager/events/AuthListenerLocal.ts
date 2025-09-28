@@ -72,7 +72,8 @@ export class AuthListenerLocal implements AuthListener {
           return;
         }
 
-        const { type, authUser } = eventData;
+        const { type, authUser, emitterId } = eventData;
+        console.debug('AuthListenerLocal: Processing event:', type, 'with authUser:', authUser, 'emitterId:', emitterId);
 
         // Deserialize Date objects if authUser is present (in case dates are included in future)
         let deserializedAuthUser: AuthUser | null = authUser;
@@ -84,6 +85,25 @@ export class AuthListenerLocal implements AuthListener {
         switch (type as AuthEventType) {
           case 'userRequiresProfile':
             if (this.callbacks.onUserRequiresProfile && deserializedAuthUser) {
+              // Ignore events without emitterId (stale events from before the emitterId was added)
+              if (!emitterId) {
+                console.debug('AuthListenerLocal: Ignoring stale userRequiresProfile event without emitterId');
+                break;
+              }
+
+              // Check if this is a stale event by comparing with current auth state
+              const currentTimestamp = Date.now();
+              const eventTimestamp = eventData.timestamp || 0;
+              const timeDiff = currentTimestamp - eventTimestamp;
+
+              console.debug('AuthListenerLocal: userRequiresProfile event - current:', currentTimestamp, 'event:', eventTimestamp, 'diff:', timeDiff + 'ms');
+
+              // Ignore events older than 10 seconds to prevent stale events
+              if (timeDiff > 10000) {
+                console.debug('AuthListenerLocal: Ignoring stale userRequiresProfile event, age:', timeDiff + 'ms');
+                break;
+              }
+
               try {
                 this.callbacks.onUserRequiresProfile(deserializedAuthUser);
               } catch (error) {
