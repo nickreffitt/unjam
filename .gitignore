@@ -19,7 +19,7 @@ dist-ssr
 .idea
 .output
 .webextrc
-.wxt
+
 .wxt-runner
 /docs/.vitepress/cache
 docs/.vitepress/.temp
