@@ -16,8 +16,8 @@ export interface SupabaseConfig {
  * These values should be overridden with actual project values
  */
 export const DEFAULT_SUPABASE_CONFIG: SupabaseConfig = {
-  url: process.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co',
-  anonKey: process.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key-here',
+  url: import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co',
+  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key-here',
   redirectUrl: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
 };
 

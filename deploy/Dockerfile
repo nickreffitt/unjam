@@ -1,5 +1,5 @@
 # Build stage - prepare source code only
-FROM node:18-alpine AS source
+FROM node:22-alpine AS source
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 WORKDIR /app
 
 # Create a startup script that builds the app and starts nginx
-RUN echo '#!/bin/sh\ncd /app\nnpm run build:unified\ncp -r dist/* /usr/share/nginx/html/\nnginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
+RUN echo -e '#!/bin/sh\nset -e\ncd /app\necho "Building application..."\nnpm run build:unified\necho "Copying files to nginx..."\ncp -r dist/* /usr/share/nginx/html/\necho "Starting nginx..."\nnginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
 
 EXPOSE 80
 
