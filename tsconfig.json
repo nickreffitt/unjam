@@ -29,6 +29,6 @@
       "@common/*": ["common/*"]
     }
   },
-  "include": ["extension/**/*", "dashboard/**/*", "common/**/*", "types/**/*", "entrypoints/**/*"],
+  "include": ["extension/**/*", "dashboard/**/*", "common/**/*", "types/**/*", "entrypoints/**/*", "vite-env.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

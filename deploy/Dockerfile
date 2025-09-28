@@ -24,8 +24,8 @@ COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 
 WORKDIR /app
 
-# Create a startup script that builds the app and starts nginx
-RUN echo -e '#!/bin/sh\nset -e\ncd /app\necho "Building application..."\nnpm run build:unified\necho "Copying files to nginx..."\ncp -r dist/* /usr/share/nginx/html/\necho "Starting nginx..."\nnginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
+# Create a startup script that creates .env.production, builds the app and starts nginx
+RUN echo -e '#!/bin/sh\nset -e\ncd /app\necho "Creating .env.production file..."\necho "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" > .env.production\necho "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env.production\necho "Building application with production environment..."\nnpm run build:unified\necho "Copying files to nginx..."\ncp -r dist/* /usr/share/nginx/html/\necho "Starting nginx..."\nnginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
 
 EXPOSE 80
 
