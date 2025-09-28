@@ -12,27 +12,7 @@ import {
  * Stores manage their own event emission following the established pattern
  */
 export interface AuthUserStore {
-  /**
-   * Subscribe to user signed in events
-   * @param callback - Function to call when user signs in
-   * @returns Cleanup function to remove the listener
-   */
-  onUserSignedIn(callback: AuthUserSignedInCallback): () => void;
-
-  /**
-   * Subscribe to user signed out events
-   * @param callback - Function to call when user signs out
-   * @returns Cleanup function to remove the listener
-   */
-  onUserSignedOut(callback: AuthUserSignedOutCallback): () => void;
-
-  /**
-   * Subscribe to auth state changed events (token refresh, etc.)
-   * @param callback - Function to call when auth state changes
-   * @returns Cleanup function to remove the listener
-   */
-  onAuthStateChanged(callback: AuthStateChangedCallback): () => void;
-
+  
   /**
    * Sign in user with magic link
    * Sends a passwordless authentication email to the user

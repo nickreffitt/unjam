@@ -1,10 +1,22 @@
 describe('Dashboard - Ticket Lists', () => {
   beforeEach(() => {
-    // Clear localStorage before each test to ensure clean state
-    cy.window().then((win) => {
-      win.localStorage.clear();
+    // Visit page first to set up the window object
+    cy.visit('/app');
 
-      // Seed test data directly into localStorage
+    // Clear localStorage before each test to ensure clean state
+    cy.clearAuthData();
+
+    // Use local auth for testing
+    cy.useLocalAuth();
+
+    // Set up fake authenticated user for testing
+    cy.createFakeAuthenticatedUser(
+      { email: 'engineer@test.com' },
+      { name: 'Test Engineer', type: 'engineer' }
+    );
+
+    // Seed test data directly into localStorage
+    cy.window().then((win) => {
       const testTickets = [
         {
           id: 'TKT-TEST-001',
@@ -57,11 +69,20 @@ describe('Dashboard - Ticket Lists', () => {
       win.localStorage.setItem('ticketStore-tickets', JSON.stringify(testTickets));
     });
 
-    // Navigate to dashboard
-    cy.visit('/app');
+    // Reload the page to pick up the new authentication state
+    cy.reload();
+
+    // Wait for authentication to complete and dashboard to load
+    cy.wait(3000);
+
+    // Check if we have any visible content first
+    cy.get('body').should('not.be.empty');
+
+    // Try to find Engineer Dashboard heading first
+    cy.contains('Engineer Dashboard', { timeout: 10000 }).should('be.visible');
 
     // Navigate to New Tickets and wait for data to load
-    cy.contains('New Tickets').click();
+    cy.contains('New Tickets', { timeout: 10000 }).click();
     cy.wait(1000); // Wait for tickets to load from localStorage
   });
 

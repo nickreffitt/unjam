@@ -1,12 +1,7 @@
 import { type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js';
 import { type User } from '@common/types';
 import { type AuthUserStore } from './AuthUserStore';
-import {
-  type AuthUserEventEmitter,
-  type AuthUserSignedInCallback,
-  type AuthUserSignedOutCallback,
-  type AuthStateChangedCallback
-} from './AuthUserEventEmitter';
+import { type AuthUserEventEmitter } from './AuthUserEventEmitter';
 
 /**
  * Supabase implementation of the auth user store
@@ -112,27 +107,6 @@ export class AuthUserStoreSupabase implements AuthUserStore {
       console.debug('AuthUserStoreSupabase: Cleaning up Supabase auth state listener');
       subscription.unsubscribe();
     };
-  }
-
-  /**
-   * Subscribe to user signed in events
-   */
-  onUserSignedIn(callback: AuthUserSignedInCallback): () => void {
-    return this.eventEmitter.onUserSignedIn(callback);
-  }
-
-  /**
-   * Subscribe to user signed out events
-   */
-  onUserSignedOut(callback: AuthUserSignedOutCallback): () => void {
-    return this.eventEmitter.onUserSignedOut(callback);
-  }
-
-  /**
-   * Subscribe to auth state changed events
-   */
-  onAuthStateChanged(callback: AuthStateChangedCallback): () => void {
-    return this.eventEmitter.onAuthStateChanged(callback);
   }
 
   /**

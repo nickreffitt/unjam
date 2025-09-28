@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ScreenShareRequest, ScreenShareSession } from '@common/types';
 import { useScreenShareManager } from '@dashboard/ScreenShare/contexts/ScreenShareManagerContext';
 import { useScreenShareListener } from '@common/features/ScreenShareManager/hooks';
-import { useUserProfile } from '@dashboard/shared/contexts/AuthManagerContext';
+import { useChatManager } from '@dashboard/ChatBox/contexts/ChatManagerContext';
 
 export type ScreenShareUIState =
   | 'idle'              // No request or session
@@ -22,7 +22,7 @@ export interface UseScreenShareStateReturn {
 
 export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn => {
   const { createScreenShareManager } = useScreenShareManager();
-  const { currentUser } = useUserProfile();
+  const { userProfile } = useChatManager();
   const [currentRequest, setCurrentRequest] = useState<ScreenShareRequest | null>(null);
   const [currentSession, setCurrentSession] = useState<ScreenShareSession | null>(null);
   const [uiState, setUIState] = useState<ScreenShareUIState>('idle');
@@ -88,17 +88,17 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
     // Check for pending requests
     if (request && request.status === 'pending') {
       // Engineer sent request
-      if (request.sender.type === 'engineer' && request.sender.id === currentUser?.id) {
+      if (request.sender.type === 'engineer' && request.sender.id === userProfile?.id) {
         return 'requesting';
       }
       // Customer initiated call to this engineer
-      if (request.sender.type === 'customer' && request.receiver.id === currentUser?.id) {
+      if (request.sender.type === 'customer' && request.receiver.id === userProfile?.id) {
         return 'incoming_call';
       }
     }
 
     return 'idle';
-  }, [currentUser]);
+  }, [userProfile]);
 
   // Load initial state
   const loadState = useCallback(() => {

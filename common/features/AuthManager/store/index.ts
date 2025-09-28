@@ -4,6 +4,7 @@ export { AuthProfileStoreSupabase } from './AuthProfileStoreSupabase';
 
 export { type AuthUserStore } from './AuthUserStore';
 export { AuthUserStoreSupabase } from './AuthUserStoreSupabase';
+export { AuthUserStoreLocal } from './AuthUserStoreLocal';
 
 export {
   type AuthUserEventEmitter,

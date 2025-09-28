@@ -1,10 +1,17 @@
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { AuthManager } from '@common/features/AuthManager/AuthManager';
-import { AuthEventEmitterLocal, AuthUserStoreSupabase, AuthUserEventEmitterLocal, AuthProfileStoreSupabase } from '@common/features/AuthManager';
+import {
+  AuthEventEmitterLocal,
+  AuthUserStoreSupabase,
+  AuthUserStoreLocal,
+  AuthUserEventEmitterLocal,
+  AuthProfileStoreSupabase,
+  AuthProfileStoreLocal,
+  AuthUserListenerLocal
+} from '@common/features/AuthManager';
 import { useAuthListener } from '@common/features/AuthManager/hooks';
 import { type AuthUser, type ErrorDisplay } from '@common/types';
-
 interface AuthManagerContextType {
   authManager: AuthManager | null;
   authUser: AuthUser;
@@ -33,32 +40,46 @@ const initializeAuthManager = (): { authManager: AuthManager | null; error?: str
     return { authManager: null, error: initializationError };
   }
 
-  // Check if Supabase environment variables are configured
-  const supabaseUrl = (import.meta as { env?: { VITE_SUPABASE_URL?: string } }).env?.VITE_SUPABASE_URL;
-  const supabaseAnonKey = (import.meta as { env?: { VITE_SUPABASE_ANON_KEY?: string } }).env?.VITE_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    initializationError = 'Supabase environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) are not configured';
-    console.warn('AuthManager:', initializationError);
-    return {
-      authManager: null,
-      error: initializationError,
-    };
-  }
-
   try {
-    // Create Supabase client (singleton)
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    // Check if we should use local storage implementation (for testing/development)
+    const useLocalAuth = import.meta.env.VITE_USE_LOCAL_AUTH === 'true';
     const authUserEventEmitter = new AuthUserEventEmitterLocal();
-    const authUserStore = new AuthUserStoreSupabase(supabaseClient, authUserEventEmitter);
-    const authProfileStore = new AuthProfileStoreSupabase(supabaseClient);
-
     const authEventEmitter = new AuthEventEmitterLocal();
+    let authUserStore;
+    let authProfileStore;
+
+    if (useLocalAuth) {
+      // Use local storage implementations
+      console.debug('AuthManager: Using local storage implementations');
+      authUserStore = new AuthUserStoreLocal(authUserEventEmitter);
+      authProfileStore = new AuthProfileStoreLocal();
+    } else {
+      console.debug('AuthManager: Using supabase implementations');
+      // Use Supabase implementations
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        initializationError = 'Supabase environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) are not configured';
+        console.warn('AuthManager:', initializationError);
+        return {
+          authManager: null,
+          error: initializationError,
+        };
+      }
+
+      console.debug('AuthManager: Using Supabase implementations');
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+      authUserStore = new AuthUserStoreSupabase(supabaseClient, authUserEventEmitter);
+      authProfileStore = new AuthProfileStoreSupabase(supabaseClient);
+    }
+
+    const authUserListener = new AuthUserListenerLocal(authUserEventEmitter);
 
     // Create AuthManager instance (singleton)
-    authManagerInstance = new AuthManager(authUserStore, authProfileStore, authEventEmitter);
+    authManagerInstance = new AuthManager(authUserStore, authProfileStore, authEventEmitter, authUserListener);
 
-    console.debug('AuthManager: Successfully initialized with Supabase');
+    console.debug('AuthManager: Successfully initialized');
 
     return {
       authManager: authManagerInstance
@@ -160,13 +181,8 @@ export const useAuthState = () => {
 
   return {
     authUser,
-    currentUser: authUser.user || null,
-    currentProfile: authUser.profile || null,
     isAuthenticated: authUser.status === 'signed-in',
     isLoading,
     error,
   };
 };
-
-// Re-export useAuthState as useUserProfile for backward compatibility
-export const useUserProfile = useAuthState;

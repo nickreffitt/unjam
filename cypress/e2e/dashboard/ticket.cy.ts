@@ -1,5 +1,8 @@
 describe('Dashboard - Individual Ticket Pages', () => {
   beforeEach(() => {
+    // Use local auth for testing
+    cy.useLocalAuth();
+
     // Clear localStorage before each test to ensure clean state
     cy.window().then((win) => {
       win.localStorage.clear();
@@ -56,6 +59,12 @@ describe('Dashboard - Individual Ticket Pages', () => {
 
       win.localStorage.setItem('ticketStore-tickets', JSON.stringify(testTickets));
     });
+
+    // Set up fake authenticated user for testing
+    cy.createFakeAuthenticatedUser(
+      { email: 'engineer@test.com' },
+      { name: 'Test Engineer', type: 'engineer' }
+    );
 
     // Navigate to dashboard
     cy.visit('/app');

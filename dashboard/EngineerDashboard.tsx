@@ -28,7 +28,6 @@ const ProtectedDashboard: React.FC = () => {
               <Sidebar />
               <div className="unjam-flex-1 unjam-overflow-hidden">
                 <Routes>
-                  <Route path="/" element={<NewTicketsList />} />
                   <Route path="/new" element={<NewTicketsList />} />
                   <Route path="/new/:ticketId" element={<TicketPreview />} />
                   <Route path="/active" element={<ActiveTicketsList />} />
@@ -36,6 +35,7 @@ const ProtectedDashboard: React.FC = () => {
                   <Route path="/completed" element={<CompletedTicketsList />} />
                   <Route path="/completed/:ticketId" element={<CompletedTicket />} />
                   <Route path="/auth/logout" element={<Logout />} />
+                  <Route path="/*" element={<Navigate to="/new" replace />} />
                 </Routes>
               </div>
             </div>
@@ -66,10 +66,37 @@ const DashboardContent: React.FC = () => {
   console.debug('[EngineerDashboard] current pathname:', window.location.pathname);
   console.debug('[EngineerDashboard] search params:', window.location.search);
 
-  // If we're on the verify route, always show VerifyAuth regardless of loading state
-  if (window.location.pathname === '/app/auth/verify') {
-    console.debug('[EngineerDashboard] Forcing VerifyAuth component for magic link');
-    return <VerifyAuth />;
+
+  switch (authUser.status) {
+    case 'signed-in': {
+        return (
+          <Routes>
+            <Route path="/*" element={<ProtectedDashboard />} />
+          </Routes>
+        );
+        break;
+    }
+    case 'requires-profile': {
+      return (
+          <Routes>
+            <Route path="/auth/complete-profile" element={<CreateProfile />} />
+            <Route path="/*" element={<Navigate to="/auth/complete-profile" replace />} />
+          </Routes>
+        );
+      break;
+    }
+    default: {
+      return (
+          <Routes>
+            <Route path="/auth" element={<SignIn />} />
+            <Route path="/auth/verify" element={<VerifyAuth />} />
+            <Route path="/auth/complete-profile" element={<CreateProfile />} />
+            <Route path="/auth/logout" element={<Logout />} />
+            <Route path="/*" element={<Navigate to="/auth" replace />} />
+          </Routes>
+        );
+      break;
+    }
   }
 
   return (

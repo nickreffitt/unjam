@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { ChatManager } from '@common/features/ChatManager';
 import { ChatStore } from '@common/features/ChatManager/store';
-import { useUserProfile } from '@dashboard/shared/contexts/AuthManagerContext';
+import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 import { ChatEventEmitterLocal } from '@common/features/ChatManager/events';
-
+import { type UserProfile } from '@common/types';
 interface ChatManagerContextType {
   createChatManager: (ticketId: string, receiverProfile: any) => ChatManager;
   createChatStore: (ticketId: string) => ChatStore;
+  userProfile: UserProfile;
 }
 
 const ChatManagerContext = createContext<ChatManagerContextType | null>(null);
@@ -16,25 +17,32 @@ interface ChatManagerProviderProps {
 }
 
 export const ChatManagerProvider: React.FC<ChatManagerProviderProps> = ({ children }) => {
-  const { currentProfile } = useUserProfile();
+  const { authUser } = useAuthState();
 
   // Create factory functions for chat manager and store instances
   const contextValue = useMemo(() => {
+
     const createChatStore = (ticketId: string) => {
+      
       const eventEmitter = new ChatEventEmitterLocal();
       return new ChatStore(ticketId, eventEmitter);
     };
 
     const createChatManager = (ticketId: string, receiverProfile: any) => {
-      if (!currentProfile) {
+      if (!authUser.profile) {
         throw new Error('No user profile available for chat manager');
       }
       const chatStore = createChatStore(ticketId);
-      return new ChatManager(ticketId, currentProfile, receiverProfile, chatStore);
+      return new ChatManager(ticketId, authUser.profile, receiverProfile, chatStore);
     };
 
-    return { createChatManager, createChatStore };
-  }, [currentProfile]);
+    if (!authUser.profile) {
+      throw new Error('No user profile available for chat manager');
+    }
+    const userProfile = authUser.profile;
+
+    return { createChatManager, createChatStore, userProfile };
+  }, [authUser]);
 
   return (
     <ChatManagerContext.Provider value={contextValue}>

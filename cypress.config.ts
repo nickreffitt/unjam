@@ -8,12 +8,15 @@ export default defineConfig({
     video: false,
     screenshotOnRunFailure: true,
     env: {
-      NODE_ENV: 'development'
+      NODE_ENV: 'development',
+      VITE_USE_LOCAL_AUTH: 'true'
     },
     setupNodeEvents(on, config) {
       // Set environment variables for development mode during tests
       process.env.NODE_ENV = 'development';
+      process.env.VITE_USE_LOCAL_AUTH = 'true';
       config.env.NODE_ENV = 'development';
+      config.env.VITE_USE_LOCAL_AUTH = 'true';
       return config;
     }
   },

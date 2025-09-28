@@ -15,9 +15,8 @@ const CreateProfile: React.FC = () => {
   const [profileCreated, setProfileCreated] = useState(false);
 
   const {
-    isAuthenticated,
-    currentProfile,
-    isLoading: authStateLoading
+    authUser,
+    isLoading
   } = useAuthState();
 
   const {
@@ -26,21 +25,18 @@ const CreateProfile: React.FC = () => {
     clearError,
   } = useCreateProfileActions();
 
-  const isLoading = authStateLoading;
-
-  console.debug('[CreateProfile] getting here');
   // Redirect to sign in if not authenticated
-  if (!authStateLoading && !isAuthenticated) {
+  if (!isLoading && authUser.status === 'not-signed-in') {
     return <Navigate to="/auth" replace />;
   }
 
   // If user already has a complete profile (name exists), redirect to dashboard
-  if (!authStateLoading && currentProfile) {
+  if (!isLoading && authUser.status === 'signed-in') {
     return <Navigate to="/new" replace />;
   }
 
   // Show loading while checking auth state
-  if (authStateLoading) {
+  if (isLoading) {
     return (
       <div className="unjam-min-h-screen unjam-bg-gray-50 unjam-flex unjam-items-center unjam-justify-center">
         <div className="unjam-text-gray-600">Loading...</div>
@@ -54,10 +50,6 @@ const CreateProfile: React.FC = () => {
       const newProfile = await createProfile(profileData);
       console.debug('Profile created successfully:', newProfile);
       setProfileCreated(true);
-
-      // TODO: Update the current user's profile in the authentication system
-      // This would typically involve calling an API to update the user's profile
-      // and then updating the local auth state
 
       // Redirect to dashboard after successful profile creation
       setTimeout(() => {

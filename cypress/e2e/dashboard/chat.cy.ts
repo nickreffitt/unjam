@@ -3,6 +3,9 @@ describe('Dashboard - Chat Functionality', () => {
     // Set a larger viewport to ensure all elements are visible
     cy.viewport(1400, 900);
 
+    // Use local auth for testing
+    cy.useLocalAuth();
+
     // Clear localStorage before each test to ensure clean state
     cy.window().then((win) => {
       win.localStorage.clear();
@@ -26,6 +29,12 @@ describe('Dashboard - Chat Functionality', () => {
 
       win.localStorage.setItem('ticketStore-tickets', JSON.stringify([testTicket]));
     });
+
+    // Set up fake authenticated user for testing
+    cy.createFakeAuthenticatedUser(
+      { email: 'engineer@test.com' },
+      { name: 'Test Engineer', type: 'engineer' }
+    );
 
     // Navigate to dashboard and claim the ticket
     cy.visit('/app');

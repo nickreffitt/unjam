@@ -2,7 +2,7 @@ import { type UserProfile, type User, type AuthUser } from '@common/types';
 import { type AuthUserStore } from './store/AuthUserStore';
 import { type AuthProfileStore } from './store/AuthProfileStore';
 import { type AuthEventEmitter } from './events/AuthEventEmitter';
-import { AuthUserListenerLocal } from './events/AuthUserListener';
+import { type AuthUserListener } from './events/AuthUserListener';
 
 /**
  * AuthManager handles authentication using AuthUserStore abstraction
@@ -12,13 +12,14 @@ export class AuthManager {
   private authUserStore: AuthUserStore;
   private authProfileStore: AuthProfileStore;
   private authEventEmitter: AuthEventEmitter;
-  private authUserListener: AuthUserListenerLocal;
+  private authUserListener: AuthUserListener;
   private currentAuthUser: AuthUser;
 
   constructor(
     authUserStore: AuthUserStore,
     authProfileStore: AuthProfileStore,
     authEventEmitter: AuthEventEmitter,
+    authUserListener: AuthUserListener,
   ) {
     if (!authUserStore) {
       throw new Error('AuthManager: authUserStore is required');
@@ -36,9 +37,10 @@ export class AuthManager {
     this.currentAuthUser = { status: 'loading' };
 
     // Set up AuthUserListener to bridge User events to UserProfile events
-    this.authUserListener = this.createAuthEventListener(authUserStore);
+    this.authUserListener = authUserListener;
 
     // Start listening to events
+    this.addAuthEventListenerCallbacks();
     this.authUserListener.startListening();
   }
 
@@ -196,10 +198,11 @@ export class AuthManager {
     return userProfile;
   }
 
-  private createAuthEventListener(authUserStore: AuthUserStore): AuthUserListenerLocal {
-    return new AuthUserListenerLocal(authUserStore, {
+  private addAuthEventListenerCallbacks(): void {
+    console.debug('[AuthManager] addAuthEventListenerCallbacks');
+    this.authUserListener.updateCallbacks({
       onUserSignedIn: async (user: User) => {
-        console.debug('AuthManager: User signed in event received, converting to UserProfile');
+        console.debug('[AuthManager] User signed in event received, converting to UserProfile');
         try {
           const userProfile = await this.convertUserToUserProfile(user);
           if (userProfile) {
@@ -209,7 +212,7 @@ export class AuthManager {
               profile: userProfile
             };
             this.authEventEmitter.emitUserSignedIn(this.currentAuthUser);
-            console.debug('AuthManager: Emitted UserProfile signed in event');
+            console.debug('[AuthManager]: Emitted UserProfile signed in event');
           } else {
             // User signed in but doesn't have a profile - emit user requires profile event
             this.currentAuthUser = {
@@ -217,20 +220,20 @@ export class AuthManager {
               user
             };
             this.authEventEmitter.emitUserRequiresProfile(this.currentAuthUser);
-            console.debug('AuthManager: Emitted UserRequiresProfile event');
+            console.debug('[AuthManager] Emitted UserRequiresProfile event');
           }
         } catch (error) {
-          console.error('AuthManager: Error converting user to UserProfile on sign in:', error);
+          console.error('[AuthManager] Error converting user to UserProfile on sign in:', error);
         }
       },
       onUserSignedOut: () => {
-        console.debug('AuthManager: User signed out event received');
+        console.debug('[AuthManager] User signed out event received');
         this.currentAuthUser = { status: 'not-signed-in' };
         this.authEventEmitter.emitUserSignedOut();
-        console.debug('AuthManager: Emitted UserProfile signed out event');
+        console.debug('[AuthManager] Emitted UserProfile signed out event');
       },
       onAuthStateChanged: async (user: User | null) => {
-        console.debug('AuthManager: Auth state changed event received');
+        console.debug('[AuthManager] Auth state changed event received');
         try {
           if (user) {
             const userProfile = await this.convertUserToUserProfile(user);
@@ -241,7 +244,7 @@ export class AuthManager {
                 profile: userProfile
               };
               this.authEventEmitter.emitAuthStateChanged(this.currentAuthUser);
-              console.debug('AuthManager: Emitted UserProfile auth state changed event');
+              console.debug('[AuthManager] Emitted UserProfile auth state changed event');
             } else {
               // User exists but doesn't have a profile - emit user requires profile event
               this.currentAuthUser = {
@@ -249,15 +252,15 @@ export class AuthManager {
                 user
               };
               this.authEventEmitter.emitUserRequiresProfile(this.currentAuthUser);
-              console.debug('AuthManager: Emitted UserRequiresProfile event from auth state change');
+              console.debug('[AuthManager] Emitted UserRequiresProfile event from auth state change');
             }
           } else {
             this.currentAuthUser = { status: 'not-signed-in' };
             this.authEventEmitter.emitAuthStateChanged(this.currentAuthUser);
-            console.debug('AuthManager: Emitted UserProfile auth state changed event (null)');
+            console.debug('[AuthManager] Emitted UserProfile auth state changed event (null)');
           }
         } catch (error) {
-          console.error('AuthManager: Error converting user to UserProfile on auth state change:', error);
+          console.error('[AuthManager] Error converting user to UserProfile on auth state change:', error);
           this.currentAuthUser = { status: 'not-signed-in' };
           this.authEventEmitter.emitAuthStateChanged(this.currentAuthUser);
         }

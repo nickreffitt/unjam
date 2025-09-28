@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { TicketManager } from '@common/features/TicketManager';
 import { type TicketStore, TicketStoreLocal } from '@common/features/TicketManager/store';
-import { useUserProfile } from '@dashboard/shared/contexts/AuthManagerContext';
+import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 
 interface TicketManagerContextType {
   ticketManager: TicketManager | null;
@@ -15,18 +15,26 @@ interface TicketManagerProviderProps {
 }
 
 export const TicketManagerProvider: React.FC<TicketManagerProviderProps> = ({ children }) => {
-  const { currentProfile } = useUserProfile();
+  const { authUser } = useAuthState();
+
+  const ticketStore = useMemo(() => {
+    if (authUser.status !== 'signed-in') {
+      throw new Error('User not signed in, not instantiating ticketStore');
+    }
+    return new TicketStoreLocal();
+  }, [authUser]);
 
   // Create shared instances using centralized engineer profile
-  const { ticketStore, ticketManager } = useMemo(() => {
-    if (!currentProfile) {
-      return { ticketStore: null, ticketManager: null };
+  const ticketManager = useMemo(() => {
+    if (authUser.status !== 'signed-in') {
+      throw new Error('User not signed in, not instantiating ticketManager');
+    }
+    if (!authUser.profile || !ticketStore) {
+      return null;
     }
 
-    const store = new TicketStoreLocal();
-    const manager = new TicketManager(currentProfile, store);
-    return { ticketStore: store, ticketManager: manager };
-  }, [currentProfile]);
+    return new TicketManager(authUser.profile, ticketStore);
+  }, [authUser, ticketStore]);
 
   return (
     <TicketManagerContext.Provider value={{ ticketManager, ticketStore }}>
