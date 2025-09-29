@@ -28,7 +28,8 @@ jobs:
       LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-      
+      STRIPE_TABLE_ID: ${{ secrets.STRIPE_TABLE_ID }}
+      STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -96,7 +97,7 @@ jobs:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
-          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY
+          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY
           script: |
             # Update system packages
             apt update
@@ -146,6 +147,8 @@ jobs:
             # Create .env.production file for the container
             echo "VITE_SUPABASE_URL=$SUPABASE_URL" > /tmp/.env.production
             echo "VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> /tmp/.env.production
+            echo "VITE_STRIPE_TABLE_ID=$STRIPE_TABLE_ID" >> /tmp/.env.production
+            echo "VITE_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY" >> /tmp/.env.production
 
             # Run the new container
             docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 \

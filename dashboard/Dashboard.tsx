@@ -19,6 +19,7 @@ import { ScreenShareManagerProvider } from '@dashboard/engineer/ScreenShare/cont
 import Onboarding from '@dashboard/pages/customer/Onboarding';
 import BuyCredits from '@dashboard/pages/customer/BuyCredits';
 import CustomerSidebar from '@dashboard/customer/Sidebar/Sidebar';
+import { PricingTableManagerProvider } from '@dashboard/customer/PricingTable/contexts/PricingTableManagerContext';
 
 
 const ProtectedEngineerDashboard: React.FC = () => {
@@ -52,17 +53,19 @@ const ProtectedEngineerDashboard: React.FC = () => {
 
 const ProtectedCustomerDashboard: React.FC = () => {
   return (
-    <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
-      <CustomerSidebar />
-      <div className="unjam-flex-1 unjam-overflow-hidden">
-        <Routes>
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/buy" element={<BuyCredits />} />
-        <Route path="/auth/logout" element={<Logout />} />
-        <Route path="/*" element={<Navigate to="/onboarding" replace />} />
-      </Routes>
+    <PricingTableManagerProvider>
+      <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
+        <CustomerSidebar />
+        <div className="unjam-flex-1 unjam-overflow-hidden">
+          <Routes>
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/buy" element={<BuyCredits />} />
+          <Route path="/auth/logout" element={<Logout />} />
+          <Route path="/*" element={<Navigate to="/onboarding" replace />} />
+        </Routes>
+        </div>
       </div>
-    </div>
+    </PricingTableManagerProvider>
   );
 };
 
