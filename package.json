@@ -8,6 +8,7 @@
     "dev:dashboard": "vite --config vite.dashboard.config.ts",
     "dev:unified": "vite --config vite.unified.config.ts",
     "dev:ext": "wxt",
+    "dev:edge": "export PATH=\"$HOME/.deno/bin:$PATH\" && deno run --allow-net --allow-env --allow-read local-edge-server.ts",
     "build": "vite build",
     "build:dashboard": "vite build --config vite.dashboard.config.ts",
     "build:unified": "vite build --config vite.unified.config.ts",

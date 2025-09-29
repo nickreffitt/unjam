@@ -19,11 +19,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isSender, displayNam
 
   return (
     <div data-testid="chat-message" className={`unjam-flex ${isSender ? 'unjam-justify-end' : 'unjam-justify-start'}`}>
-      <div className={`unjam-max-w-[70%] ${isSender ? 'unjam-order-2' : ''}`}>
+      <div className={`unjam-max-w-[70%] unjam-min-w-0 ${isSender ? 'unjam-order-2' : ''}`}>
         {/* Message bubble */}
         <div
           className={`
-            unjam-rounded-2xl unjam-px-4 unjam-py-3 unjam-shadow-sm
+            unjam-rounded-2xl unjam-px-4 unjam-py-3 unjam-shadow-sm unjam-break-words
             ${isSender
               ? 'unjam-message-bubble-sender unjam-bg-blue-500 unjam-text-white unjam-rounded-br-sm'
               : 'unjam-message-bubble-receiver unjam-bg-gray-100 unjam-text-gray-900 unjam-rounded-bl-sm'
@@ -40,7 +40,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isSender, displayNam
           </div>
 
           {/* Message content */}
-          <div data-testid="chat-message-content" className="unjam-text-sm unjam-leading-relaxed">
+          <div data-testid="chat-message-content" className="unjam-text-sm unjam-leading-relaxed unjam-break-words unjam-overflow-wrap-anywhere">
             {linkify(message.content)}
           </div>
         </div>
