@@ -3,7 +3,7 @@ CREATE TYPE user_type AS ENUM ('customer', 'engineer');
 
 -- Create profiles table
 CREATE TABLE profiles (
-  profile_id UUID NOT NULL PRIMARY KEY,
+  id UUID NOT NULL PRIMARY KEY,
   auth_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type user_type NOT NULL,
   name TEXT NOT NULL,

@@ -113,14 +113,14 @@ export class AuthUserStoreSupabase implements AuthUserStore {
    * Sign in user with magic link
    */
   async signInWithMagicLink(email: string, redirectUrl?: string): Promise<void> {
-    console.debug('AuthUserStoreSupabase: Signing in with magic link for:', email);
-
+    const redirectURL = redirectUrl || `${window.location.origin}/app/auth/verify`;
+    console.debug('AuthUserStoreSupabase: Signing in with magic link for:', email, ' with redirect URL:', redirectURL);
     try {
       const { error } = await this.supabaseClient.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: redirectUrl || `${window.location.origin}/auth/verify`,
+          emailRedirectTo: redirectURL,
         },
       });
 

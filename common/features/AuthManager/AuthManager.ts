@@ -62,7 +62,7 @@ export class AuthManager {
    */
   async signInWithMagicLink(email: string): Promise<void> {
     console.debug('AuthManager: Delegating magic link sign in to AuthUserStore');
-    return this.authUserStore.signInWithMagicLink(email, `${window.location.origin}/auth/verify`);
+    return this.authUserStore.signInWithMagicLink(email);
   }
 
   /**

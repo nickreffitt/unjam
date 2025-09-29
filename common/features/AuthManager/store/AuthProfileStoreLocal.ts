@@ -28,7 +28,7 @@ export class AuthProfileStoreLocal implements AuthProfileStore {
 
     // Validate required fields
     if (!newProfile.id) {
-      throw new Error('profileId is required for profile creation');
+      throw new Error('id is required for profile creation');
     }
     if (!newProfile.authId) {
       throw new Error('authId is required for profile creation');

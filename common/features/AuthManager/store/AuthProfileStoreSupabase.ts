@@ -24,8 +24,8 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
    */
   async create(profile: UserProfile): Promise<UserProfile> {
     // Validate required fields
-    if (!profile.profileId) {
-      throw new Error('profileId is required for profile creation');
+    if (!profile.id) {
+      throw new Error('id is required for profile creation');
     }
     if (!profile.authId) {
       throw new Error('authId is required for profile creation');
@@ -36,12 +36,12 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       throw new Error('GitHub username is required for engineer profiles');
     }
 
-    console.debug('AuthProfileStoreSupabase: Creating profile', profile.profileId);
+    console.debug('AuthProfileStoreSupabase: Creating profile', profile.id);
 
     const { data, error } = await this.supabaseClient
       .from(this.tableName)
       .insert([{
-        profile_id: profile.profileId,
+        id: profile.id,
         auth_id: profile.authId,
         type: profile.type,
         name: profile.name,
@@ -58,7 +58,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
     }
 
     const createdProfile = this.mapRowToProfile(data);
-    console.debug('AuthProfileStoreSupabase: Created profile successfully:', createdProfile.profileId);
+    console.debug('AuthProfileStoreSupabase: Created profile successfully:', createdProfile.id);
     return createdProfile;
   }
 
@@ -73,7 +73,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
     const { data, error } = await this.supabaseClient
       .from(this.tableName)
       .select('*')
-      .eq('profile_id', profileId)
+      .eq('id', profileId)
       .maybeSingle();
 
     if (error) {
@@ -155,7 +155,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
         github_username: updatedProfile.type === 'engineer' ? updatedProfile.githubUsername : undefined,
         specialties: updatedProfile.type === 'engineer' ? updatedProfile.specialties || [] : [],
       })
-      .eq('profile_id', profileId)
+      .eq('id', profileId)
       .select()
       .single();
 
@@ -261,7 +261,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
     const { error } = await this.supabaseClient
       .from(this.tableName)
       .delete()
-      .neq('profile_id', 'impossible-id'); // Delete all rows
+      .neq('id', 'impossible-id'); // Delete all rows
 
     if (error) {
       console.error('AuthProfileStoreSupabase: Clear failed:', error);
