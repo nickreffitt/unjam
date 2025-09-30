@@ -12,11 +12,10 @@ export const handler = async (req: Request) => {
 
   try {
     const { name } = await req.json()
-
+    
     const data = {
       message: `Hello ${name || 'World'}!`,
       timestamp: new Date().toISOString(),
-      environment: Deno.env.get('ENVIRONMENT') || 'supabase'
     }
 
     return new Response(

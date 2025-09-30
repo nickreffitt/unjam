@@ -16,7 +16,6 @@ describe('API - Hello World Edge Function', () => {
       expect(response.status).to.eq(200);
       expect(response.body).to.have.property('message', 'Hello World!');
       expect(response.body).to.have.property('timestamp');
-      expect(response.body).to.have.property('environment', 'local');
     });
   });
   
