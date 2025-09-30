@@ -1,8 +1,4 @@
 {
-  "compilerOptions": {
-    "lib": ["deno.window"],
-    "strict": true
-  },
   "imports": {
     "stripe": "npm:stripe@18",
     "server": "https://deno.land/std@0.168.0/http/server.ts"
