@@ -1,0 +1,11 @@
+node_modules
+.git
+.github
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local
+dist
+cypress/screenshots
+cypress/videos
