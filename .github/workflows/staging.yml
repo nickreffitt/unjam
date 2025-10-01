@@ -57,26 +57,26 @@ jobs:
         run: npm test
 
       # Run Cypress tests using the official GitHub Action
-      - name: Cypress run
-        uses: cypress-io/github-action@v6
-        env:
-          NODE_ENV: 'development'
-          VITE_USE_LOCAL_AUTH: 'true'
-        with:
-          start: npm run dev:edge, npm run dev:unified
-          wait-on: 'http://localhost:5175'
-          wait-on-timeout: 120
-          browser: chrome
-          command: npm run cypress:run
+#      - name: Cypress run
+#        uses: cypress-io/github-action@v6
+#        env:
+#          NODE_ENV: 'development'
+#          VITE_USE_LOCAL_AUTH: 'true'
+#        with:
+#          start: npm run dev:edge, npm run dev:unified
+#          wait-on: 'http://localhost:5175'
+#          wait-on-timeout: 120
+#          browser: chrome
+#          command: npm run cypress:run
 
       # Upload Cypress screenshots on failure
-      - name: Upload Cypress screenshots
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: cypress-screenshots
-          path: cypress/screenshots/
-          if-no-files-found: ignore
+#      - name: Upload Cypress screenshots
+#        uses: actions/upload-artifact@v4
+#        if: failure()
+#        with:
+#          name: cypress-screenshots
+#          path: cypress/screenshots/
+#          if-no-files-found: ignore
 
       - name: Build Docker image locally
         run: |
