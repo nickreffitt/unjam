@@ -35,7 +35,7 @@ const SignIn: React.FC = () => {
 
   // Redirect authenticated users to dashboard
   if (isAuthenticated) {
-    return <Navigate to="/new" replace />;
+    return <Navigate to="new" replace />;
   }
 
   // Show loading while checking auth state

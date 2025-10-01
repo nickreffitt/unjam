@@ -12,7 +12,6 @@ interface PricingTableProps {
   stripePublishableKey?: string;
   clientReferenceId?: string;
   customerEmail?: string;
-  customerSessionClientSecret?: string;
 }
 
 const PricingTable: React.FC<PricingTableProps> = ({
@@ -20,7 +19,6 @@ const PricingTable: React.FC<PricingTableProps> = ({
   stripePublishableKey,
   clientReferenceId,
   customerEmail,
-  customerSessionClientSecret
 }) => {
 
   if (!stripePricingTableId || !stripePublishableKey) {
@@ -44,7 +42,6 @@ const PricingTable: React.FC<PricingTableProps> = ({
       publishableKey={stripePublishableKey}
       clientReferenceId={clientReferenceId}
       customerEmail={customerEmail}
-      customerSessionClientSecret={customerSessionClientSecret}
     />
   );
 };

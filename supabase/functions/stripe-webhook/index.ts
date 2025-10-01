@@ -1,20 +1,37 @@
 import { serve } from "server"
-import { BillingEventHandlerStripe } from "./BillingEventHandlerStripe.ts"
-import { type BillingEventHandler } from "./BillingEventHandler.ts";
-import { BillingEventHandlerLocal } from "./BillingEventHandlerLocal.ts";
+import { BillingEventConverterStripe } from "./BillingEventConverterStripe.ts"
+import { BillingEventConverterLocal } from "./BillingEventConverterLocal.ts"
+import { BillingEventHandler } from "./BillingEventHandler.ts"
+import { BillingCustomerStoreSupabase } from "./BillingCustomerStoreSupabase.ts"
+import { BillingSubscriptionStoreSupabase } from "./BillingSubscriptionStoreSupabase.ts"
+import { BillingInvoiceStoreSupabase } from "./BillingInvoiceStoreSupabase.ts"
 
-let billingEventHandler: BillingEventHandler;
+// Initialize environment variables
+const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
+const stripeApiKey = Deno.env.get('STRIPE_API_KEY') as string
+const enableStripe = Deno.env.get('WEBHOOKS_ENABLE_STRIPE')
 
-const enableStripe = Deno.env.get('WEBHOOKS_ENABLE_STRIPE');
+// Initialize stores
+const customerStore = new BillingCustomerStoreSupabase(supabaseUrl, supabaseServiceKey)
+const subscriptionStore = new BillingSubscriptionStoreSupabase(supabaseUrl, supabaseServiceKey)
+const invoiceStore = new BillingInvoiceStoreSupabase(supabaseUrl, supabaseServiceKey)
 
-if (enableStripe) {
-  billingEventHandler = new BillingEventHandlerStripe(
-    Deno.env.get('STRIPE_API_KEY') as string,
-    Deno.env.get('STRIPE_WEBHOOK_SIGNING_SECRET') as string
-  );
-} else {
-  billingEventHandler = new BillingEventHandlerLocal()
-}
+// Initialize converter based on environment
+const converter = enableStripe
+  ? new BillingEventConverterStripe(
+      stripeApiKey,
+      Deno.env.get('STRIPE_WEBHOOK_SIGNING_SECRET') as string
+    )
+  : new BillingEventConverterLocal()
+
+// Initialize handler with all dependencies
+const billingEventHandler = new BillingEventHandler(
+  converter,
+  customerStore,
+  subscriptionStore,
+  invoiceStore
+)
 
 export const handler = async (request: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -69,15 +86,14 @@ export const handler = async (request: Request): Promise<Response> => {
     // Get the raw request body
     const body = await request.text()
 
-    // Delegate to BillingEventHandler and get the processed event
-    const billingEvent = await billingEventHandler.handleEvent(body, signature)
+    // Delegate to BillingEventHandler to convert and persist the event
+    await billingEventHandler.handleEvent(body, signature)
 
-    // Return success response with event details
+    // Return success response
     return new Response(
       JSON.stringify({
         received: true,
-        timestamp: new Date().toISOString(),
-        event: billingEvent
+        timestamp: new Date().toISOString()
       }),
       {
         status: 200,

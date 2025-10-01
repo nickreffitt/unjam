@@ -3,8 +3,9 @@ import PricingTable from '@dashboard/customer/PricingTable';
 import { usePricingTableManager } from '@dashboard/customer/PricingTable/contexts/PricingTableManagerContext';
 
 const BuyCredits: React.FC = () => {
-    const { userProfile, stripeTableId, stripePublishableKey} = usePricingTableManager();
+  const { userProfile, stripeTableId, stripePublishableKey} = usePricingTableManager();
   
+  console.debug('[BuyCredits] userProfile:', userProfile)
   return (
     <div className="unjam-h-full unjam-overflow-y-auto">
       <div className="unjam-pt-20">

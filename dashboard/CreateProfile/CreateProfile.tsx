@@ -27,12 +27,12 @@ const CreateProfile: React.FC = () => {
 
   // Redirect to sign in if not authenticated
   if (!isLoading && authUser.status === 'not-signed-in') {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="auth" replace />;
   }
 
   // If user already has a complete profile (name exists), redirect to dashboard
   if (!isLoading && authUser.status === 'signed-in') {
-    return <Navigate to="/new" replace />;
+    return <Navigate to="new" replace />;
   }
 
   // Show loading while checking auth state

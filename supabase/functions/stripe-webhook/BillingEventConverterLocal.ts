@@ -1,23 +1,23 @@
-import type { BillingEventHandler } from './BillingEventHandler.ts'
+import type { BillingEventConverter } from './BillingEventConverter.ts'
 import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, BillingEvent } from './types.ts'
 
 /**
- * Local implementation of BillingEventHandler for testing
+ * Local implementation of BillingEventConverter for testing
  * Parses the body as JSON and returns the appropriate BillingEvent
  */
-export class BillingEventHandlerLocal implements BillingEventHandler {
-  async handleEvent(body: string, _signature: string): Promise<BillingEvent> {
+export class BillingEventConverterLocal implements BillingEventConverter {
+  async convertEvent(body: string, _signature: string): Promise<BillingEvent> {
     let event: any
 
     try {
       event = JSON.parse(body)
     } catch (err) {
       const error = err as Error
-      console.error('[BillingEventHandlerLocal] Failed to parse body:', error.message)
+      console.error('[BillingEventConverterLocal] Failed to parse body:', error.message)
       throw new Error(`Failed to parse body: ${error.message}`)
     }
 
-    console.info(`🔔 [BillingEventHandlerLocal] Event received: ${event.type}`)
+    console.info(`🔔 [BillingEventConverterLocal] Event received: ${event.type}`)
 
     // Handle different event types
     switch (event.type) {
@@ -31,7 +31,7 @@ export class BillingEventHandlerLocal implements BillingEventHandler {
           state: 'created',
           customer
         }
-        console.info(`👤 [BillingEventHandlerLocal] Customer created: ${customer.id}`, customerEvent)
+        console.info(`👤 [BillingEventConverterLocal] Customer created: ${customer.id}`, customerEvent)
         return customerEvent
       }
 
@@ -45,7 +45,7 @@ export class BillingEventHandlerLocal implements BillingEventHandler {
           state: 'updated',
           customer
         }
-        console.info(`👤 [BillingEventHandlerLocal] Customer updated: ${customer.id}`, customerEvent)
+        console.info(`👤 [BillingEventConverterLocal] Customer updated: ${customer.id}`, customerEvent)
         return customerEvent
       }
 
@@ -59,7 +59,7 @@ export class BillingEventHandlerLocal implements BillingEventHandler {
           state: 'deleted',
           customer
         }
-        console.info(`👤 [BillingEventHandlerLocal] Customer deleted: ${customer.id}`, customerEvent)
+        console.info(`👤 [BillingEventConverterLocal] Customer deleted: ${customer.id}`, customerEvent)
         return customerEvent
       }
 
@@ -75,7 +75,7 @@ export class BillingEventHandlerLocal implements BillingEventHandler {
           state: 'created',
           subscription
         }
-        console.info(`📅 [BillingEventHandlerLocal] Subscription created: ${subscription.id}`, subscriptionEvent)
+        console.info(`📅 [BillingEventConverterLocal] Subscription created: ${subscription.id}`, subscriptionEvent)
         return subscriptionEvent
       }
 
@@ -91,7 +91,7 @@ export class BillingEventHandlerLocal implements BillingEventHandler {
           state: 'updated',
           subscription
         }
-        console.info(`📅 [BillingEventHandlerLocal] Subscription updated: ${subscription.id}`, subscriptionEvent)
+        console.info(`📅 [BillingEventConverterLocal] Subscription updated: ${subscription.id}`, subscriptionEvent)
         return subscriptionEvent
       }
 
@@ -107,7 +107,7 @@ export class BillingEventHandlerLocal implements BillingEventHandler {
           state: 'deleted',
           subscription
         }
-        console.info(`📅 [BillingEventHandlerLocal] Subscription deleted: ${subscription.id}`, subscriptionEvent)
+        console.info(`📅 [BillingEventConverterLocal] Subscription deleted: ${subscription.id}`, subscriptionEvent)
         return subscriptionEvent
       }
 
@@ -123,7 +123,7 @@ export class BillingEventHandlerLocal implements BillingEventHandler {
           state: 'paid',
           invoice
         }
-        console.info(`✅ [BillingEventHandlerLocal] Invoice paid: ${invoice.id}`, invoiceEvent)
+        console.info(`✅ [BillingEventConverterLocal] Invoice paid: ${invoice.id}`, invoiceEvent)
         return invoiceEvent
       }
 
@@ -139,12 +139,12 @@ export class BillingEventHandlerLocal implements BillingEventHandler {
           state: 'failed',
           invoice
         }
-        console.info(`❌ [BillingEventHandlerLocal] Invoice failed: ${invoice.id}`, invoiceEvent)
+        console.info(`❌ [BillingEventConverterLocal] Invoice failed: ${invoice.id}`, invoiceEvent)
         return invoiceEvent
       }
 
       default:
-        console.info(`ℹ️ [BillingEventHandlerLocal] Unhandled event type: ${event.type}`)
+        console.info(`ℹ️ [BillingEventConverterLocal] Unhandled event type: ${event.type}`)
         throw new Error(`Unhandled event type: ${event.type}`)
     }
   }

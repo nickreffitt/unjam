@@ -57,4 +57,13 @@ export interface InvoiceEvent {
   invoice: Invoice
 }
 
-export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent
+export interface CheckoutSession {
+  id: string
+  customerId: string
+}
+
+export interface CheckoutSessionEvent {
+  checkoutSession: CheckoutSession
+}
+
+export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent | CheckoutSessionEvent

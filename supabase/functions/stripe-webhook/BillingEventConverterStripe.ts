@@ -1,11 +1,11 @@
 import Stripe from "stripe"
-import type { BillingEventHandler } from './BillingEventHandler.ts'
-import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, BillingEvent } from './types.ts'
+import type { BillingEventConverter } from './BillingEventConverter.ts'
+import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, CheckoutSession, CheckoutSessionEvent, BillingEvent } from './types.ts'
 
 /**
- * Stripe implementation of BillingEventHandler
+ * Stripe implementation of BillingEventConverter
  */
-export class BillingEventHandlerStripe implements BillingEventHandler {
+export class BillingEventConverterStripe implements BillingEventConverter {
   private stripe: Stripe
   private webhookSecret: string
   private cryptoProvider: Stripe.CryptoProvider
@@ -21,7 +21,7 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
     this.cryptoProvider = Stripe.createSubtleCryptoProvider()
   }
 
-  async handleEvent(body: string, signature: string): Promise<BillingEvent> {
+  async convertEvent(body: string, signature: string): Promise<BillingEvent> {
     // Verify and construct the event
     let event: Stripe.Event
 
@@ -35,11 +35,11 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
       )
     } catch (err) {
       const error = err as Error
-      console.error('[BillingEventHandlerStripe] Webhook signature verification failed:', error.message)
+      console.error('[BillingEventConverterStripe] Webhook signature verification failed:', error.message)
       throw new Error(`Webhook signature verification failed: ${error.message}`)
     }
 
-    console.info(`🔔 [BillingEventHandlerStripe] Event received: ${event.id} (${event.type})`)
+    console.info(`🔔 [BillingEventConverterStripe] Event received: ${event.id} (${event.type})`)
 
     // Handle different event types
     switch (event.type) {
@@ -50,7 +50,7 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
           state: 'created',
           customer
         }
-        console.info(`👤 [BillingEventHandlerStripe] Customer created: ${customer.id}`, customerEvent)
+        console.info(`👤 [BillingEventConverterStripe] Customer created: ${customer.id}`, customerEvent)
         return customerEvent
       }
 
@@ -61,7 +61,7 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
           state: 'updated',
           customer
         }
-        console.info(`👤 [BillingEventHandlerStripe] Customer updated: ${customer.id}`, customerEvent)
+        console.info(`👤 [BillingEventConverterStripe] Customer updated: ${customer.id}`, customerEvent)
         return customerEvent
       }
 
@@ -72,7 +72,7 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
           state: 'deleted',
           customer
         }
-        console.info(`👤 [BillingEventHandlerStripe] Customer deleted: ${customer.id}`, customerEvent)
+        console.info(`👤 [BillingEventConverterStripe] Customer deleted: ${customer.id}`, customerEvent)
         return customerEvent
       }
 
@@ -83,7 +83,7 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
           state: 'created',
           subscription
         }
-        console.info(`📅 [BillingEventHandlerStripe] Subscription created: ${subscription.id}`, subscriptionEvent)
+        console.info(`📅 [BillingEventConverterStripe] Subscription created: ${subscription.id}`, subscriptionEvent)
         return subscriptionEvent
       }
 
@@ -94,7 +94,7 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
           state: 'updated',
           subscription
         }
-        console.info(`📅 [BillingEventHandlerStripe] Subscription updated: ${subscription.id}`, subscriptionEvent)
+        console.info(`📅 [BillingEventConverterStripe] Subscription updated: ${subscription.id}`, subscriptionEvent)
         return subscriptionEvent
       }
 
@@ -105,7 +105,7 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
           state: 'deleted',
           subscription
         }
-        console.info(`📅 [BillingEventHandlerStripe] Subscription deleted: ${subscription.id}`, subscriptionEvent)
+        console.info(`📅 [BillingEventConverterStripe] Subscription deleted: ${subscription.id}`, subscriptionEvent)
         return subscriptionEvent
       }
 
@@ -116,7 +116,7 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
           state: 'paid',
           invoice
         }
-        console.info(`✅ [BillingEventHandlerStripe] Payment succeeded: ${invoice.id}`, invoiceEvent)
+        console.info(`✅ [BillingEventConverterStripe] Payment succeeded: ${invoice.id}`, invoiceEvent)
         return invoiceEvent
       }
 
@@ -127,12 +127,21 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
           state: 'failed',
           invoice
         }
-        console.info(`❌ [BillingEventHandlerStripe] Payment failed: ${invoice.id}`, invoiceEvent)
+        console.info(`❌ [BillingEventConverterStripe] Payment failed: ${invoice.id}`, invoiceEvent)
         return invoiceEvent
+      }
+      case 'checkout.session.completed': {
+        const stripeCheckoutSession = event.data.object as Stripe.Checkout.Session
+        const checkoutSession = this.mapStripeCheckoutSessionToCheckoutSession(stripeCheckoutSession)
+        const checkoutSessionEvent: CheckoutSessionEvent = {
+          checkoutSession
+        }
+        console.info(`🛒 [BillingEventConverterStripe] Checkout session completed: ${checkoutSession.id}`, checkoutSessionEvent)
+        return checkoutSessionEvent
       }
 
       default:
-        console.info(`ℹ️ [BillingEventHandlerStripe] Unhandled event type: ${event.type}`)
+        console.info(`ℹ️ [BillingEventConverterStripe] Unhandled event type: ${event.type}`)
         throw new Error(`Unhandled event type: ${event.type}`)
     }
   }
@@ -185,6 +194,15 @@ export class BillingEventHandlerStripe implements BillingEventHandler {
         : stripeInvoice.subscription?.id || '',
       status: stripeInvoice.status || 'draft',
       amount: stripeInvoice.amount_due
+    }
+  }
+
+  private mapStripeCheckoutSessionToCheckoutSession(stripeCheckoutSession: Stripe.Checkout.Session): CheckoutSession {
+    return {
+      id: stripeCheckoutSession.id,
+      customerId: typeof stripeCheckoutSession.customer === 'string'
+        ? stripeCheckoutSession.customer
+        : stripeCheckoutSession.customer || ''
     }
   }
 }

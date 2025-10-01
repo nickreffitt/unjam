@@ -73,7 +73,7 @@ const VerifyAuth: React.FC = () => {
   // Redirect authenticated users to dashboard
   if (isAuthenticated) {
     console.debug('[VerifyAuth] User is authenticated, redirecting to /new');
-    return <Navigate to="/new" replace />;
+    return <Navigate to="new" replace />;
   }
 
   // Show loading while checking auth state

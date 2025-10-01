@@ -20,6 +20,7 @@ import Onboarding from '@dashboard/pages/customer/Onboarding';
 import BuyCredits from '@dashboard/pages/customer/BuyCredits';
 import CustomerSidebar from '@dashboard/customer/Sidebar/Sidebar';
 import { PricingTableManagerProvider } from '@dashboard/customer/PricingTable/contexts/PricingTableManagerContext';
+import CreditSuccess from '@dashboard/pages/customer/CreditSuccess';
 
 
 const ProtectedEngineerDashboard: React.FC = () => {
@@ -32,14 +33,14 @@ const ProtectedEngineerDashboard: React.FC = () => {
               <Sidebar />
               <div className="unjam-flex-1 unjam-overflow-hidden">
                 <Routes>
-                  <Route path="/new" element={<NewTicketsList />} />
-                  <Route path="/new/:ticketId" element={<TicketPreview />} />
-                  <Route path="/active" element={<ActiveTicketsList />} />
-                  <Route path="/active/:ticketId" element={<ActiveTicket />} />
-                  <Route path="/completed" element={<CompletedTicketsList />} />
-                  <Route path="/completed/:ticketId" element={<CompletedTicket />} />
-                  <Route path="/auth/logout" element={<Logout />} />
-                  <Route path="/*" element={<Navigate to="/new" replace />} />
+                  <Route path="new" element={<NewTicketsList />} />
+                  <Route path="new/:ticketId" element={<TicketPreview />} />
+                  <Route path="active" element={<ActiveTicketsList />} />
+                  <Route path="active/:ticketId" element={<ActiveTicket />} />
+                  <Route path="completed" element={<CompletedTicketsList />} />
+                  <Route path="completed/:ticketId" element={<CompletedTicket />} />
+                  <Route path="auth/logout" element={<Logout />} />
+                  <Route path="*" element={<NewTicketsList />} />
                 </Routes>
               </div>
             </div>
@@ -58,11 +59,12 @@ const ProtectedCustomerDashboard: React.FC = () => {
         <CustomerSidebar />
         <div className="unjam-flex-1 unjam-overflow-hidden">
           <Routes>
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/buy" element={<BuyCredits />} />
-          <Route path="/auth/logout" element={<Logout />} />
-          <Route path="/*" element={<Navigate to="/onboarding" replace />} />
-        </Routes>
+            <Route path="onboarding" element={<Onboarding />} />
+            <Route path="buy" element={<BuyCredits />} />
+            <Route path="buy/success" element={<CreditSuccess />} />
+            <Route path="auth/logout" element={<Logout />} />
+            <Route path="*" element={<Onboarding />} />
+          </Routes>
         </div>
       </div>
     </PricingTableManagerProvider>
@@ -93,25 +95,15 @@ const DashboardContent: React.FC = () => {
   switch (authUser.status) {
     case 'signed-in': {
       if (authUser.profile?.type === 'customer') {
-        return (
-          <Routes>
-            <Route path="/*" element={<ProtectedCustomerDashboard />} />
-          </Routes>
-        );
+        return <ProtectedCustomerDashboard />;
       } else {
-        return (
-          <Routes>
-            <Route path="/*" element={<ProtectedEngineerDashboard />} />
-          </Routes>
-        );
+        return <ProtectedEngineerDashboard />;
       }
-        break;
     }
     case 'requires-profile': {
       return (
           <Routes>
-            <Route path="/auth/complete-profile" element={<CreateProfile />} />
-            <Route path="/*" element={<Navigate to="/auth/complete-profile" replace />} />
+            <Route path="*" element={<CreateProfile />} />
           </Routes>
         );
       break;
@@ -119,11 +111,11 @@ const DashboardContent: React.FC = () => {
     default: {
       return (
           <Routes>
-            <Route path="/auth" element={<SignIn />} />
-            <Route path="/auth/verify" element={<VerifyAuth />} />
-            <Route path="/auth/complete-profile" element={<CreateProfile />} />
-            <Route path="/auth/logout" element={<Logout />} />
-            <Route path="/*" element={<Navigate to="/auth" replace />} />
+            <Route path="auth" element={<SignIn />} />
+            <Route path="auth/verify" element={<VerifyAuth />} />
+            <Route path="auth/complete-profile" element={<CreateProfile />} />
+            <Route path="auth/logout" element={<Logout />} />
+            <Route path="*" element={<SignIn />} />
           </Routes>
         );
       break;

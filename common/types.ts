@@ -144,3 +144,25 @@ export type WebRTCEventType =
   | 'webrtcIceCandidate'
   | 'webrtcOfferCreated'
   | 'webrtcAnswerCreated';
+
+export type SubscriptionStatus =
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'unpaid'
+  | 'paused';
+
+export interface Subscription {
+  id: string;
+  customerId: string;
+  status: SubscriptionStatus;
+  planName: string;
+  creditPrice: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type SubscriptionEventType = 'subscriptionCreated' | 'subscriptionUpdated' | 'subscriptionDeleted';

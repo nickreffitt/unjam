@@ -5,7 +5,6 @@ interface StripePricingTableProps {
   publishableKey: string;
   clientReferenceId?: string;
   customerEmail?: string;
-  customerSessionClientSecret?: string;
 }
 
 // TypeScript declaration for the Stripe pricing table custom element
@@ -18,7 +17,6 @@ declare global {
           'publishable-key'?: string;
           'client-reference-id'?: string;
           'customer-email'?: string;
-          'customer-session-client-secret'?: string;
         },
         HTMLElement
       >;
@@ -31,7 +29,6 @@ const StripePricingTable: React.FC<StripePricingTableProps> = ({
   publishableKey,
   clientReferenceId,
   customerEmail,
-  customerSessionClientSecret
 }) => {
   useEffect(() => {
     // Ensure the Stripe pricing table script is loaded
@@ -52,7 +49,6 @@ const StripePricingTable: React.FC<StripePricingTableProps> = ({
             publishable-key={publishableKey}
             client-reference-id={clientReferenceId}
             customer-email={customerEmail}
-            customer-session-client-secret={customerSessionClientSecret}
           />
         </div>
       </div>

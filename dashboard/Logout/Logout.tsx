@@ -30,7 +30,7 @@ const Logout: React.FC = () => {
 
   // Redirect to sign in if not authenticated
   if (!authStateLoading && !isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="auth" replace />;
   }
 
   // Show loading while checking auth state
