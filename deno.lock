@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "npm:@eslint/js@^9.35.0": "9.36.0",
+    "npm:@supabase/supabase-js@2": "2.58.0",
     "npm:@supabase/supabase-js@^2.58.0": "2.58.0",
     "npm:@testing-library/jest-dom@^6.8.0": "6.8.0",
     "npm:@testing-library/react@^16.3.0": "16.3.0_@testing-library+dom@10.4.1_@types+react@18.3.25_@types+react-dom@18.3.7__@types+react@18.3.25_react@18.3.1_react-dom@18.3.1__react@18.3.1",
@@ -5849,6 +5850,7 @@
   },
   "workspace": {
     "dependencies": [
+      "npm:@supabase/supabase-js@2",
       "npm:stripe@18"
     ],
     "packageJson": {

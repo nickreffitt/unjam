@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'supabase'
 import type { BillingSubscriptionStore } from './BillingSubscriptionStore.ts'
 import type { Subscription } from './types.ts'
 
