@@ -1,9 +1,4 @@
 import { type User } from '@common/types';
-import {
-  type AuthUserSignedInCallback,
-  type AuthUserSignedOutCallback,
-  type AuthStateChangedCallback
-} from './AuthUserEventEmitter';
 
 /**
  * Interface for authentication user storage implementations

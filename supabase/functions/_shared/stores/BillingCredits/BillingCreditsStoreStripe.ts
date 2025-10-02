@@ -1,4 +1,4 @@
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 import type { BillingCreditsStore, CreateCreditGrantParams } from './BillingCreditsStore.ts'
 import type { CreditGrant } from '@types'
 
@@ -8,10 +8,8 @@ import type { CreditGrant } from '@types'
 export class BillingCreditsStoreStripe implements BillingCreditsStore {
   private stripe: Stripe
 
-  constructor(apiKey: string) {
-    this.stripe = new Stripe(apiKey, {
-      apiVersion: '2025-08-27.basil'
-    })
+  constructor(stripe: Stripe) {
+    this.stripe = stripe
   }
 
   /**

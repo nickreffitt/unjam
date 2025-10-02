@@ -5,9 +5,15 @@
   },
   "imports": {
     "stripe": "npm:stripe@18",
-    "server": "https://deno.land/std@0.168.0/http/server.ts",
     "supabase": "npm:@supabase/supabase-js@2",
-    "@types": "./supabase/functions/stripe-webhook/types.ts"
+    "server": "https://deno.land/std@0.168.0/http/server.ts",
+    "@types": "./supabase/functions/_shared/types.ts",
+    "@shared/events/": "./supabase/functions/_shared/events/",
+    "@shared/services/": "./supabase/functions/_shared/services/",
+    "@shared/stores/": "./supabase/functions/_shared/stores/",
+    "@services/": "./supabase/functions/_shared/services/",
+    "@stores/": "./supabase/functions/_shared/stores/",
+    "@common": "./common"
   },
   "nodeModulesDir": "auto"
 }

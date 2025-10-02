@@ -1,9 +1,9 @@
-import type { BillingEventConverter } from './BillingEventConverter.ts'
-import type { BillingCustomerStore } from './store/BillingCustomer/BillingCustomerStore.ts'
-import type { BillingSubscriptionStore } from './store//BillingSubscription/BillingSubscriptionStore.ts'
-import type { BillingSubscriptionService } from './service/BillingSubscriptionService.ts'
-import type { BillingInvoiceStore } from './store/BillingInvoice/BillingInvoiceStore.ts'
-import type { BillingCreditsStore } from './store/BillingCredits/BillingCreditsStore.ts'
+import type { BillingEventConverter } from '@shared/events/BillingEventConverter.ts'
+import type { BillingCustomerStore } from '@shared/stores/BillingCustomer/BillingCustomerStore.ts'
+import type { BillingSubscriptionStore } from '@shared/stores/BillingSubscription/BillingSubscriptionStore.ts'
+import type { BillingSubscriptionService } from '@shared/services/BillingSubscriptionService.ts'
+import type { BillingInvoiceStore } from '@shared/stores/BillingInvoice/BillingInvoiceStore.ts'
+import type { BillingCreditsStore } from '@shared/stores/BillingCredits/BillingCreditsStore.ts'
 import type { CustomerEvent, SubscriptionEvent, InvoiceEvent, CheckoutSessionEvent, Invoice, Subscription } from '@types'
 
 /**

@@ -1,5 +1,5 @@
 import type { BillingEventConverter } from './BillingEventConverter.ts'
-import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, BillingEvent } from './types.ts'
+import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, BillingEvent } from '../types.ts'
 
 /**
  * Local implementation of BillingEventConverter for testing

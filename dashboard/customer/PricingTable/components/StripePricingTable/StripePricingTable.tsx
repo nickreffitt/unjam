@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useBillingPortalLink } from '../../hooks/useBillingPortalLink';
 
 interface StripePricingTableProps {
   pricingTableId: string;
@@ -30,6 +31,8 @@ const StripePricingTable: React.FC<StripePricingTableProps> = ({
   clientReferenceId,
   customerEmail,
 }) => {
+  const { portalUrl, isLoading: isLoadingPortal } = useBillingPortalLink();
+
   useEffect(() => {
     // Ensure the Stripe pricing table script is loaded
     if (!document.querySelector('script[src="https://js.stripe.com/v3/pricing-table.js"]')) {
@@ -40,10 +43,27 @@ const StripePricingTable: React.FC<StripePricingTableProps> = ({
     }
   }, []);
 
+  const handleManageSubscription = () => {
+    if (portalUrl) {
+      window.open(portalUrl, '_blank');
+    }
+  };
+
   return (
     <div className="unjam-h-full unjam-overflow-y-auto">
       <div className="unjam-p-4">
         <div className="unjam-max-w-6xl max-lg:unjam-max-w-3xl unjam-mx-auto">
+          {/* Manage Subscription Button */}
+          <div className="unjam-mb-4 unjam-flex unjam-justify-end">
+            <button
+              onClick={handleManageSubscription}
+              disabled={!portalUrl || isLoadingPortal}
+              className="unjam-px-4 unjam-py-2 unjam-bg-blue-600 unjam-text-white unjam-rounded-md hover:unjam-bg-blue-700 disabled:unjam-bg-gray-400 disabled:unjam-cursor-not-allowed unjam-transition-colors"
+            >
+              {isLoadingPortal ? 'Loading...' : 'Manage Subscription'}
+            </button>
+          </div>
+
           <stripe-pricing-table
             pricing-table-id={pricingTableId}
             publishable-key={publishableKey}

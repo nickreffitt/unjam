@@ -8,8 +8,8 @@ import type { Subscription } from '@types'
 export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStore {
   private supabase: SupabaseClient
 
-  constructor(supabaseUrl: string, supabaseServiceKey: string) {
-    this.supabase = createClient(supabaseUrl, supabaseServiceKey)
+  constructor(supabase: SupabaseClient) {
+    this.supabase = supabase
   }
 
   /**

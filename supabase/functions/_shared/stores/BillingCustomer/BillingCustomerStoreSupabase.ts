@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from 'supabase'
+import { type SupabaseClient } from 'supabase'
 import type { BillingCustomerStore } from './BillingCustomerStore.ts'
 import type { Customer } from '@types'
 
@@ -8,8 +8,8 @@ import type { Customer } from '@types'
 export class BillingCustomerStoreSupabase implements BillingCustomerStore {
   private supabase: SupabaseClient
 
-  constructor(supabaseUrl: string, supabaseServiceKey: string) {
-    this.supabase = createClient(supabaseUrl, supabaseServiceKey)
+  constructor(supabase: SupabaseClient) {
+    this.supabase = supabase
   }
 
   /**
@@ -127,5 +127,33 @@ export class BillingCustomerStoreSupabase implements BillingCustomerStore {
 
     console.info(`[BillingCustomerStoreSupabase] Found billing customer with profile ${data.profile_id}`)
     return data.profile_id
+  }
+
+  /**
+   * Fetches a billing customer by their profile ID
+   * @param profileId - The profile ID
+   * @returns The stripe customer ID if found, undefined otherwise
+   */
+  async getByProfileId(profileId: string): Promise<string | undefined> {
+    console.info(`[BillingCustomerStoreSupabase] Fetching billing customer by profile ID: ${profileId}`)
+
+    const { data, error } = await this.supabase
+      .from('billing_customers')
+      .select('stripe_customer_id')
+      .eq('profile_id', profileId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // Not found
+        console.info(`[BillingCustomerStoreSupabase] Billing customer not found for profile: ${profileId}`)
+        return undefined
+      }
+      console.error(`[BillingCustomerStoreSupabase] Error fetching billing customer by profile:`, error)
+      throw new Error(`Failed to fetch billing customer by profile: ${error.message}`)
+    }
+
+    console.info(`[BillingCustomerStoreSupabase] Found billing customer ${data.stripe_customer_id} for profile ${profileId}`)
+    return data.stripe_customer_id
   }
 }

@@ -29,4 +29,11 @@ export interface BillingCustomerStore {
    * @returns The profile ID if found, undefined otherwise
    */
   fetch(customerId: string): Promise<string | undefined>
+
+  /**
+   * Fetches a billing customer by their profile ID
+   * @param profileId - The profile ID
+   * @returns The stripe customer ID if found, undefined otherwise
+   */
+  getByProfileId(profileId: string): Promise<string | undefined>
 }

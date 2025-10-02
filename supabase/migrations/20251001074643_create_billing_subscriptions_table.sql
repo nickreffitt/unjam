@@ -14,10 +14,12 @@ CREATE TYPE subscription_status AS ENUM (
 CREATE TABLE billing_subscriptions (
   id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
   stripe_subscription_id TEXT NOT NULL UNIQUE,
-  stripe_customer_id TEXT NOT NULL REFERENCES billing_customers(stripe_customer_id) ON DELETE CASCADE,
+  stripe_customer_id TEXT NOT NULL,
   status subscription_status NOT NULL,
   plan_name TEXT NOT NULL,
   credit_price INTEGER NOT NULL,
+  cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+  current_period_end TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -30,6 +32,9 @@ CREATE INDEX billing_subscriptions_stripe_customer_id_idx ON billing_subscriptio
 
 -- Create index on status for filtering active subscriptions
 CREATE INDEX billing_subscriptions_status_idx ON billing_subscriptions (status);
+
+-- Create index on current_period_end for querying expiring subscriptions
+CREATE INDEX billing_subscriptions_current_period_end_idx ON billing_subscriptions (current_period_end);
 
 -- Create updated_at trigger
 CREATE TRIGGER update_billing_subscriptions_updated_at BEFORE UPDATE ON billing_subscriptions

@@ -1,12 +1,14 @@
 import { serve } from "server"
-import { BillingEventConverterStripe } from "./BillingEventConverterStripe.ts"
-import { BillingEventConverterLocal } from "./BillingEventConverterLocal.ts"
+import { createClient } from "supabase"
+import Stripe from "stripe"
+import { BillingEventConverterStripe } from "@shared/events/BillingEventConverterStripe.ts"
+import { BillingEventConverterLocal } from "@shared/events/BillingEventConverterLocal.ts"
 import { BillingEventHandler } from "./BillingEventHandler.ts"
-import { BillingCustomerStoreSupabase } from "./store/BillingCustomer/BillingCustomerStoreSupabase.ts"
-import { BillingSubscriptionStoreSupabase } from "./store/BillingSubscription/BillingSubscriptionStoreSupabase.ts"
-import { BillingSubscriptionServiceStripe } from "./service/BillingSubscriptionServiceStripe.ts"
-import { BillingInvoiceStoreSupabase } from "./store/BillingInvoice/BillingInvoiceStoreSupabase.ts"
-import { BillingCreditsStoreStripe } from "./store/BillingCredits/BillingCreditsStoreStripe.ts"
+import { BillingCustomerStoreSupabase } from "@shared/stores/BillingCustomer/BillingCustomerStoreSupabase.ts"
+import { BillingSubscriptionStoreSupabase } from "@shared/stores/BillingSubscription/BillingSubscriptionStoreSupabase.ts"
+import { BillingSubscriptionServiceStripe } from "@shared/services/BillingSubscriptionServiceStripe.ts"
+import { BillingInvoiceStoreSupabase } from "@shared/stores/BillingInvoice/BillingInvoiceStoreSupabase.ts"
+import { BillingCreditsStoreStripe } from "@shared/stores/BillingCredits/BillingCreditsStoreStripe.ts"
 
 // Initialize environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
@@ -14,12 +16,17 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
 const stripeApiKey = Deno.env.get('STRIPE_API_KEY') as string
 const enableStripe = Deno.env.get('WEBHOOKS_ENABLE_STRIPE')
 
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const stripe = new Stripe(stripeApiKey, {
+  apiVersion: '2025-08-27.basil'
+})
+
 // Initialize stores
-const customerStore = new BillingCustomerStoreSupabase(supabaseUrl, supabaseServiceKey)
-const subscriptionStore = new BillingSubscriptionStoreSupabase(supabaseUrl, supabaseServiceKey)
-const subscriptionService = new BillingSubscriptionServiceStripe(stripeApiKey)
-const invoiceStore = new BillingInvoiceStoreSupabase(supabaseUrl, supabaseServiceKey)
-const creditsStore = new BillingCreditsStoreStripe(stripeApiKey)
+const customerStore = new BillingCustomerStoreSupabase(supabase)
+const subscriptionStore = new BillingSubscriptionStoreSupabase(supabase)
+const subscriptionService = new BillingSubscriptionServiceStripe(stripe)
+const invoiceStore = new BillingInvoiceStoreSupabase(supabase)
+const creditsStore = new BillingCreditsStoreStripe(stripe)
 
 // Initialize converter based on environment
 const converter = enableStripe

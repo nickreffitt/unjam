@@ -1,5 +1,5 @@
-import Stripe from 'stripe'
-import type { BillingSubscriptionService } from '../service/BillingSubscriptionService.ts'
+import type Stripe from 'stripe'
+import type { BillingSubscriptionService } from './BillingSubscriptionService.ts'
 import type { Subscription } from '@types'
 
 /**
@@ -9,10 +9,8 @@ import type { Subscription } from '@types'
 export class BillingSubscriptionServiceStripe implements BillingSubscriptionService {
   private stripe: Stripe
 
-  constructor(apiKey: string) {
-    this.stripe = new Stripe(apiKey, {
-      apiVersion: '2025-08-27.basil'
-    })
+  constructor(stripe: Stripe) {
+    this.stripe = stripe
   }
 
   /**

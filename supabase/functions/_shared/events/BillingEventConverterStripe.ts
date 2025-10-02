@@ -1,6 +1,6 @@
 import Stripe from "stripe"
 import type { BillingEventConverter } from './BillingEventConverter.ts'
-import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, CheckoutSession, CheckoutSessionEvent, BillingEvent } from './types.ts'
+import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, CheckoutSession, CheckoutSessionEvent, BillingEvent } from '../types.ts'
 
 /**
  * Stripe implementation of BillingEventConverter
@@ -172,6 +172,14 @@ export class BillingEventConverterStripe implements BillingEventConverter {
     const planName = product.name
     const creditPrice = parseInt(product.metadata.credit_price || '0', 10)
 
+    // Get current_period_end from subscription or fall back to first item's period
+    const currentPeriodEnd = stripeSubscription.current_period_end
+      || firstItem.current_period_end
+
+    if (!currentPeriodEnd) {
+      throw new Error(`Subscription ${stripeSubscription.id} has no current_period_end`)
+    }
+
     return {
       id: stripeSubscription.id,
       customerId: typeof stripeSubscription.customer === 'string'
@@ -181,7 +189,7 @@ export class BillingEventConverterStripe implements BillingEventConverter {
       planName,
       creditPrice,
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end || false,
-      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000)
+      currentPeriodEnd: new Date(currentPeriodEnd * 1000)
     }
   }
 

@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from 'supabase'
+import { type SupabaseClient } from 'supabase'
 import type { BillingInvoiceStore } from './BillingInvoiceStore.ts'
 import type { Invoice } from '@types'
 
@@ -8,8 +8,8 @@ import type { Invoice } from '@types'
 export class BillingInvoiceStoreSupabase implements BillingInvoiceStore {
   private supabase: SupabaseClient
 
-  constructor(supabaseUrl: string, supabaseServiceKey: string) {
-    this.supabase = createClient(supabaseUrl, supabaseServiceKey)
+  constructor(supabase: SupabaseClient) {
+    this.supabase = supabase
   }
 
   /**
