@@ -1,6 +1,6 @@
 import Stripe from "stripe"
 import type { BillingEventConverter } from './BillingEventConverter.ts'
-import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, CheckoutSession, CheckoutSessionEvent, BillingEvent } from '../types.ts'
+import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, CheckoutSession, CheckoutSessionEvent, BillingEvent } from '@types'
 
 /**
  * Stripe implementation of BillingEventConverter

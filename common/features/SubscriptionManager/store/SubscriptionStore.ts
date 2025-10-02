@@ -1,9 +1,5 @@
-import { type SubscriptionEventEmitter } from '@common/features/SubscriptionManager/events';
+import type { Subscription } from '@common/types';
 
-export class SubscriptionStore {
-  private readonly eventEmitter: SubscriptionEventEmitter;
-
-  constructor(eventEmitter: SubscriptionEventEmitter) {
-    this.eventEmitter = eventEmitter;
-  }
+export interface SubscriptionStore {
+  getActiveSubscriptionForProfile(profileId: string): Promise<Subscription | null>;
 }

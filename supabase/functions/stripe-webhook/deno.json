@@ -3,7 +3,7 @@
     "stripe": "npm:stripe@18",
     "supabase": "npm:@supabase/supabase-js@2",
     "server": "https://deno.land/std@0.168.0/http/server.ts",
-    "@types": "../_shared/types.ts",
+    "@types": "../../../common/types.ts",
     "@shared/events/": "../_shared/events/",
     "@shared/services/": "../_shared/services/",
     "@shared/stores/": "../_shared/stores/"

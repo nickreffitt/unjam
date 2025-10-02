@@ -1,5 +1,5 @@
 import type { BillingEventConverter } from './BillingEventConverter.ts'
-import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, BillingEvent } from '../types.ts'
+import type { Customer, CustomerEvent, Subscription, SubscriptionEvent, Invoice, InvoiceEvent, BillingEvent } from '@types'
 
 /**
  * Local implementation of BillingEventConverter for testing
@@ -69,7 +69,9 @@ export class BillingEventConverterLocal implements BillingEventConverter {
           customerId: event.data.customerId,
           status: event.data.status,
           planName: event.data.planName,
-          creditPrice: event.data.creditPrice
+          creditPrice: event.data.creditPrice,
+          cancelAtPeriodEnd: event.data.cancelAtPeriodEnd || false,
+          currentPeriodEnd: new Date(event.data.currentPeriodEnd)
         }
         const subscriptionEvent: SubscriptionEvent = {
           state: 'created',
@@ -85,7 +87,9 @@ export class BillingEventConverterLocal implements BillingEventConverter {
           customerId: event.data.customerId,
           status: event.data.status,
           planName: event.data.planName,
-          creditPrice: event.data.creditPrice
+          creditPrice: event.data.creditPrice,
+          cancelAtPeriodEnd: event.data.cancelAtPeriodEnd || false,
+          currentPeriodEnd: new Date(event.data.currentPeriodEnd)
         }
         const subscriptionEvent: SubscriptionEvent = {
           state: 'updated',
@@ -101,7 +105,9 @@ export class BillingEventConverterLocal implements BillingEventConverter {
           customerId: event.data.customerId,
           status: event.data.status,
           planName: event.data.planName,
-          creditPrice: event.data.creditPrice
+          creditPrice: event.data.creditPrice,
+          cancelAtPeriodEnd: event.data.cancelAtPeriodEnd || false,
+          currentPeriodEnd: new Date(event.data.currentPeriodEnd)
         }
         const subscriptionEvent: SubscriptionEvent = {
           state: 'deleted',
@@ -117,7 +123,9 @@ export class BillingEventConverterLocal implements BillingEventConverter {
           customerId: event.data.customerId,
           subscriptionId: event.data.subscriptionId,
           status: event.data.status,
-          amount: event.data.amount
+          amount: event.data.amount,
+          periodStart: new Date(event.data.periodStart),
+          periodEnd: new Date(event.data.periodEnd)
         }
         const invoiceEvent: InvoiceEvent = {
           state: 'paid',
@@ -133,7 +141,9 @@ export class BillingEventConverterLocal implements BillingEventConverter {
           customerId: event.data.customerId,
           subscriptionId: event.data.subscriptionId,
           status: event.data.status,
-          amount: event.data.amount
+          amount: event.data.amount,
+          periodStart: new Date(event.data.periodStart),
+          periodEnd: new Date(event.data.periodEnd)
         }
         const invoiceEvent: InvoiceEvent = {
           state: 'failed',

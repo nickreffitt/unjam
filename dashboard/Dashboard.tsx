@@ -19,7 +19,7 @@ import { ScreenShareManagerProvider } from '@dashboard/engineer/ScreenShare/cont
 import Onboarding from '@dashboard/pages/customer/Onboarding';
 import BuyCredits from '@dashboard/pages/customer/BuyCredits';
 import CustomerSidebar from '@dashboard/customer/Sidebar/Sidebar';
-import { PricingTableManagerProvider } from '@dashboard/customer/PricingTable/contexts/PricingTableManagerContext';
+import { SubscriptionManagerProvider } from '@dashboard/customer/Subscription';
 import CreditSuccess from '@dashboard/pages/customer/CreditSuccess';
 
 
@@ -54,7 +54,7 @@ const ProtectedEngineerDashboard: React.FC = () => {
 
 const ProtectedCustomerDashboard: React.FC = () => {
   return (
-    <PricingTableManagerProvider>
+    <SubscriptionManagerProvider>
       <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
         <CustomerSidebar />
         <div className="unjam-flex-1 unjam-overflow-hidden">
@@ -67,7 +67,7 @@ const ProtectedCustomerDashboard: React.FC = () => {
           </Routes>
         </div>
       </div>
-    </PricingTableManagerProvider>
+    </SubscriptionManagerProvider>
   );
 };
 

@@ -1,9 +1,9 @@
 import React from 'react';
-import PricingTable from '@dashboard/customer/PricingTable';
-import { usePricingTableManager } from '@dashboard/customer/PricingTable/contexts/PricingTableManagerContext';
+import Subscription from '@dashboard/customer/Subscription';
+import { useSubscriptionManager } from '@dashboard/customer/Subscription/contexts/SubscriptionManagerContext';
 
 const BuyCredits: React.FC = () => {
-  const { userProfile, stripeTableId, stripePublishableKey} = usePricingTableManager();
+  const { userProfile, stripeTableId, stripePublishableKey} = useSubscriptionManager();
   
   console.debug('[BuyCredits] userProfile:', userProfile)
   return (
@@ -20,7 +20,7 @@ const BuyCredits: React.FC = () => {
             </p>
           </div>
 
-          <PricingTable
+          <Subscription
             stripePricingTableId={stripeTableId}
             stripePublishableKey={stripePublishableKey}
             clientReferenceId={userProfile.authId}

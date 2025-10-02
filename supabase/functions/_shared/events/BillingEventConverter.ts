@@ -1,4 +1,4 @@
-import type { BillingEvent } from '../types.ts'
+import type { BillingEvent } from '@types'
 
 /**
  * BillingEventConverter interface for converting webhook events to domain events

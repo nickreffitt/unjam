@@ -22,7 +22,7 @@ export class BillingLinksServiceStripe implements BillingLinksService {
     try {
       const session = await this.stripe.billingPortal.sessions.create({
         customer: stripeCustomerId,
-        return_url: `${Deno.env.get('APP_URL')}/billing`
+        return_url: `${Deno.env.get('APP_URL')}/app/buy`
       })
 
       console.info(`[BillingLinksServiceStripe] Successfully created portal session: ${session.id}`)

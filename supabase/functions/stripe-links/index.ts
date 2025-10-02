@@ -9,12 +9,16 @@ import Stripe from "stripe";
 console.debug("Stripe Links function loaded")
 
 export const handler = async (request: Request): Promise<Response> => {
+  const allowedOrigins = ['https://unjam.nickreffitt.com', 'http://localhost:5175']
+  const origin = request.headers.get('Origin') || ''
+  const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://unjam.nickreffitt.com'
+
   // Handle CORS preflight requests
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': corsOrigin,
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
@@ -31,7 +35,7 @@ export const handler = async (request: Request): Promise<Response> => {
       console.error('[stripe-links] Missing profile_id in request')
       return new Response(
         JSON.stringify({ error: 'profile_id is required' }),
-        { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
 
@@ -40,7 +44,7 @@ export const handler = async (request: Request): Promise<Response> => {
       console.error(`[stripe-links] No Authorization header set`)
       return new Response(
         JSON.stringify({ error: 'No Authorization header set' }),
-        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
 
@@ -72,7 +76,7 @@ export const handler = async (request: Request): Promise<Response> => {
       console.error(`[stripe-links] No billing customer found for profile: ${profile_id}`)
       return new Response(
         JSON.stringify({ error: 'No billing customer found for this profile' }),
-        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
 
@@ -83,7 +87,7 @@ export const handler = async (request: Request): Promise<Response> => {
 
     return new Response(
       JSON.stringify({ url: portalUrl }),
-      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
     )
 
   } catch (err) {
@@ -91,7 +95,7 @@ export const handler = async (request: Request): Promise<Response> => {
     console.error('[stripe-links] Error:', error.message)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
     )
   }
 }
