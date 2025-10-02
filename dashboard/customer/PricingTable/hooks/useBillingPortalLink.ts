@@ -17,7 +17,7 @@ export const useBillingPortalLink = () => {
         setIsLoading(true);
         setError(null);
 
-        console.info('[useBillingPortalLink] Fetching billing portal link for profile:', userProfile.id);
+        console.info('[useBillingPortalLink] Fetching billing portal link for profile:', userProfile);
         const url = await apiManager.createBillingPortalLink(userProfile.id);
 
         setPortalUrl(url);

@@ -276,7 +276,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
    */
   private mapRowToProfile(row: Record<string, unknown>): UserProfile {
     const baseProfile = {
-      id: row.profile_id as string,  // Use profile_id as the id for UserProfile
+      id: row.id as string,  // Use profile_id as the id for UserProfile
       name: row.name as string,
       email: row.email as string | undefined,
       authId: row.auth_id as string,

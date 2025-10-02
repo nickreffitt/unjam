@@ -9,15 +9,29 @@ import Stripe from "stripe";
 console.debug("Stripe Links function loaded")
 
 export const handler = async (request: Request): Promise<Response> => {
+  // Handle CORS preflight requests
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    })
+  }
+
   try {
     // Parse request body
-    const { profile_id } = await request.json()
-
+    const body = await request.text()
+    console.info('About to handle request body: ', body)
+    const { profile_id } = JSON.parse(body)
+    console.info('Request contains profile_id: ', profile_id)
     if (!profile_id) {
       console.error('[stripe-links] Missing profile_id in request')
       return new Response(
         JSON.stringify({ error: 'profile_id is required' }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
       )
     }
 
@@ -26,16 +40,16 @@ export const handler = async (request: Request): Promise<Response> => {
       console.error(`[stripe-links] No Authorization header set`)
       return new Response(
         JSON.stringify({ error: 'No Authorization header set' }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
       )
     }
 
     console.info(`[stripe-links] Creating billing portal session for profile: ${profile_id}`)
 
     // Initialize services
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const stripeApiKey = Deno.env.get('STRIPE_API_KEY')!
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
+    const stripeApiKey = Deno.env.get('STRIPE_API_KEY') as string
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey,
       {
@@ -58,7 +72,7 @@ export const handler = async (request: Request): Promise<Response> => {
       console.error(`[stripe-links] No billing customer found for profile: ${profile_id}`)
       return new Response(
         JSON.stringify({ error: 'No billing customer found for this profile' }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
       )
     }
 
@@ -69,7 +83,7 @@ export const handler = async (request: Request): Promise<Response> => {
 
     return new Response(
       JSON.stringify({ url: portalUrl }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     )
 
   } catch (err) {
@@ -77,7 +91,7 @@ export const handler = async (request: Request): Promise<Response> => {
     console.error('[stripe-links] Error:', error.message)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     )
   }
 }
