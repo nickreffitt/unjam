@@ -31,6 +31,8 @@ export interface Subscription {
   status: SubscriptionStatus
   planName: string
   creditPrice: number
+  cancelAtPeriodEnd: boolean
+  currentPeriodEnd: Date
 }
 
 export type SubscriptionState = 'created' | 'updated' | 'deleted'

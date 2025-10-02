@@ -28,6 +28,8 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
         status: subscription.status,
         plan_name: subscription.planName,
         credit_price: subscription.creditPrice,
+        cancel_at_period_end: subscription.cancelAtPeriodEnd,
+        current_period_end: subscription.currentPeriodEnd.toISOString(),
       })
 
     if (insertError) {
@@ -51,6 +53,8 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
         status: subscription.status,
         plan_name: subscription.planName,
         credit_price: subscription.creditPrice,
+        cancel_at_period_end: subscription.cancelAtPeriodEnd,
+        current_period_end: subscription.currentPeriodEnd.toISOString(),
       })
       .eq('stripe_subscription_id', subscription.id)
 
@@ -92,7 +96,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
 
     const { data, error } = await this.supabase
       .from('billing_subscriptions')
-      .select('stripe_subscription_id, stripe_customer_id, status, plan_name, credit_price, current_period_end')
+      .select('stripe_subscription_id, stripe_customer_id, status, plan_name, credit_price, cancel_at_period_end, current_period_end')
       .eq('stripe_subscription_id', subscriptionId)
       .single()
 
@@ -113,6 +117,8 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
       status: data.status,
       planName: data.plan_name,
       creditPrice: data.credit_price,
+      cancelAtPeriodEnd: data.cancel_at_period_end,
+      currentPeriodEnd: new Date(data.current_period_end),
     }
   }
 }

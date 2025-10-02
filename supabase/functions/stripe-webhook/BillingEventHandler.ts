@@ -92,16 +92,54 @@ export class BillingEventHandler {
     switch (event.state) {
       case 'created':
         await this.subscriptionStore.create(event.subscription)
+        // No credit handling - credits granted when invoice paid
         break
       case 'updated':
+        // Fetch the old subscription to detect plan changes
+        const oldSubscription = await this.subscriptionStore.fetch(event.subscription.id)
+
+        // Update database with new subscription data
         await this.subscriptionStore.update(event.subscription)
+
+        // Detect upgrade: plan changed AND credit price increased
+        if (oldSubscription && this.isUpgrade(oldSubscription, event.subscription)) {
+          await this.handleUpgrade(event.subscription.customerId)
+        }
+        // Downgrades and cancellations don't require immediate action
+        // Credits will naturally expire at period end
         break
       case 'deleted':
         await this.subscriptionStore.delete(event.subscription.id)
+        // Subscription ended - credits should already be expired or voided
         break
       default:
         throw new Error(`Unknown subscription event state: ${event.state}`)
     }
+  }
+
+  /**
+   * Determines if a subscription change is an upgrade
+   * Upgrade = immediate plan change with higher credit price
+   */
+  private isUpgrade(oldSub: Subscription, newSub: Subscription): boolean {
+    // Plan changed AND credit price increased
+    return oldSub.planName !== newSub.planName &&
+           newSub.creditPrice > oldSub.creditPrice
+  }
+
+  /**
+   * Handles immediate upgrade:
+   * 1. Void existing credits from old plan
+   * 2. Wait for prorated invoice to grant new credits
+   */
+  private async handleUpgrade(customerId: string): Promise<void> {
+    console.info(`[BillingEventHandler] Processing upgrade for customer: ${customerId}`)
+
+    // Void all existing credits from the old plan
+    // New credits will be granted when the prorated invoice is paid
+    await this.voidExistingCreditGrants(customerId)
+
+    console.info(`[BillingEventHandler] Voided credits for upgrade. New credits will be granted when prorated invoice is paid.`)
   }
 
   /**

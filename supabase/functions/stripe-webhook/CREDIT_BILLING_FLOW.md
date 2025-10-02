@@ -111,11 +111,123 @@ This document describes the complete implementation of credit-based billing usin
 │    - Customer must wait for next billing cycle                 │
 │    - No overage charges possible                               │
 └─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│              SUBSCRIPTION CHANGES (Upgrade/Downgrade)            │
+├─────────────────────────────────────────────────────────────────┤
+│ UPGRADE (Immediate Effect)                                      │
+│ ─────────────────────────────────────────────────────────────   │
+│ Example: Starter ($50, 5 credits) → Popular ($100, 10 credits) │
+│                                                                  │
+│ 1. Customer initiates upgrade via UI                            │
+│    - Stripe API called with proration_behavior: 'always_invoice'│
+│                                                                  │
+│ 2. Stripe immediately switches plan                             │
+│    ├─ Webhook: customer.subscription.updated                    │
+│    ├─ BillingEventHandler detects upgrade                       │
+│    │   • Old creditPrice: 500 ($5 per credit)                  │
+│    │   • New creditPrice: 1000 ($10 per credit)                │
+│    │   • Old planName: "Starter"                               │
+│    │   • New planName: "Popular"                               │
+│    └─ VOIDS existing $50 credit grant ❌                       │
+│                                                                  │
+│ 3. Stripe creates prorated invoice                              │
+│    - Prorated refund for unused Starter time: -$25             │
+│    - Full charge for Popular plan: +$100                       │
+│    - Total due: ~$75                                            │
+│                                                                  │
+│ 4. Invoice paid                                                 │
+│    ├─ Webhook: invoice.payment_succeeded                        │
+│    └─ Creates NEW $100 credit grant (10 credits) ✅            │
+│        • Expires at new current_period_end                      │
+│                                                                  │
+│ DOWNGRADE (End of Period)                                       │
+│ ─────────────────────────────────────────────────────────────   │
+│ Example: Popular ($100, 10 credits) → Starter ($50, 5 credits) │
+│                                                                  │
+│ 1. Customer initiates downgrade via UI                          │
+│    - Stripe API: billing_cycle_anchor: 'unchanged'              │
+│    - Scheduled for current_period_end (e.g., Oct 10th)         │
+│                                                                  │
+│ 2. Subscription updated with future change                      │
+│    ├─ Webhook: customer.subscription.updated                    │
+│    ├─ BillingEventHandler updates database                      │
+│    └─ NO credit changes (not an upgrade) ⏸️                    │
+│                                                                  │
+│ 3. Customer continues on Popular plan                           │
+│    - Still has 10 credits available                             │
+│    - Credits expire at Oct 10th (unchanged)                     │
+│                                                                  │
+│ 4. On Oct 10th (period end)                                     │
+│    ├─ Popular credits expire naturally ⏰                       │
+│    ├─ Invoice generated for Starter plan ($50)                 │
+│    ├─ Invoice paid → invoice.payment_succeeded                  │
+│    └─ Creates NEW $50 credit grant (5 credits) ✅              │
+│                                                                  │
+│ CANCELLATION (End of Period)                                    │
+│ ─────────────────────────────────────────────────────────────   │
+│ 1. Customer cancels subscription                                │
+│    ├─ Webhook: customer.subscription.updated                    │
+│    │   • cancel_at_period_end: true                             │
+│    │   • current_period_end: Oct 10th                           │
+│    └─ NO credit changes ⏸️                                     │
+│                                                                  │
+│ 2. Until Oct 10th                                               │
+│    - Subscription remains active                                │
+│    - Customer can use remaining credits                         │
+│    - UI shows "Cancels on Oct 10th" warning                     │
+│                                                                  │
+│ 3. On Oct 10th (period end)                                     │
+│    ├─ Credits expire naturally ⏰                               │
+│    ├─ Webhook: customer.subscription.deleted                    │
+│    └─ Subscription removed from database                        │
+│                                                                  │
+│ 4. After cancellation                                           │
+│    - No new invoice generated                                   │
+│    - No new credits granted                                     │
+│    - Customer must resubscribe to continue                      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Implementation Components
 
-### 1. Credit Grant Creation with Expiration (✅ Implemented)
+### 1. Subscription Change Tracking (✅ Implemented)
+
+**Files**: `types.ts`, `BillingEventConverterStripe.ts`, `BillingSubscriptionStoreSupabase.ts`, `BillingEventHandler.ts`
+
+**What**: Tracks subscription changes to handle upgrades, downgrades, and cancellations
+**Why**: Different subscription changes require different credit management strategies
+
+**Key Fields Added to Subscription**:
+- `cancelAtPeriodEnd: boolean` - Whether subscription is set to cancel at period end
+- `currentPeriodEnd: Date` - When the current billing period ends
+
+**Upgrade Detection Logic**:
+```typescript
+// In BillingEventHandler.handleSubscriptionEvent()
+const oldSubscription = await this.subscriptionStore.fetch(event.subscription.id)
+
+// Detect upgrade: plan changed AND credit price increased
+if (oldSubscription && this.isUpgrade(oldSubscription, event.subscription)) {
+  // Void old credits immediately
+  await this.voidExistingCreditGrants(event.subscription.customerId)
+  // New credits granted when prorated invoice is paid
+}
+
+private isUpgrade(oldSub: Subscription, newSub: Subscription): boolean {
+  return oldSub.planName !== newSub.planName &&
+         newSub.creditPrice > oldSub.creditPrice
+}
+```
+
+**Database Schema**:
+```sql
+ALTER TABLE billing_subscriptions
+ADD COLUMN cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN current_period_end TIMESTAMP WITH TIME ZONE;
+```
+
+### 2. Credit Grant Creation with Expiration (✅ Implemented)
 
 **File**: `BillingEventHandler.ts`
 
@@ -287,6 +399,119 @@ Month 2 Start:
 - Fresh $100 credits (not $180!)
 ```
 
+## Subscription Change Scenarios
+
+### Upgrade Scenario (Mid-Cycle)
+```
+Starting State (Sept 15th):
+- Current plan: Starter ($50/month, 5 credits)
+- Subscription started: Sept 1st
+- Current credits: $50 (expires Sept 30th)
+- Credits used so far: 2 tickets ($20)
+- Remaining credits: $30
+
+Customer upgrades to Popular ($100/month, 10 credits):
+
+Immediate Effects:
+1. Stripe fires customer.subscription.updated webhook
+2. BillingEventHandler detects upgrade:
+   - Old creditPrice: 500, New creditPrice: 1000
+   - Old planName: "Starter", New planName: "Popular"
+3. Old $50 credit grant VOIDED ❌ (loses $30 unused credits)
+4. Prorated invoice created:
+   - Refund unused Starter time: -$25 (15 days)
+   - Charge for Popular plan: +$100
+   - Total due: $75
+5. Invoice paid immediately
+6. NEW $100 credit grant created ✅
+   - Expires: Sept 30th (unchanged period end)
+   - Full 10 credits available immediately
+
+Result:
+- Customer has 10 fresh credits
+- Paid $125 total for September ($50 initial + $75 upgrade)
+- Next renewal: Sept 30th for $100
+```
+
+### Downgrade Scenario (Mid-Cycle)
+```
+Starting State (Sept 15th):
+- Current plan: Popular ($100/month, 10 credits)
+- Subscription started: Sept 1st
+- Current credits: $100 (expires Sept 30th)
+- Credits used so far: 3 tickets ($30)
+- Remaining credits: $70
+
+Customer downgrades to Starter ($50/month, 5 credits):
+
+Immediate Effects:
+1. Stripe updates subscription with schedule_at: current_period_end
+2. Webhook: customer.subscription.updated
+3. BillingEventHandler updates database
+4. NO upgrade detected (creditPrice decreased: 1000 → 500)
+5. NO credit changes ⏸️
+
+Until Sept 30th:
+- Customer keeps using 10 credits
+- Credits still expire Sept 30th
+- Full access maintained
+
+On Sept 30th (Period End):
+1. Popular credits expire ($70 if unused lost) ❌
+2. Invoice for Starter plan: $50
+3. Invoice paid → invoice.payment_succeeded
+4. NEW $50 credit grant (5 credits) ✅
+   - Expires: Oct 30th
+
+Result:
+- Customer retains full access until Sept 30th
+- Unused credits lost (no refund)
+- Starts fresh with 5 credits on Oct 1st
+- Total paid in Sept: $100 (original charge only)
+```
+
+### Cancellation Scenario
+```
+Starting State (Sept 15th):
+- Current plan: Popular ($100/month, 10 credits)
+- Current credits: $100 (expires Sept 30th)
+- Credits used: 4 tickets ($40)
+- Remaining: $60
+
+Customer cancels subscription:
+
+Immediate Effects:
+1. Stripe sets cancel_at_period_end: true
+2. Webhook: customer.subscription.updated
+3. BillingEventHandler updates database:
+   - cancelAtPeriodEnd: true
+   - currentPeriodEnd: Sept 30th
+4. NO upgrade detected
+5. NO credit changes ⏸️
+
+Until Sept 30th:
+- Subscription status: "active" (but canceling)
+- Customer can use remaining 6 credits
+- UI shows: "Access until Sept 30th"
+- No new invoice scheduled
+- Full feature access maintained
+
+On Sept 30th:
+1. Credits expire ($60 if unused) ❌
+2. Webhook: customer.subscription.deleted
+3. Subscription removed from database
+4. Access revoked
+
+After Cancellation:
+- No refund for unused time/credits
+- Must resubscribe to continue service
+
+Result:
+- Customer keeps what they paid for
+- No partial refunds
+- Clean end at period boundary
+```
+
 ## Key Benefits of This Model
 
 1. ✅ **Predictable Revenue**: No overage means customers always pay fixed amount
@@ -325,7 +550,8 @@ CREATE TABLE billing_subscriptions (
   status TEXT NOT NULL,
   plan_name TEXT NOT NULL,
   credit_price INTEGER NOT NULL,
-  current_period_end INTEGER NOT NULL,
+  cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+  current_period_end TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );

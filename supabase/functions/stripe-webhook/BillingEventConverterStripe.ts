@@ -179,7 +179,9 @@ export class BillingEventConverterStripe implements BillingEventConverter {
         : stripeSubscription.customer.id,
       status: stripeSubscription.status,
       planName,
-      creditPrice
+      creditPrice,
+      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end || false,
+      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000)
     }
   }
 
