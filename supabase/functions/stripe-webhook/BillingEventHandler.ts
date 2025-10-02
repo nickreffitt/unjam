@@ -4,7 +4,7 @@ import type { BillingSubscriptionStore } from './store//BillingSubscription/Bill
 import type { BillingSubscriptionService } from './service/BillingSubscriptionService.ts'
 import type { BillingInvoiceStore } from './store/BillingInvoice/BillingInvoiceStore.ts'
 import type { BillingCreditsStore } from './store/BillingCredits/BillingCreditsStore.ts'
-import type { CustomerEvent, SubscriptionEvent, InvoiceEvent, CheckoutSessionEvent, Invoice } from '@types'
+import type { CustomerEvent, SubscriptionEvent, InvoiceEvent, CheckoutSessionEvent, Invoice, Subscription } from '@types'
 
 /**
  * BillingEventHandler orchestrates the conversion and persistence of billing events
