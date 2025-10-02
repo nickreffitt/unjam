@@ -11,10 +11,12 @@ CREATE TYPE invoice_status AS ENUM (
 CREATE TABLE billing_invoices (
   id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
   stripe_invoice_id TEXT NOT NULL UNIQUE,
-  stripe_customer_id TEXT NOT NULL,
-  stripe_subscription_id TEXT NOT NULL,
+  stripe_customer_id TEXT NOT NULL REFERENCES billing_customers(stripe_customer_id) ON DELETE CASCADE,
+  stripe_subscription_id TEXT NOT NULL REFERENCES billing_subscriptions(stripe_subscription_id) ON DELETE CASCADE,
   status invoice_status NOT NULL,
   amount INTEGER NOT NULL,
+  period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+  period_end TIMESTAMP WITH TIME ZONE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

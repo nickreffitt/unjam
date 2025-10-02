@@ -1,4 +1,4 @@
-import type { Customer } from './types.ts'
+import type { Customer } from '@types'
 
 /**
  * Interface for billing customer persistence

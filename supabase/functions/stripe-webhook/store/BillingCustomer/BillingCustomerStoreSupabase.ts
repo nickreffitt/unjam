@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from 'supabase'
 import type { BillingCustomerStore } from './BillingCustomerStore.ts'
-import type { Customer } from './types.ts'
+import type { Customer } from '@types'
 
 /**
  * Supabase implementation of BillingCustomerStore

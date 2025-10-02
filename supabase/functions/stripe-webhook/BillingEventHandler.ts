@@ -1,8 +1,10 @@
 import type { BillingEventConverter } from './BillingEventConverter.ts'
-import type { BillingCustomerStore } from './BillingCustomerStore.ts'
-import type { BillingSubscriptionStore } from './BillingSubscriptionStore.ts'
-import type { BillingInvoiceStore } from './BillingInvoiceStore.ts'
-import type { CustomerEvent, SubscriptionEvent, InvoiceEvent, CheckoutSessionEvent } from './types.ts'
+import type { BillingCustomerStore } from './store/BillingCustomer/BillingCustomerStore.ts'
+import type { BillingSubscriptionStore } from './store//BillingSubscription/BillingSubscriptionStore.ts'
+import type { BillingSubscriptionService } from './service/BillingSubscriptionService.ts'
+import type { BillingInvoiceStore } from './store/BillingInvoice/BillingInvoiceStore.ts'
+import type { BillingCreditsStore } from './store/BillingCredits/BillingCreditsStore.ts'
+import type { CustomerEvent, SubscriptionEvent, InvoiceEvent, CheckoutSessionEvent, Invoice } from '@types'
 
 /**
  * BillingEventHandler orchestrates the conversion and persistence of billing events
@@ -12,18 +14,24 @@ export class BillingEventHandler {
   private readonly converter: BillingEventConverter
   private readonly customerStore: BillingCustomerStore
   private readonly subscriptionStore: BillingSubscriptionStore
+  private readonly subscriptionService: BillingSubscriptionService
   private readonly invoiceStore: BillingInvoiceStore
+  private readonly creditsStore: BillingCreditsStore
 
   constructor(
     converter: BillingEventConverter,
     customerStore: BillingCustomerStore,
     subscriptionStore: BillingSubscriptionStore,
-    invoiceStore: BillingInvoiceStore
+    subscriptionService: BillingSubscriptionService,
+    invoiceStore: BillingInvoiceStore,
+    creditsStore: BillingCreditsStore
   ) {
     this.converter = converter
     this.customerStore = customerStore
     this.subscriptionStore = subscriptionStore
+    this.subscriptionService = subscriptionService
     this.invoiceStore = invoiceStore
+    this.creditsStore = creditsStore
   }
 
   /**
@@ -107,6 +115,16 @@ export class BillingEventHandler {
 
     switch (event.state) {
       case 'paid':
+        // Save/update the invoice
+        if (existingInvoice) {
+          await this.invoiceStore.update(event.invoice)
+        } else {
+          await this.invoiceStore.create(event.invoice)
+        }
+
+        // Create credit grant for paid invoice
+        await this.createCreditGrantForInvoice(event.invoice)
+        break
       case 'failed':
         if (existingInvoice) {
           await this.invoiceStore.update(event.invoice)
@@ -116,6 +134,99 @@ export class BillingEventHandler {
         break
       default:
         throw new Error(`Unknown invoice event state: ${event.state}`)
+    }
+  }
+
+  /**
+   * Creates a credit grant for a paid invoice
+   * Calculates credits based on invoice amount and subscription credit price
+   *
+   * Key behaviors:
+   * - Voids all existing credit grants for the customer (no rollover)
+   * - Sets expiration to subscription's current_period_end (credits expire at cycle end)
+   * - No overage charges - credits are replenished each billing cycle
+   */
+  private async createCreditGrantForInvoice(invoice: Invoice): Promise<void> {
+    console.info(`[BillingEventHandler] Creating credit grant for invoice: ${invoice.id}`)
+
+    // Fetch subscription directly from Stripe to avoid race conditions
+    const subscription = await this.subscriptionService.fetch(invoice.subscriptionId)
+    if (!subscription) {
+      console.warn(`[BillingEventHandler] Subscription ${invoice.subscriptionId} not found in Stripe, skipping credit grant creation`)
+      return
+    }
+
+    // Calculate number of credits based on invoice amount and credit price
+    // invoice.amount is in cents, creditPrice is in cents per credit
+    const numberOfCredits = subscription.creditPrice > 0
+      ? Math.floor(invoice.amount / subscription.creditPrice)
+      : 0
+
+    if (numberOfCredits <= 0) {
+      console.warn(`[BillingEventHandler] No credits to grant for invoice ${invoice.id} (amount: ${invoice.amount}, creditPrice: ${subscription.creditPrice})`)
+      return
+    }
+
+    // Void all existing credit grants for this customer (no rollover policy)
+    await this.voidExistingCreditGrants(invoice.customerId)
+
+    // Use subscription's current_period_end for credit expiration
+    const expiresAt = Math.floor(invoice.periodEnd.getTime() / 1000)
+    console.info(`[BillingEventHandler] Credit grant will expire at: ${new Date(expiresAt * 1000).toISOString()}`)
+
+    // Create credit grant with expiration set to end of billing period
+    await this.creditsStore.create({
+      customerId: invoice.customerId,
+      name: `Credits for ${subscription.planName} - Invoice ${invoice.id}`,
+      amount: {
+        type: 'monetary',
+        monetary: {
+          value: invoice.amount,
+          currency: 'usd'
+        }
+      },
+      category: 'paid',
+      applicability_config: {
+        scope: {
+          price_type: 'metered'
+        }
+      },
+      expires_at: expiresAt, // Credits expire at end of billing period (no rollover)
+      metadata: {
+        invoice_id: invoice.id,
+        subscription_id: invoice.subscriptionId,
+        credits_count: numberOfCredits.toString()
+      }
+    })
+
+    console.info(`[BillingEventHandler] Created credit grant for ${numberOfCredits} credits (${invoice.amount} cents at ${subscription.creditPrice} cents per credit)`)
+  }
+
+  /**
+   * Voids all existing credit grants for a customer
+   * This implements the no-rollover policy where credits don't carry over between billing cycles
+   */
+  private async voidExistingCreditGrants(customerId: string): Promise<void> {
+    console.info(`[BillingEventHandler] Voiding existing credit grants for customer: ${customerId}`)
+
+    try {
+      const existingGrants = await this.creditsStore.listByCustomer(customerId)
+
+      for (const grant of existingGrants) {
+        try {
+          await this.creditsStore.void(grant.id)
+          console.info(`[BillingEventHandler] Voided credit grant: ${grant.id}`)
+        } catch (err) {
+          const error = err as Error
+          console.warn(`[BillingEventHandler] Failed to void credit grant ${grant.id}: ${error.message}`)
+        }
+      }
+
+      console.info(`[BillingEventHandler] Voided ${existingGrants.length} existing credit grants`)
+    } catch (err) {
+      const error = err as Error
+      console.error(`[BillingEventHandler] Failed to list/void existing credit grants: ${error.message}`)
+      // Don't throw - we still want to create the new grant even if voiding old ones fails
     }
   }
 

@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from 'supabase'
 import type { BillingInvoiceStore } from './BillingInvoiceStore.ts'
-import type { Invoice } from './types.ts'
+import type { Invoice } from '@types'
 
 /**
  * Supabase implementation of BillingInvoiceStore
@@ -27,7 +27,9 @@ export class BillingInvoiceStoreSupabase implements BillingInvoiceStore {
         stripe_customer_id: invoice.customerId,
         stripe_subscription_id: invoice.subscriptionId,
         status: invoice.status,
-        amount: invoice.amount
+        amount: invoice.amount,
+        period_start: invoice.periodStart.toISOString(),
+        period_end: invoice.periodEnd.toISOString()
       })
 
     if (insertError) {
@@ -49,7 +51,9 @@ export class BillingInvoiceStoreSupabase implements BillingInvoiceStore {
       .from('billing_invoices')
       .update({
         status: invoice.status,
-        amount: invoice.amount
+        amount: invoice.amount,
+        period_start: invoice.periodStart.toISOString(),
+        period_end: invoice.periodEnd.toISOString()
       })
       .eq('stripe_invoice_id', invoice.id)
 
@@ -71,7 +75,7 @@ export class BillingInvoiceStoreSupabase implements BillingInvoiceStore {
 
     const { data, error } = await this.supabase
       .from('billing_invoices')
-      .select('stripe_invoice_id, stripe_customer_id, stripe_subscription_id, status, amount')
+      .select('stripe_invoice_id, stripe_customer_id, stripe_subscription_id, status, amount, period_start, period_end')
       .eq('stripe_invoice_id', invoiceId)
       .single()
 
@@ -91,7 +95,9 @@ export class BillingInvoiceStoreSupabase implements BillingInvoiceStore {
       customerId: data.stripe_customer_id,
       subscriptionId: data.stripe_subscription_id,
       status: data.status,
-      amount: data.amount
+      amount: data.amount,
+      periodStart: new Date(data.period_start),
+      periodEnd: new Date(data.period_end)
     }
   }
 }

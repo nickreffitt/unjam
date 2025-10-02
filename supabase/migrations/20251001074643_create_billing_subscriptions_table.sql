@@ -14,7 +14,7 @@ CREATE TYPE subscription_status AS ENUM (
 CREATE TABLE billing_subscriptions (
   id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
   stripe_subscription_id TEXT NOT NULL UNIQUE,
-  stripe_customer_id TEXT NOT NULL,
+  stripe_customer_id TEXT NOT NULL REFERENCES billing_customers(stripe_customer_id) ON DELETE CASCADE,
   status subscription_status NOT NULL,
   plan_name TEXT NOT NULL,
   credit_price INTEGER NOT NULL,

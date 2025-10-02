@@ -48,6 +48,8 @@ export interface Invoice {
   subscriptionId: string
   status: InvoiceStatus
   amount: number
+  periodStart: Date
+  periodEnd: Date
 }
 
 export type InvoiceState = 'paid' | 'failed'
@@ -64,6 +66,34 @@ export interface CheckoutSession {
 
 export interface CheckoutSessionEvent {
   checkoutSession: CheckoutSession
+}
+
+export type CreditGrantCategory = 'paid' | 'promotional'
+
+export interface CreditGrantAmount {
+  type: 'monetary'
+  monetary: {
+    value: number
+    currency: string
+  }
+}
+
+export interface CreditGrantApplicabilityConfig {
+  scope: {
+    price_type: 'metered'
+  }
+}
+
+export interface CreditGrant {
+  id: string
+  customerId: string
+  name: string
+  amount: CreditGrantAmount
+  category: CreditGrantCategory
+  applicability_config: CreditGrantApplicabilityConfig
+  effective_at?: number
+  expires_at?: number
+  metadata?: Record<string, string>
 }
 
 export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent | CheckoutSessionEvent

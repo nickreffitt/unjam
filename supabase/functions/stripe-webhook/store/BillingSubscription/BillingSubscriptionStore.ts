@@ -1,4 +1,4 @@
-import type { Subscription } from './types.ts'
+import type { Subscription } from '@types'
 
 /**
  * Interface for billing subscription persistence

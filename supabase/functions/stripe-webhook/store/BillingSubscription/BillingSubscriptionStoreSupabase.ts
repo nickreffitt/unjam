@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from 'supabase'
 import type { BillingSubscriptionStore } from './BillingSubscriptionStore.ts'
-import type { Subscription } from './types.ts'
+import type { Subscription } from '@types'
 
 /**
  * Supabase implementation of BillingSubscriptionStore
@@ -27,7 +27,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
         stripe_customer_id: subscription.customerId,
         status: subscription.status,
         plan_name: subscription.planName,
-        credit_price: subscription.creditPrice
+        credit_price: subscription.creditPrice,
       })
 
     if (insertError) {
@@ -50,7 +50,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
       .update({
         status: subscription.status,
         plan_name: subscription.planName,
-        credit_price: subscription.creditPrice
+        credit_price: subscription.creditPrice,
       })
       .eq('stripe_subscription_id', subscription.id)
 
@@ -92,7 +92,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
 
     const { data, error } = await this.supabase
       .from('billing_subscriptions')
-      .select('stripe_subscription_id, stripe_customer_id, status, plan_name, credit_price')
+      .select('stripe_subscription_id, stripe_customer_id, status, plan_name, credit_price, current_period_end')
       .eq('stripe_subscription_id', subscriptionId)
       .single()
 
@@ -112,7 +112,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
       customerId: data.stripe_customer_id,
       status: data.status,
       planName: data.plan_name,
-      creditPrice: data.credit_price
+      creditPrice: data.credit_price,
     }
   }
 }

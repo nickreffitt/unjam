@@ -1,4 +1,4 @@
-import type { Invoice } from './types.ts'
+import type { Invoice } from '@types'
 
 /**
  * Interface for billing invoice persistence

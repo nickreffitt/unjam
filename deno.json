@@ -6,7 +6,7 @@
   "imports": {
     "stripe": "npm:stripe@18",
     "server": "https://deno.land/std@0.168.0/http/server.ts",
-    "supabase": "npm:@supabase/supabase-js@2"
+    "supabase": "npm:@supabase/supabase-js@2",
   },
   "nodeModulesDir": "auto"
 }

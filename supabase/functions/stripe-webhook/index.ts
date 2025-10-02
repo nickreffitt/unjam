@@ -2,9 +2,11 @@ import { serve } from "server"
 import { BillingEventConverterStripe } from "./BillingEventConverterStripe.ts"
 import { BillingEventConverterLocal } from "./BillingEventConverterLocal.ts"
 import { BillingEventHandler } from "./BillingEventHandler.ts"
-import { BillingCustomerStoreSupabase } from "./BillingCustomerStoreSupabase.ts"
-import { BillingSubscriptionStoreSupabase } from "./BillingSubscriptionStoreSupabase.ts"
-import { BillingInvoiceStoreSupabase } from "./BillingInvoiceStoreSupabase.ts"
+import { BillingCustomerStoreSupabase } from "./store/BillingCustomer/BillingCustomerStoreSupabase.ts"
+import { BillingSubscriptionStoreSupabase } from "./store/BillingSubscription/BillingSubscriptionStoreSupabase.ts"
+import { BillingSubscriptionServiceStripe } from "./service/BillingSubscriptionServiceStripe.ts"
+import { BillingInvoiceStoreSupabase } from "./store/BillingInvoice/BillingInvoiceStoreSupabase.ts"
+import { BillingCreditsStoreStripe } from "./store/BillingCredits/BillingCreditsStoreStripe.ts"
 
 // Initialize environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
@@ -15,7 +17,9 @@ const enableStripe = Deno.env.get('WEBHOOKS_ENABLE_STRIPE')
 // Initialize stores
 const customerStore = new BillingCustomerStoreSupabase(supabaseUrl, supabaseServiceKey)
 const subscriptionStore = new BillingSubscriptionStoreSupabase(supabaseUrl, supabaseServiceKey)
+const subscriptionService = new BillingSubscriptionServiceStripe(stripeApiKey)
 const invoiceStore = new BillingInvoiceStoreSupabase(supabaseUrl, supabaseServiceKey)
+const creditsStore = new BillingCreditsStoreStripe(stripeApiKey)
 
 // Initialize converter based on environment
 const converter = enableStripe
@@ -30,7 +34,9 @@ const billingEventHandler = new BillingEventHandler(
   converter,
   customerStore,
   subscriptionStore,
-  invoiceStore
+  subscriptionService,
+  invoiceStore,
+  creditsStore
 )
 
 export const handler = async (request: Request): Promise<Response> => {

@@ -184,16 +184,32 @@ export class BillingEventConverterStripe implements BillingEventConverter {
   }
 
   private mapStripeInvoiceToInvoice(stripeInvoice: Stripe.Invoice): Invoice {
+    // Extract subscription ID from the correct location
+    let subscriptionId = ''
+
+    if (!subscriptionId && stripeInvoice.parent) {
+      const parent = stripeInvoice.parent as any
+      if (parent.type === 'subscription_details' && parent.subscription_details?.subscription) {
+        subscriptionId = parent.subscription_details.subscription
+      }
+    }
+
+    // Get period from first line item
+    const firstLineItem = stripeInvoice.lines?.data[0]
+    if (!firstLineItem?.period) {
+      throw new Error(`Invoice ${stripeInvoice.id} has no line items with period`)
+    }
+
     return {
       id: stripeInvoice.id,
       customerId: typeof stripeInvoice.customer === 'string'
         ? stripeInvoice.customer
         : stripeInvoice.customer?.id || '',
-      subscriptionId: typeof stripeInvoice.subscription === 'string'
-        ? stripeInvoice.subscription
-        : stripeInvoice.subscription?.id || '',
+      subscriptionId,
       status: stripeInvoice.status || 'draft',
-      amount: stripeInvoice.amount_due
+      amount: stripeInvoice.amount_due,
+      periodStart: new Date(firstLineItem.period.start * 1000),
+      periodEnd: new Date(firstLineItem.period.end * 1000)
     }
   }
 
