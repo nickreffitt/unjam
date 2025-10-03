@@ -2,12 +2,6 @@ import { serve } from "server"
 import { createClient } from "supabase"
 import Stripe from "stripe"
 import { BillingEventHandler } from "./BillingEventHandler.ts"
-import { BillingEventConverterLocal, BillingEventConverterStripe } from "@events/index.ts"
-import { BillingCustomerStoreSupabase } from "@stores/BillingCustomer/index.ts"
-import { BillingSubscriptionStoreSupabase } from "@stores/BillingSubscription/index.ts"
-import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts"
-import { BillingInvoiceStoreSupabase } from "@stores/BillingInvoice/index.ts"
-import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts"
 
 // Initialize environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
@@ -20,29 +14,8 @@ const stripe = new Stripe(stripeApiKey, {
   apiVersion: '2025-09-30.clover'
 })
 
-// Initialize stores and services
-const customerStore = new BillingCustomerStoreSupabase(supabase)
-const subscriptionStore = new BillingSubscriptionStoreSupabase(supabase)
-const invoiceStore = new BillingInvoiceStoreSupabase(supabase)
-const creditsService = new BillingCreditsServiceStripe(stripe)
-const subscriptionService = new BillingSubscriptionServiceStripe(stripe, creditsService)
-
-// Initialize converter based on environment
-const converter = enableStripe
-  ? new BillingEventConverterStripe(
-      stripeApiKey,
-      Deno.env.get('STRIPE_WEBHOOK_SIGNING_SECRET') as string
-    )
-  : new BillingEventConverterLocal()
-
 // Initialize handler with all dependencies
-const billingEventHandler = new BillingEventHandler(
-  converter,
-  customerStore,
-  subscriptionStore,
-  subscriptionService,
-  invoiceStore
-)
+const billingEventHandler = new BillingEventHandler()
 
 export const handler = async (request: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -78,7 +51,7 @@ export const handler = async (request: Request): Promise<Response> => {
     const signature = request.headers.get('Stripe-Signature')
 
     if (!signature) {
-      console.error('[stripe-webhook] Missing Stripe-Signature header')
+      console.error('[engineer-billing-webhook] Missing Stripe-Signature header')
       return new Response(
         JSON.stringify({
           error: 'Missing signature',
@@ -116,7 +89,7 @@ export const handler = async (request: Request): Promise<Response> => {
     )
 
   } catch (error) {
-    console.error('[stripe-webhook] Error processing webhook:', error)
+    console.error('[engineer-billing-webhook] Error processing webhook:', error)
 
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'
     const isSignatureError = errorMessage.includes('signature')
@@ -139,6 +112,6 @@ export const handler = async (request: Request): Promise<Response> => {
 
 // Only start server if running in Supabase (not imported as module)
 if (import.meta.main) {
-  console.info('🎣 Stripe webhook function starting...')
+  console.info('🎣 engineer-billing-webhook function starting...')
   serve(handler)
 }

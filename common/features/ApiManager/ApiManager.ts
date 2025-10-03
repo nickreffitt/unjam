@@ -36,8 +36,8 @@ export class ApiManager {
         throw new Error('No active session found. Please sign in.');
       }
 
-      // Make request to stripe-links edge function
-      const response = await fetch(`${this.edgeFunctionUrl}/stripe-links`, {
+      // Make request to billing-links edge function
+      const response = await fetch(`${this.edgeFunctionUrl}/billing-links`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -242,4 +242,27 @@ export interface CreditGrant {
   metadata?: Record<string, string>;
 }
 
+/**
+ * Verification status for engineer billing accounts
+ */
+export type EngineerAccountVerificationStatus =
+  | 'active'              // No outstanding requirements, account fully operational
+  | 'eventually_due'      // Has future requirements but not urgent, can still work
+  | 'currently_due'       // Has requirements due by deadline, can still work but action needed
+  | 'past_due'            // Requirements overdue, capabilities may be disabled
+  | 'pending_verification' // Waiting for async verification results
+  | 'disabled'            // Account disabled, cannot process payments
+
+export interface EngineerAccount {
+  id: string;
+  engineerId: string;
+  email: string;
+  detailsSubmitted: boolean;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  verificationStatus: EngineerAccountVerificationStatus;
+  currentDeadline: Date | null;
+  disabledReason: string | null;
+}
+
 export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent | CheckoutSessionEvent;

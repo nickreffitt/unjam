@@ -2,13 +2,49 @@
 
 This document describes the complete implementation of credit-based billing using Stripe's Credit Grants and Meter Events APIs.
 
+## Naming Conventions
+
+This project follows a consistent naming pattern for billing-related code:
+
+**Services** (Business logic, Stripe API calls):
+- Location: `supabase/functions/_shared/services/[Feature]/`
+- Pattern: `Billing[Feature]Service.ts` (interface), `Billing[Feature]ServiceStripe.ts` (implementation)
+- Examples: `BillingCreditsServiceStripe`, `BillingMeterServiceStripe`, `BillingSubscriptionServiceStripe`
+
+**Stores** (Data persistence, Supabase operations):
+- Location: `supabase/functions/_shared/stores/[Feature]/`
+- Pattern: `Billing[Feature]Store.ts` (interface), `Billing[Feature]StoreSupabase.ts` (implementation)
+- Examples: `BillingCustomerStoreSupabase`, `BillingInvoiceStoreSupabase`, `BillingSubscriptionStoreSupabase`
+
+**Events** (Webhook event conversion):
+- Location: `supabase/functions/_shared/events/`
+- Pattern: `BillingEventConverter[Provider].ts`
+- Examples: `BillingEventConverterStripe`, `BillingEventConverterLocal`
+
+**Handlers** (Webhook orchestration):
+- Location: `supabase/functions/[webhook-name]/`
+- Pattern: `BillingEventHandler.ts`
+- Example: `customer-billing-webhook/BillingEventHandler.ts`
+
+**Database Tables**:
+- Pattern: `billing_[entity]` (snake_case)
+- Examples: `billing_customers`, `billing_invoices`, `billing_subscriptions`, `engineer_transfers`
+
 ## Billing Model
 
-**Key Policies:**
+**Unjam operates as a marketplace connecting customers with engineers for technical support.**
+
+**Customer Billing (Credit-Based):**
 - ✅ **No Overage Charges**: Customers cannot use more credits than allocated
 - ✅ **No Rollover**: Credits expire at the end of each billing period
 - ✅ **Fresh Start**: Each billing cycle starts with a fresh allocation of credits
 - ✅ **Automatic Replenishment**: Old credits are voided and new credits granted when invoice is paid
+
+**Engineer Payouts (Marketplace Model):**
+- ✅ **Stripe Connect Express**: Engineers onboard via Express Connect accounts for quick setup
+- ✅ **Fixed Payout**: Engineers receive a configurable fixed amount per ticket (default: $3.50)
+- ✅ **Separate Transfers**: Unjam transfers funds to engineer accounts when tickets complete
+- ✅ **Platform Revenue**: Unjam retains the difference between credit value and engineer payout
 
 ## Architecture Overview
 
@@ -43,11 +79,11 @@ This document describes the complete implementation of credit-based billing usin
 │    ├─ BillingEventConverterStripe extracts invoice details:     │
 │    │   • period from line item (not invoice level)              │
 │    │   • periodStart & periodEnd as Date objects                │
-│    ├─ BillingInvoiceStore persists invoice with periods         │
+│    ├─ BillingInvoiceStoreSupabase persists invoice with periods │
 │    ├─ BillingEventHandler processes paid invoice                │
 │    ├─ Fetches subscription from Stripe (for planName & price)   │
 │    ├─ VOIDS all existing credit grants (no rollover)            │
-│    └─ BillingCreditsStore creates NEW Credit Grant              │
+│    └─ BillingCreditsServiceStripe creates NEW Credit Grant      │
 │        • Amount: $100 (invoice amount)                          │
 │        • Category: "paid"                                       │
 │        • Applicability: metered prices only                     │
@@ -69,17 +105,29 @@ This document describes the complete implementation of credit-based billing usin
 │    - Status: "complete"                                         │
 │                                                                  │
 │ 3. Record usage to Stripe                                       │
-│    ├─ BillingMeterStore.recordTicketCompletion()               │
+│    ├─ BillingMeterServiceStripe.recordTicketCompletion()       │
 │    ├─ Creates Stripe Meter Event:                              │
 │    │   • event_name: "ticket_completed"                        │
 │    │   • stripe_customer_id: customer.stripeId                 │
 │    │   • value: 1 (one ticket completed)                       │
 │    └─ Stripe stores event for billing period                   │
 │                                                                  │
-│ 4. Usage tracked but NOT billed yet ⏳                          │
+│ 4. Pay engineer via Stripe Connect                             │
+│    ├─ Fetch engineer's payout amount from Connect account      │
+│    │   • Default: $3.50 (350 cents)                            │
+│    │   • Configurable per engineer in account metadata         │
+│    ├─ Create Stripe Transfer:                                  │
+│    │   • amount: 350 (engineer's fixed payout)                 │
+│    │   • destination: engineer.stripeConnectAccountId          │
+│    │   • metadata: ticket_id, engineer_id, customer_id         │
+│    └─ Unjam retains difference as platform revenue 💰          │
+│        • Example: $7 credit value - $3.50 payout = $3.50 profit│
+│                                                                  │
+│ 5. Usage tracked but NOT billed yet ⏳                          │
 │    - Stripe accumulates meter events                            │
-│    - No immediate charge                                        │
+│    - No immediate charge to customer                            │
 │    - Credits continue to apply automatically                    │
+│    - Engineer paid immediately from platform balance            │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -193,7 +241,7 @@ This document describes the complete implementation of credit-based billing usin
 
 ### 1. Subscription Change Tracking (✅ Implemented)
 
-**Files**: `types.ts`, `BillingEventConverterStripe.ts`, `BillingSubscriptionStoreSupabase.ts`, `BillingEventHandler.ts`
+**Files**: `_shared/types.ts`, `_shared/events/BillingEventConverterStripe.ts`, `_shared/stores/BillingSubscription/BillingSubscriptionStoreSupabase.ts`, `customer-billing-webhook/BillingEventHandler.ts`
 
 **What**: Tracks subscription changes to handle upgrades, downgrades, and cancellations
 **Why**: Different subscription changes require different credit management strategies
@@ -229,7 +277,7 @@ ADD COLUMN current_period_end TIMESTAMP WITH TIME ZONE;
 
 ### 2. Credit Grant Creation with Expiration (✅ Implemented)
 
-**File**: `BillingEventHandler.ts`
+**Files**: `_shared/services/BillingSubscription/BillingSubscriptionServiceStripe.ts`, `_shared/services/BillingCredits/BillingCreditsServiceStripe.ts`
 
 **When**: Invoice payment succeeds
 **What**:
@@ -239,41 +287,44 @@ ADD COLUMN current_period_end TIMESTAMP WITH TIME ZONE;
 
 **How**:
 ```typescript
-// Void old credits (no rollover)
-await voidExistingCreditGrants(customerId)
+// BillingSubscriptionServiceStripe.ts
+async createCreditGrantForInvoice(invoice: Invoice): Promise<void> {
+  // Void old credits (no rollover)
+  await this.voidExistingCreditGrants(invoice.customerId)
 
-// Use invoice's period end for credit expiration (from line item)
-const expiresAt = Math.floor(invoice.periodEnd.getTime() / 1000)
+  // Use invoice's period end for credit expiration (from line item)
+  const expiresAt = Math.floor(invoice.periodEnd.getTime() / 1000)
 
-// Create new credit grant with expiration
-await creditsStore.create({
-  customerId: invoice.customerId,
-  name: `Credits for ${subscription.planName} - Invoice ${invoice.id}`,
-  amount: {
-    type: 'monetary',
-    monetary: {
-      value: invoice.amount,
-      currency: 'usd'
+  // Create new credit grant with expiration
+  await this.creditsService.create({
+    customerId: invoice.customerId,
+    name: `Credits for ${subscription.planName} - Invoice ${invoice.id}`,
+    amount: {
+      type: 'monetary',
+      monetary: {
+        value: invoice.amount,
+        currency: 'usd'
+      }
+    },
+    category: 'paid',
+    applicability_config: {
+      scope: {
+        price_type: 'metered'
+      }
+    },
+    expires_at: expiresAt, // ⏰ Expires at end of billing period (no rollover)
+    metadata: {
+      invoice_id: invoice.id,
+      subscription_id: invoice.subscriptionId,
+      credits_count: numberOfCredits.toString()
     }
-  },
-  category: 'paid',
-  applicability_config: {
-    scope: {
-      price_type: 'metered'
-    }
-  },
-  expires_at: expiresAt, // ⏰ Expires at end of billing period (no rollover)
-  metadata: {
-    invoice_id: invoice.id,
-    subscription_id: invoice.subscriptionId,
-    credits_count: numberOfCredits.toString()
-  }
-})
+  })
+}
 ```
 
 ### 2. Invoice Period Tracking (✅ Implemented)
 
-**Files**: `types.ts`, `BillingEventConverterStripe.ts`, `BillingInvoiceStoreSupabase.ts`
+**Files**: `_shared/types.ts`, `_shared/events/BillingEventConverterStripe.ts`, `_shared/stores/BillingInvoice/BillingInvoiceStoreSupabase.ts`
 
 **What**: Extracts and persists `period_start` and `period_end` from invoice line items
 **Why**: Used to set credit expiration dates - represents the actual billing period covered by the invoice
@@ -289,7 +340,7 @@ const invoice = {
   periodEnd: new Date(firstLineItem.period.end * 1000)
 }
 
-// 3. BillingInvoiceStore persists to database as timestamps
+// 3. BillingInvoiceStoreSupabase persists to database as timestamps
 await supabase.from('billing_invoices').insert({
   ...
   period_start: invoice.periodStart.toISOString(),
@@ -298,22 +349,92 @@ await supabase.from('billing_invoices').insert({
 
 // 4. BillingEventHandler uses invoice.periodEnd for credit expiration
 const expiresAt = Math.floor(invoice.periodEnd.getTime() / 1000)
-await creditsStore.create({ ..., expires_at: expiresAt })
+await creditsService.create({ ..., expires_at: expiresAt })
 ```
 
 ### 3. Usage Recording (✅ Implemented)
 
-**File**: `BillingMeterStore.ts`, `BillingMeterStoreStripe.ts`
+**Files**: `_shared/services/BillingMeter/BillingMeterService.ts`, `_shared/services/BillingMeter/BillingMeterServiceStripe.ts`
 
 **When**: Ticket is completed
 **What**: Sends meter event to Stripe
 **How**:
 ```typescript
-await meterStore.recordTicketCompletion({
+await meterService.recordTicketCompletion({
   customerId: customer.stripeCustomerId,
   ticketId: ticket.id,
   value: 1 // One ticket completed
 })
+```
+
+### 4. Engineer Payout via Stripe Connect (TODO)
+
+**Files**: `_shared/services/EngineerPayout/EngineerPayoutService.ts`, `_shared/services/EngineerPayout/EngineerPayoutServiceStripe.ts` (to be created)
+
+**When**: Ticket is marked as complete
+**What**: Transfers fixed payout amount to engineer's Stripe Connect Express account
+**Why**: Unjam operates as a marketplace - engineers earn money when completing tickets
+
+**Engineer Onboarding**:
+```typescript
+// EngineerPayoutServiceStripe.ts
+async onboardEngineer(engineerId: string, email: string): Promise<string> {
+  // Create Stripe Connect Express account for engineer
+  const account = await this.stripe.accounts.create({
+    type: 'express',
+    country: 'US',
+    email,
+    metadata: {
+      engineer_id: engineerId,
+      payout_amount: '350', // $3.50 default, configurable per engineer
+      payout_currency: 'usd'
+    },
+    capabilities: {
+      transfers: { requested: true }
+    }
+  });
+
+  // Return account ID to be stored in engineers table
+  return account.id;
+}
+```
+
+**Payout on Ticket Completion**:
+```typescript
+// EngineerPayoutServiceStripe.ts
+async payEngineer(
+  ticketId: string,
+  engineerId: string,
+  engineerConnectAccountId: string,
+  customerId: string,
+  creditValue: number
+): Promise<{ transferId: string; platformProfit: number }> {
+  // 1. Fetch engineer's Connect account to get payout amount
+  const account = await this.stripe.accounts.retrieve(engineerConnectAccountId);
+  const payoutAmount = parseInt(account.metadata.payout_amount || '350');
+
+  // 2. Create transfer to engineer's Connect account
+  const transfer = await this.stripe.transfers.create({
+    amount: payoutAmount, // e.g., 350 = $3.50
+    currency: 'usd',
+    destination: engineerConnectAccountId,
+    metadata: {
+      ticket_id: ticketId,
+      engineer_id: engineerId,
+      customer_id: customerId,
+      credit_value: creditValue.toString() // e.g., 700 = $7.00
+    }
+  });
+
+  // 3. Calculate platform profit
+  const platformProfit = creditValue - payoutAmount;
+  // Example: 700 - 350 = 350 ($3.50 profit)
+
+  return {
+    transferId: transfer.id,
+    platformProfit
+  };
+}
 ```
 
 **Integration Point** (TODO):
@@ -322,11 +443,32 @@ await meterStore.recordTicketCompletion({
 async markAsComplete(ticketId: string): Promise<void> {
   // ... existing logic to update ticket status ...
 
-  // Record usage to Stripe
-  await billingMeterStore.recordTicketCompletion({
+  // 1. Record usage to Stripe (deducts customer credit)
+  await billingMeterService.recordTicketCompletion({
     customerId: ticket.customer.stripeCustomerId,
     ticketId: ticket.id
-  })
+  });
+
+  // 2. Pay engineer via Stripe Connect
+  const { transferId, platformProfit } = await engineerPayoutService.payEngineer(
+    ticket.id,
+    engineer.id,
+    engineer.stripeConnectAccountId,
+    ticket.customerId,
+    ticket.creditValue // e.g., 700 cents = $7.00
+  );
+
+  // 3. Record transfer in audit table
+  await engineerTransferStore.create({
+    ticketId: ticket.id,
+    engineerId: engineer.id,
+    customerId: ticket.customerId,
+    stripeTransferId: transferId,
+    amount: payoutAmount,
+    creditValue: ticket.creditValue,
+    platformProfit,
+    status: 'completed'
+  });
 }
 ```
 
@@ -341,20 +483,30 @@ async markAsComplete(ticketId: string): Promise<void> {
 
 ### Example Scenarios
 
-#### Scenario 1: Usage Within Credits
+#### Scenario 1: Usage Within Credits (Marketplace Economics)
 ```
 Month 1:
 - Subscription: $100/month for 10 credits ($10/credit)
-- Usage: 8 tickets completed ($80 value)
+- Usage: 8 tickets completed ($80 credit value)
 - Credits available: $100
 - Credits expire: End of Month 1
+
+Engineer Payouts (Immediate via Stripe Connect):
+- 8 tickets × $3.50 = $28 transferred to engineers
+- Paid from Unjam's Stripe balance
+
+Platform Revenue Breakdown:
+- Customer pays: $100 (subscription)
+- Credit value used: 8 × $10 = $80
+- Engineer costs: 8 × $3.50 = $28
+- Unjam profit: $80 - $28 = $52 💰
 
 Invoice at Month End:
 - Subscription renewal: $100
 - Metered usage: $80
 - Credits applied: -$80
 - Unused credits: $20 (will be voided)
-- Total due: $100
+- Total customer pays: $100
 
 Month 2 Start:
 - Old $20 credits: VOIDED ❌
@@ -364,16 +516,20 @@ Month 2 Start:
 #### Scenario 2: Credits Exhausted (No Overage)
 ```
 Month 1:
-- Subscription: $100/month for 10 credits
-- Usage: 10 tickets completed ($100 value)
+- Subscription: $100/month for 10 credits ($10/credit)
+- Usage: 10 tickets completed ($100 credit value)
 - Credits available: $100
+
+Engineer Payouts:
+- 10 tickets × $3.50 = $35 transferred to engineers
+- Unjam profit: $100 - $35 = $65 💰
 
 Invoice at Month End:
 - Subscription renewal: $100
 - Metered usage: $100
 - Credits applied: -$100
 - Remaining credits: $0
-- Total due: $100
+- Total customer pays: $100
 
 What if customer tries ticket #11?
 - UI prevents ticket creation when credits = 0
@@ -384,19 +540,28 @@ What if customer tries ticket #11?
 #### Scenario 3: Minimal Usage
 ```
 Month 1:
-- Subscription: $100/month for 10 credits
-- Usage: 2 tickets completed ($20 value)
+- Subscription: $100/month for 10 credits ($10/credit)
+- Usage: 2 tickets completed ($20 credit value)
 - Credits available: $100
+
+Engineer Payouts:
+- 2 tickets × $3.50 = $7 transferred to engineers
+- Unjam profit: $20 - $7 = $13 💰
+- Note: Customer paid $100, but only used $20 of value
 
 Invoice at Month End:
 - Subscription renewal: $100
 - Metered usage: $20
 - Credits applied: -$20
 - Unused credits: $80 ❌ LOST (no rollover)
-- Total due: $100
+- Total customer pays: $100
 
 Month 2 Start:
 - Fresh $100 credits (not $180!)
+
+Platform Economics:
+- This scenario shows high profit margin when customers underutilize credits
+- Customer loses unused credits (use it or lose it model)
 ```
 
 ## Subscription Change Scenarios
@@ -514,11 +679,25 @@ Result:
 
 ## Key Benefits of This Model
 
-1. ✅ **Predictable Revenue**: No overage means customers always pay fixed amount
-2. ✅ **Encourages Usage**: "Use it or lose it" motivates customers to use credits
-3. ✅ **Simple Pricing**: No complex overage calculations or prorations
-4. ✅ **Fresh Start**: Each cycle is independent, easier to reason about
-5. ✅ **Stripe-Native**: Leverages Stripe's credit expiration features
+**Customer Benefits:**
+1. ✅ **Predictable Costs**: No overage charges - customers always pay fixed subscription amount
+2. ✅ **Simple Pricing**: Easy to understand credit-based model
+3. ✅ **Fresh Start**: Each billing cycle starts with full credit allocation
+
+**Platform Benefits:**
+1. ✅ **Marketplace Revenue**: Unjam earns difference between credit value and engineer payout
+2. ✅ **Encourages Usage**: "Use it or lose it" motivates customers to maximize value
+3. ✅ **Flexible Margins**: Engineer payouts are configurable per account
+4. ✅ **Stripe-Native**: Leverages Stripe's credit grants, metering, and Connect features
+5. ✅ **Immediate Payouts**: Engineers paid instantly via Stripe transfers when tickets complete
+
+**Example Profit Margins:**
+- Starter Plan: $35/month, 5 credits at $7 each
+  - Full usage: 5 tickets × ($7 - $3.50) = $17.50 profit
+  - Profit margin: 50% of credit value used
+- Enterprise Plan: $245/month, 35 credits at $7 each
+  - Full usage: 35 tickets × ($7 - $3.50) = $122.50 profit
+  - Profit margin: 50% of credit value used
 
 ## Database Schema Requirements
 
@@ -557,6 +736,45 @@ CREATE TABLE billing_subscriptions (
 );
 ```
 
+### Engineers Table (Stripe Connect)
+
+```sql
+CREATE TABLE engineers (
+  id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  stripe_connect_account_id TEXT UNIQUE, -- Express Connect account
+  payout_amount INTEGER NOT NULL DEFAULT 350, -- $3.50 in cents, configurable
+  onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Note: Payout amount can also be stored in Stripe Connect account metadata
+-- This local field provides faster access and caching
+```
+
+### Engineer Transfers Table (Audit Trail)
+
+```sql
+CREATE TABLE engineer_transfers (
+  id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+  ticket_id UUID NOT NULL REFERENCES tickets(id),
+  engineer_id UUID NOT NULL REFERENCES engineers(id),
+  customer_id UUID NOT NULL,
+  stripe_transfer_id TEXT NOT NULL UNIQUE,
+  amount INTEGER NOT NULL, -- Engineer payout amount in cents
+  credit_value INTEGER NOT NULL, -- Customer credit value in cents
+  platform_profit INTEGER NOT NULL, -- Unjam profit = credit_value - amount
+  status TEXT NOT NULL, -- 'pending', 'completed', 'failed'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_engineer_transfers_engineer ON engineer_transfers(engineer_id);
+CREATE INDEX idx_engineer_transfers_ticket ON engineer_transfers(ticket_id);
+CREATE INDEX idx_engineer_transfers_created ON engineer_transfers(created_at);
+```
+
 ## Environment Variables
 
 Required for the webhook function:
@@ -573,13 +791,29 @@ SUPABASE_SERVICE_ROLE_KEY=xxx
 
 Run tests:
 ```bash
-npm test supabase/functions/stripe-webhook/BillingCreditsStoreStripe.test.ts
-npm test supabase/functions/stripe-webhook/BillingMeterStoreStripe.test.ts
+npm test supabase/functions/_shared/services/BillingCredits/BillingCreditsServiceStripe.test.ts
+npm test supabase/functions/_shared/services/BillingMeter/BillingMeterServiceStripe.test.ts
 ```
 
 ## Next Steps for Full Integration
 
-1. **UI: Display Credit Balance**:
+1. **Engineer Onboarding (Stripe Connect Express)**:
+   - Create Express Connect accounts for engineers
+   - Implement onboarding flow using Stripe Account Links
+   - Store `stripe_connect_account_id` in engineers table
+   - Configure payout amounts (default $3.50, customizable)
+   - Enable transfers capability on accounts
+
+2. **Engineer Payout Service**:
+   - Create `_shared/services/EngineerPayout/EngineerPayoutService.ts` interface
+   - Create `_shared/services/EngineerPayout/EngineerPayoutServiceStripe.ts` implementation
+   - Create `_shared/stores/EngineerTransfer/EngineerTransferStore.ts` for audit trail
+   - Integrate into ticket completion flow
+   - Record transfers in `engineer_transfers` table for audit trail
+   - Handle transfer failures and retries
+   - Track platform profit per ticket
+
+3. **UI: Display Credit Balance**:
    - Query Stripe Credit Balance Summary API
    - Show remaining credits in customer UI
    - Disable ticket creation button when credits = 0
@@ -598,22 +832,32 @@ npm test supabase/functions/stripe-webhook/BillingMeterStoreStripe.test.ts
    </button>
    ```
 
-2. **Add Meter Event Recording**:
-   - Integrate `BillingMeterStore` into ticket completion flow
+4. **Add Meter Event Recording**:
+   - Integrate `BillingMeterService` into ticket completion flow
    - Send meter events when tickets marked complete
+   - Trigger engineer payout after meter event recorded
 
-3. **Configure Stripe Meter**:
+5. **Configure Stripe**:
    - See **[STRIPE_SETUP_GUIDE.md](./STRIPE_SETUP_GUIDE.md)** for complete CLI commands
    - Create the "ticket_completed" meter
    - Create metered price linked to meter
    - Update subscription creation to use metered price
-   - Configure webhooks
+   - Configure webhooks for both billing and Connect events
+   - Set up Connect platform settings
 
 ## References
 
 - **[Stripe Setup Guide](./STRIPE_SETUP_GUIDE.md)** - Complete CLI commands for setting up meters, products, and webhooks
 
+**Billing & Credits:**
 - [Stripe Credit Grants API](https://docs.stripe.com/api/billing/credit-grant)
 - [Stripe Meter Events API](https://docs.stripe.com/api/billing/meter-event)
 - [Credits-Based Pricing Model Guide](https://docs.stripe.com/billing/subscriptions/usage-based/use-cases/credits-based-pricing-model)
 - [Usage-Based Billing](https://docs.stripe.com/billing/subscriptions/usage-based)
+
+**Stripe Connect (Marketplace Payouts):**
+- [Stripe Connect Overview](https://docs.stripe.com/connect)
+- [Express Accounts](https://docs.stripe.com/connect/express-accounts)
+- [Transfers API](https://docs.stripe.com/api/transfers)
+- [Connect Account Types Comparison](https://docs.stripe.com/connect/accounts)
+- [Marketplace Payments Guide](https://docs.stripe.com/connect/charges)

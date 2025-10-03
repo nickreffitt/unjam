@@ -78,7 +78,7 @@ describe('ApiManager', () => {
 
       // And it should call the edge function with correct parameters
       expect(global.fetch).toHaveBeenCalledWith(
-        `${edgeFunctionUrl}/stripe-links`,
+        `${edgeFunctionUrl}/billing-links`,
         {
           method: 'POST',
           headers: {

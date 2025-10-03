@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, cleanup } from '@testing-library/react';
 import { useWebRTCListener } from './useWebRTCListener';
-import { WebRTCListener } from '@common/features/WebRTCManager/events';
-import type { WebRTCListenerCallbacks } from '@common/features/WebRTCManager/events';
+import { type WebRTCListenerCallbacks, WebRTCListener } from '@common/features/WebRTCManager/events';
 
 // Mock WebRTCListener
 vi.mock('@common/features/WebRTCManager/events', () => ({

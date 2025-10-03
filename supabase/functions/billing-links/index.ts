@@ -1,10 +1,13 @@
 import { serve } from "server"
-import { type BillingCustomerStore, BillingCustomerStoreSupabase } from '@stores/BillingCustomer/index.ts'
-import { type BillingLinksService, BillingLinksServiceStripe } from '@services/BillingLinks/index.ts'
+import { BillingCustomerStoreSupabase } from '@stores/BillingCustomer/index.ts'
+import { BillingEngineerStoreSupabase } from '@stores/BillingEngineer/index.ts'
+import { BillingLinksServiceStripe } from '@services/BillingLinks/index.ts'
+import { BillingEngineerAccountServiceStripe } from '@services/BillingEngineerAccount/index.ts'
+import { BillingLinksHandler } from './BillingLinksHandler.ts'
 import { createClient } from "supabase";
 import Stripe from "stripe";
 
-console.debug("Stripe Links function loaded")
+console.debug("Billing Links function loaded")
 
 export const handler = async (request: Request): Promise<Response> => {
   const allowedOrigins = ['https://unjam.nickreffitt.com', 'http://localhost:5175']
@@ -27,26 +30,25 @@ export const handler = async (request: Request): Promise<Response> => {
     // Parse request body
     const body = await request.text()
     console.info('About to handle request body: ', body)
-    const { profile_id } = JSON.parse(body)
-    console.info('Request contains profile_id: ', profile_id)
-    if (!profile_id) {
-      console.error('[stripe-links] Missing profile_id in request')
+
+    const { link_type, payload } = JSON.parse(body)
+
+    if (!link_type || !payload) {
+      console.error('[billing-links] Missing link_type or payload in request')
       return new Response(
-        JSON.stringify({ error: 'profile_id is required' }),
+        JSON.stringify({ error: 'link_type and payload are required' }),
         { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
 
     const authHeader = request.headers.get('Authorization')
     if (!authHeader) {
-      console.error(`[stripe-links] No Authorization header set`)
+      console.error(`[billing-links] No Authorization header set`)
       return new Response(
         JSON.stringify({ error: 'No Authorization header set' }),
         { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
-
-    console.info(`[stripe-links] Creating billing portal session for profile: ${profile_id}`)
 
     // Initialize services
     const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
@@ -64,33 +66,38 @@ export const handler = async (request: Request): Promise<Response> => {
       apiVersion: '2025-09-30.clover'
     })
 
-    const billingCustomerStore: BillingCustomerStore = new BillingCustomerStoreSupabase(supabase)
-    const billingLinksService: BillingLinksService = new BillingLinksServiceStripe(stripe)
+    const customerStore = new BillingCustomerStoreSupabase(supabase)
+    const engineerStore = new BillingEngineerStoreSupabase(supabase)
+    const linksService = new BillingLinksServiceStripe(stripe)
+    const engineerAccountService = new BillingEngineerAccountServiceStripe(stripe)
+    const billingLinksHandler = new BillingLinksHandler(customerStore, engineerStore, linksService, engineerAccountService)
 
-    // Fetch the billing customer by profile ID
-    const stripeCustomerId = await billingCustomerStore.getByProfileId(profile_id)
+    let url: string
 
-    if (!stripeCustomerId) {
-      console.error(`[stripe-links] No billing customer found for profile: ${profile_id}`)
-      return new Response(
-        JSON.stringify({ error: 'No billing customer found for this profile' }),
-        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
-      )
+    // Route to appropriate handler based on link_type
+    switch (link_type) {
+      case 'create_portal':
+        url = await billingLinksHandler.createPortalLink(payload, origin)
+        break
+      case 'create_engineer_account':
+        url = await billingLinksHandler.createEngineerAccountLink(payload, origin)
+        break
+      default:
+        console.error(`[billing-links] Unknown link_type: ${link_type}`)
+        return new Response(
+          JSON.stringify({ error: `Unknown link_type: ${link_type}` }),
+          { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
     }
 
-    // Create billing portal session
-    const portalUrl = await billingLinksService.createBillingPortalSession(stripeCustomerId)
-
-    console.info(`[stripe-links] Successfully created portal session for profile ${profile_id}`)
-
     return new Response(
-      JSON.stringify({ url: portalUrl }),
+      JSON.stringify({ url }),
       { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
     )
 
   } catch (err) {
     const error = err as Error
-    console.error('[stripe-links] Error:', error.message)
+    console.error('[billing-links] Error:', error.message)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
@@ -100,6 +107,6 @@ export const handler = async (request: Request): Promise<Response> => {
 
 // Only start server if running in Supabase (not imported as module)
 if (import.meta.main) {
-  console.info('🔗 Stripe Links function starting...')
+  console.info('🔗 Billing Links function starting...')
   serve(handler)
 }
