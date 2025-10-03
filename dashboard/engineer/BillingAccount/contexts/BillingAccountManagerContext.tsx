@@ -2,12 +2,14 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
 import { ApiManager } from '@common/features/ApiManager';
+import { BillingAccountManager } from '@common/features/BillingAccountManager';
+import { BillingAccountStoreSupabase } from '@common/features/BillingAccountManager';
 import type { EngineerProfile } from '@common/types';
 
 
 interface BillingAccountManagerContextType {
   engineerProfile: EngineerProfile;
-  apiManager: ApiManager;
+  billingAccountManager: BillingAccountManager;
 }
 
 const BillingAccountManagerContext = createContext<BillingAccountManagerContextType | null>(null);
@@ -30,16 +32,18 @@ export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProvid
 
   const engineerProfile = authUser.profile as EngineerProfile;
 
-  // Initialize ApiManager using shared Supabase client
-  const apiManager = useMemo(() => {
+  // Initialize BillingAccountManager with dependencies
+  const billingAccountManager = useMemo(() => {
+    const billingAccountStore = new BillingAccountStoreSupabase(supabaseClient);
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
-    return new ApiManager(supabaseClient, edgeFunctionUrl);
+    const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
+    return new BillingAccountManager(billingAccountStore, apiManager);
   }, [supabaseClient, supabaseUrl]);
 
   const contextValue: BillingAccountManagerContextType = useMemo(() => ({
     engineerProfile,
-    apiManager
-  }), [engineerProfile, apiManager]);
+    billingAccountManager
+  }), [engineerProfile, billingAccountManager]);
 
   return (
     <BillingAccountManagerContext.Provider value={contextValue}>

@@ -1,41 +1,42 @@
 import { useState, useEffect } from 'react';
 import { useBillingAccountManager } from '../contexts/BillingAccountManagerContext';
+import type { EngineerAccount } from '@common/types';
 
 /**
- * Hook to check for billing account and fetch account link
- * Returns account link URL, loading state, and errors
+ * Hook to fetch engineer billing account status
+ * Returns account data, loading state, and errors
  */
 export const useBillingAccountState = () => {
-  const { apiManager, engineerProfile } = useBillingAccountManager();
-  const [accountLinkUrl, setAccountLinkUrl] = useState<string | null>(null);
+  const { billingAccountManager, engineerProfile } = useBillingAccountManager();
+  const [account, setAccount] = useState<EngineerAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBillingAccountState = async () => {
+    const fetchBillingAccount = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        console.info('[useBillingAccountState] Fetching engineer account link for profile:', engineerProfile.id);
-        const url = await apiManager.createEngineerAccountLink(engineerProfile);
-        setAccountLinkUrl(url);
-        console.info('[useBillingAccountState] Successfully fetched engineer account link');
+        console.info('[useBillingAccountState] Fetching billing account for profile:', engineerProfile.id);
+        const billingAccount = await billingAccountManager.getAccountByProfileId(engineerProfile.id);
+        setAccount(billingAccount);
+        console.info('[useBillingAccountState] Successfully fetched billing account:', billingAccount ? 'exists' : 'does not exist');
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load billing account state';
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load billing account';
         console.error('[useBillingAccountState] Error:', errorMessage);
         setError(errorMessage);
-        setAccountLinkUrl(null);
+        setAccount(null);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchBillingAccountState();
-  }, [apiManager, engineerProfile]);
+    fetchBillingAccount();
+  }, [billingAccountManager, engineerProfile.id]);
 
   return {
-    accountLinkUrl,
+    account,
     isLoading,
     error
   };

@@ -72,6 +72,59 @@ export type Database = {
           },
         ]
       }
+      billing_engineers: {
+        Row: {
+          charges_enabled: boolean
+          created_at: string | null
+          current_deadline: string | null
+          details_submitted: boolean
+          disabled_reason: string | null
+          email: string
+          id: string
+          payouts_enabled: boolean
+          profile_id: string
+          stripe_account_id: string
+          updated_at: string | null
+          verification_status: Database["public"]["Enums"]["engineer_account_verification_status"]
+        }
+        Insert: {
+          charges_enabled?: boolean
+          created_at?: string | null
+          current_deadline?: string | null
+          details_submitted?: boolean
+          disabled_reason?: string | null
+          email: string
+          id?: string
+          payouts_enabled?: boolean
+          profile_id: string
+          stripe_account_id: string
+          updated_at?: string | null
+          verification_status?: Database["public"]["Enums"]["engineer_account_verification_status"]
+        }
+        Update: {
+          charges_enabled?: boolean
+          created_at?: string | null
+          current_deadline?: string | null
+          details_submitted?: boolean
+          disabled_reason?: string | null
+          email?: string
+          id?: string
+          payouts_enabled?: boolean
+          profile_id?: string
+          stripe_account_id?: string
+          updated_at?: string | null
+          verification_status?: Database["public"]["Enums"]["engineer_account_verification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_profile"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_invoices: {
         Row: {
           amount: number
@@ -194,6 +247,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      engineer_account_verification_status:
+        | "active"
+        | "eventually_due"
+        | "currently_due"
+        | "past_due"
+        | "pending_verification"
+        | "disabled"
       invoice_status: "draft" | "open" | "paid" | "uncollectible" | "void"
       subscription_status:
         | "incomplete"
@@ -335,6 +395,14 @@ export const Constants = {
   },
   public: {
     Enums: {
+      engineer_account_verification_status: [
+        "active",
+        "eventually_due",
+        "currently_due",
+        "past_due",
+        "pending_verification",
+        "disabled",
+      ],
       invoice_status: ["draft", "open", "paid", "uncollectible", "void"],
       subscription_status: [
         "incomplete",
