@@ -6,7 +6,7 @@ import type { EngineerProfile } from '@common/types';
 
 
 interface BillingAccountManagerContextType {
-  userProfile: EngineerProfile;
+  engineerProfile: EngineerProfile;
   apiManager: ApiManager;
 }
 
@@ -28,7 +28,7 @@ export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProvid
     throw new Error('Billing account manager requires an engineer profile');
   }
 
-  const userProfile = authUser.profile as EngineerProfile;
+  const engineerProfile = authUser.profile as EngineerProfile;
 
   // Initialize ApiManager using shared Supabase client
   const apiManager = useMemo(() => {
@@ -37,9 +37,9 @@ export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProvid
   }, [supabaseClient, supabaseUrl]);
 
   const contextValue: BillingAccountManagerContextType = useMemo(() => ({
-    userProfile,
+    engineerProfile,
     apiManager
-  }), [userProfile, apiManager]);
+  }), [engineerProfile, apiManager]);
 
   return (
     <BillingAccountManagerContext.Provider value={contextValue}>

@@ -6,7 +6,7 @@ import { useBillingAccountManager } from '../contexts/BillingAccountManagerConte
  * Returns account link URL, loading state, and errors
  */
 export const useBillingAccountState = () => {
-  const { apiManager, userProfile } = useBillingAccountManager();
+  const { apiManager, engineerProfile } = useBillingAccountManager();
   const [accountLinkUrl, setAccountLinkUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,10 +17,10 @@ export const useBillingAccountState = () => {
         setIsLoading(true);
         setError(null);
 
-        console.info('[useBillingAccountState] Fetching billing portal link for profile:', userProfile.id);
-        const url = await apiManager.createBillingPortalLink(userProfile.id);
+        console.info('[useBillingAccountState] Fetching engineer account link for profile:', engineerProfile.id);
+        const url = await apiManager.createEngineerAccountLink(engineerProfile);
         setAccountLinkUrl(url);
-        console.info('[useBillingAccountState] Successfully fetched billing portal link');
+        console.info('[useBillingAccountState] Successfully fetched engineer account link');
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load billing account state';
         console.error('[useBillingAccountState] Error:', errorMessage);
@@ -32,7 +32,7 @@ export const useBillingAccountState = () => {
     };
 
     fetchBillingAccountState();
-  }, [apiManager, userProfile.id]);
+  }, [apiManager, engineerProfile]);
 
   return {
     accountLinkUrl,
