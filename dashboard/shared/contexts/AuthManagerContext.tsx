@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { AuthManager } from '@common/features/AuthManager/AuthManager';
 import {
   AuthEventEmitterLocal,
@@ -12,6 +11,7 @@ import {
 } from '@common/features/AuthManager';
 import { useAuthListener } from '@common/features/AuthManager/hooks';
 import { type AuthUser, type ErrorDisplay } from '@common/types';
+import { useSupabase } from './SupabaseContext';
 interface AuthManagerContextType {
   authManager: AuthManager | null;
   authUser: AuthUser;
@@ -25,22 +25,30 @@ interface AuthManagerProviderProps {
   children: React.ReactNode;
 }
 
-// Singleton instances to prevent multiple Supabase clients
+// Singleton AuthManager instance
 let authManagerInstance: AuthManager | null = null;
-let initializationError: string | null = null;
 
-const initializeAuthManager = (): { authManager: AuthManager | null; error?: string } => {
-  // Return existing instance if already created
-  if (authManagerInstance) {
-    return { authManager: authManagerInstance };
-  }
+/**
+ * Provides AuthManager instance to dashboard components
+ * Uses SupabaseContext for the Supabase client
+ */
+export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ children }) => {
+  console.debug('[AuthManagerProvider] Component mounting/rendering');
+  const { supabaseClient } = useSupabase();
+  const [authUser, setAuthUser] = useState<AuthUser>({ status: 'loading' });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<ErrorDisplay | null>(null);
 
-  // Return previous error if initialization failed before
-  if (initializationError) {
-    return { authManager: null, error: initializationError };
-  }
+  // Create AuthManager instance singleton
+  const authManager = useMemo(() => {
+    // Return existing instance if already created
+    if (authManagerInstance) {
+      console.debug('[AuthManagerProvider] Returning existing AuthManager singleton');
+      return authManagerInstance;
+    }
 
-  try {
+    console.debug('[AuthManagerProvider] Creating NEW AuthManager singleton');
+
     // Check if we should use local storage implementation (for testing/development)
     const useLocalAuth = import.meta.env.VITE_USE_LOCAL_AUTH === 'true';
     const authUserEventEmitter = new AuthUserEventEmitterLocal();
@@ -49,79 +57,26 @@ const initializeAuthManager = (): { authManager: AuthManager | null; error?: str
     let authProfileStore;
 
     if (useLocalAuth) {
-      // Use local storage implementations
-      console.debug('AuthManager: Using local storage implementations');
+      console.debug('[AuthManagerProvider] Using local storage implementations');
       authUserStore = new AuthUserStoreLocal(authUserEventEmitter);
       authProfileStore = new AuthProfileStoreLocal();
     } else {
-      console.debug('AuthManager: Using supabase implementations');
-      // Use Supabase implementations
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-        initializationError = 'Supabase environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) are not configured';
-        console.warn('AuthManager:', initializationError);
-        return {
-          authManager: null,
-          error: initializationError,
-        };
-      }
-
-      console.debug('AuthManager: Using Supabase implementations');
-      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+      console.debug('[AuthManagerProvider] Using Supabase implementations');
       authUserStore = new AuthUserStoreSupabase(supabaseClient, authUserEventEmitter);
       authProfileStore = new AuthProfileStoreSupabase(supabaseClient);
     }
 
     const authUserListener = new AuthUserListenerLocal(authUserEventEmitter);
 
-    // Create AuthManager instance (singleton)
+    // Create and store singleton
     authManagerInstance = new AuthManager(authUserStore, authProfileStore, authEventEmitter, authUserListener);
 
-    console.debug('AuthManager: Successfully initialized');
+    console.debug('[AuthManagerProvider] AuthManager successfully initialized');
+    return authManagerInstance;
+  }, [supabaseClient]);
 
-    return {
-      authManager: authManagerInstance
-    };
-  } catch (error) {
-    initializationError = error instanceof Error ? error.message : 'Failed to initialize AuthManager';
-    console.error('AuthManager: Failed to initialize:', error);
-    return {
-      authManager: null,
-      error: initializationError,
-    };
-  }
-};
-
-/**
- * Provides AuthManager instance to dashboard components
- * Handles Supabase configuration and initialization
- * Uses singleton pattern to prevent multiple Supabase client instances
- */
-export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ children }) => {
-  console.debug('[AuthManagerProvider] Component mounting/rendering');
-  const [authUser, setAuthUser] = useState<AuthUser>({ status: 'not-signed-in' });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<ErrorDisplay | null>(null);
-
-  // Create AuthManager instance
-  const authManager = useMemo(() => {
-    const { authManager: manager, error: initError } = initializeAuthManager();
-
-    if (initError) {
-      setError({
-        title: 'Configuration Error',
-        message: initError,
-      });
-      setIsLoading(false);
-    }
-
-    return manager;
-  }, []);
-
-  // Listen to auth events
-  useAuthListener({
+  // Memoize callbacks to prevent re-creating them on every render
+  const authCallbacks = useMemo(() => ({
     onUserRequiresProfile: (authUserEvent: AuthUser) => {
       console.debug('[AuthManagerContext] onUserRequiresProfile received:', authUserEvent);
       setAuthUser(authUserEvent);
@@ -151,7 +106,10 @@ export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ childr
       setAuthUser(authUserEvent);
       setIsLoading(false);
     },
-  });
+  }), []);
+
+  // Listen to auth events
+  useAuthListener(authCallbacks);
 
   // Initialize auth state
   useEffect(() => {
@@ -160,10 +118,16 @@ export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ childr
       return;
     }
 
-    // Get initial auth state
+    // Get initial auth state - don't set isLoading to false yet
+    // The auth listeners will handle setting isLoading to false when auth is determined
     const initialAuthUser = authManager.getCurrentAuthUser();
+    console.debug('[AuthManagerProvider] Initial auth state from manager:', initialAuthUser);
     setAuthUser(initialAuthUser);
-    setIsLoading(false);
+
+    // Only set loading to false if we already have a determined state
+    if (initialAuthUser.status !== 'loading') {
+      setIsLoading(false);
+    }
   }, [authManager]);
 
   return (

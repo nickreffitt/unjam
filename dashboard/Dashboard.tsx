@@ -7,11 +7,13 @@ import CompletedTicketsList from '@dashboard/pages/engineer/CompletedTicketsList
 import TicketPreview from '@dashboard/pages/engineer/TicketPreview/TicketPreview';
 import ActiveTicket from '@dashboard/pages/engineer/ActiveTicket/ActiveTicket';
 import CompletedTicket from '@dashboard/pages/engineer/CompletedTicket/CompletedTicket';
+import Settings from '@dashboard/pages/engineer/Settings';
 import SignIn from '@dashboard/SignIn/SignIn';
 import VerifyAuth from '@dashboard/VerifyAuth/VerifyAuth';
 import Logout from '@dashboard/Logout/Logout';
 import CreateProfile from '@dashboard/CreateProfile/CreateProfile';
 import { AuthManagerProvider, useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
+import { SupabaseProvider } from '@dashboard/shared/contexts/SupabaseContext';
 import { TicketManagerProvider } from '@dashboard/engineer/Ticket/contexts/TicketManagerContext';
 import { TicketListManagerProvider } from '@dashboard/engineer/TicketList/contexts/TicketListManagerContext';
 import { ChatManagerProvider } from '@dashboard/engineer/ChatBox/contexts/ChatManagerContext';
@@ -39,6 +41,7 @@ const ProtectedEngineerDashboard: React.FC = () => {
                   <Route path="active/:ticketId" element={<ActiveTicket />} />
                   <Route path="completed" element={<CompletedTicketsList />} />
                   <Route path="completed/:ticketId" element={<CompletedTicket />} />
+                  <Route path="settings" element={<Settings />} />
                   <Route path="auth/logout" element={<Logout />} />
                   <Route path="*" element={<NewTicketsList />} />
                 </Routes>
@@ -125,9 +128,11 @@ const DashboardContent: React.FC = () => {
 
 const Dashboard: React.FC = () => {
   return (
-    <AuthManagerProvider>
-      <DashboardContent />
-    </AuthManagerProvider>
+    <SupabaseProvider>
+      <AuthManagerProvider>
+        <DashboardContent />
+      </AuthManagerProvider>
+    </SupabaseProvider>
   );
 };
 

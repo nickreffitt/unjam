@@ -10,7 +10,7 @@
     "@types": "./common/types.ts",
     "@events/": "./supabase/functions/_shared/events/",
     "@services/": "./supabase/functions/_shared/services/",
-    "@stores/": "./supabase/functions/_shared/stores/",
+    "@stores/": "./supabase/functions/_shared/stores/"
   },
   "nodeModulesDir": "auto"
 }

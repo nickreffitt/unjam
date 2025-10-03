@@ -30,7 +30,7 @@ const subscriptionService = new BillingSubscriptionServiceStripe(stripe, credits
 // Initialize converter based on environment
 const converter = enableStripe
   ? new BillingEventConverterStripe(
-      stripeApiKey,
+      stripe,
       Deno.env.get('STRIPE_WEBHOOK_SIGNING_SECRET') as string
     )
   : new BillingEventConverterLocal()

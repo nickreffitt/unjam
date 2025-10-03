@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
+import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
 import { ApiManager } from '@common/features/ApiManager';
 import { SubscriptionManager } from '@common/features/SubscriptionManager';
 import { SubscriptionStoreSupabase } from '@common/features/SubscriptionManager/store/SubscriptionStoreSupabase';
@@ -23,6 +23,7 @@ interface SubscriptionManagerProviderProps {
 
 export const SubscriptionManagerProvider: React.FC<SubscriptionManagerProviderProps> = ({ children }) => {
   const { authUser } = useAuthState();
+  const { supabaseClient, supabaseUrl } = useSupabase();
 
   if (!authUser.profile) {
     throw new Error('No user profile available for subscription manager');
@@ -44,16 +45,8 @@ export const SubscriptionManagerProvider: React.FC<SubscriptionManagerProviderPr
     throw new Error('No VITE_STRIPE_PUBLISHABLE_KEY set');
   }
 
-  // Initialize Supabase client, ApiManager, and SubscriptionManager
+  // Initialize ApiManager and SubscriptionManager using shared Supabase client
   const { apiManager, subscriptionManager } = useMemo(() => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase environment variables not configured');
-    }
-
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
 
     const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
@@ -61,7 +54,7 @@ export const SubscriptionManagerProvider: React.FC<SubscriptionManagerProviderPr
     const subscriptionManager = new SubscriptionManager(subscriptionStore);
 
     return { apiManager, subscriptionManager };
-  }, []);
+  }, [supabaseClient, supabaseUrl]);
 
   const contextValue: SubscriptionManagerContextType = useMemo(() => ({
     userProfile,

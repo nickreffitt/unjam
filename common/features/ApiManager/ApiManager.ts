@@ -1,22 +1,23 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
+import type { EngineerProfile } from '@common/types';
 
 /**
- * ApiManager handles communication with Supabase Edge Functions
+ * ApiManager handles communication with the backend API
  * Wraps edge function calls with proper authentication and error handling
  */
 export class ApiManager {
   private supabaseClient: SupabaseClient;
-  private edgeFunctionUrl: string;
+  private apiUrl: string;
 
-  constructor(supabaseClient: SupabaseClient, edgeFunctionUrl: string) {
+  constructor(supabaseClient: SupabaseClient, apiUrl: string) {
     if (!supabaseClient) {
       throw new Error('ApiManager: supabaseClient is required');
     }
-    if (!edgeFunctionUrl) {
-      throw new Error('ApiManager: edgeFunctionUrl is required');
+    if (!apiUrl) {
+      throw new Error('ApiManager: apiUrl is required');
     }
     this.supabaseClient = supabaseClient;
-    this.edgeFunctionUrl = edgeFunctionUrl;
+    this.apiUrl = apiUrl;
   }
 
   /**
@@ -29,29 +30,16 @@ export class ApiManager {
     console.info(`[ApiManager] Creating billing portal link for profile: ${profileId}`);
 
     try {
-      // Get the current session to access the auth token
-      const { data: { session }, error: sessionError } = await this.supabaseClient.auth.getSession();
-
-      if (sessionError || !session) {
-        throw new Error('No active session found. Please sign in.');
-      }
-
-      // Make request to billing-links edge function
-      const response = await fetch(`${this.edgeFunctionUrl}/billing-links`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+        'billing-links',
+        {
+          link_type: 'create_portal',
+          payload: {
+            profile_id: profileId
+          }
         },
-        body: JSON.stringify({ profile_id: profileId })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to create billing portal link: ${response.statusText}`);
-      }
-
-      const { url } = await response.json();
+        'Failed to create billing portal link'
+      );
 
       if (!url) {
         throw new Error('No URL returned from billing portal service');
@@ -65,5 +53,84 @@ export class ApiManager {
       console.error('[ApiManager] Error creating billing portal link:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Creates an engineer account link for onboarding
+   * @param engineerProfile - The engineer profile
+   * @returns The account link URL where the engineer can complete onboarding
+   * @throws Error if the request fails or engineer email is missing
+   */
+  async createEngineerAccountLink(engineerProfile: EngineerProfile): Promise<string> {
+    console.info(`[ApiManager] Creating engineer account link for profile: ${engineerProfile.id}`);
+
+    if (!engineerProfile.email) {
+      throw new Error('Engineer email is required to create account link');
+    }
+
+    try {
+      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+        'billing-links',
+        {
+          link_type: 'create_engineer_account',
+          payload: {
+            engineer_id: engineerProfile.id,
+            email: engineerProfile.email
+          }
+        },
+        'Failed to create engineer account link'
+      );
+
+      if (!url) {
+        throw new Error('No URL returned from engineer account service');
+      }
+
+      console.info(`[ApiManager] Successfully created engineer account link`);
+      return url;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error creating engineer account link:', error.message);
+      throw error;
+    }
+  }
+
+
+  /**
+   * Makes an authenticated POST request to an edge function
+   * @param endpoint - The edge function endpoint (e.g., 'billing-links')
+   * @param body - The request body
+   * @param errorContext - Context string for error messages
+   * @returns The response data
+   * @throws Error if authentication fails or request fails
+   */
+  private async makeAuthenticatedRequest<T>(
+    endpoint: string,
+    body: unknown,
+    errorContext: string
+  ): Promise<T> {
+    // Get the current session to access the auth token
+    const { data: { session }, error: sessionError } = await this.supabaseClient.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error('No active session found. Please sign in.');
+    }
+
+    // Make request to edge function
+    const response = await fetch(`${this.apiUrl}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `${errorContext}: ${response.statusText}`);
+    }
+
+    return await response.json();
   }
 }

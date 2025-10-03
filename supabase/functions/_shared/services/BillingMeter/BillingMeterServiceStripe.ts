@@ -1,11 +1,11 @@
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 import type { BillingMeterService, RecordTicketCompletionParams } from './BillingMeterService.ts'
 
 /**
  * Stripe implementation of BillingMeterStore using Stripe Meter Events API
  * Records usage events that will be aggregated and billed against credit grants
  */
-export default class BillingMeterServiceStripe implements BillingMeterService {
+export class BillingMeterServiceStripe implements BillingMeterService {
   private stripe: Stripe
   private meterEventName: string
 
@@ -13,10 +13,8 @@ export default class BillingMeterServiceStripe implements BillingMeterService {
    * @param apiKey - Stripe API key
    * @param meterEventName - The event name configured in your Stripe Meter (e.g., 'ticket_completed')
    */
-  constructor(apiKey: string, meterEventName: string = 'ticket_completed') {
-    this.stripe = new Stripe(apiKey, {
-      apiVersion: '2025-09-30.clover'
-    })
+  constructor(stripe: Stripe, meterEventName: string = 'ticket_completed') {
+    this.stripe = stripe
     this.meterEventName = meterEventName
   }
 

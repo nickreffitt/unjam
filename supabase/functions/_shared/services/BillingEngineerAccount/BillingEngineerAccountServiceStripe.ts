@@ -1,5 +1,5 @@
 import type Stripe from 'stripe'
-import type { EngineerAccount, EngineerAccountVerificationStatus } from '@types.ts'
+import type { EngineerAccount, EngineerAccountVerificationStatus } from '@types'
 import type { BillingEngineerAccountService } from './BillingEngineerAccountService.ts'
 
 /**
@@ -36,10 +36,10 @@ export class BillingEngineerAccountServiceStripe implements BillingEngineerAccou
     console.info(`[BillingEngineerAccountServiceStripe] Fetching account: ${accountId}`)
     try {
       const account = await this.stripe.accounts.retrieve(accountId)
-
+      const engId = (account.metadata) ? account.metadata.engineerId : ''
       return {
         id: account.id,
-        engineerId: account.metadata.engineerId || '',
+        engineerId: engId,
         email: account.email || '',
         detailsSubmitted: account.details_submitted || false,
         chargesEnabled: account.charges_enabled || false,

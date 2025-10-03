@@ -11,12 +11,10 @@ export class BillingEventConverterStripe implements BillingEventConverter {
   private cryptoProvider: Stripe.CryptoProvider
 
   constructor(
-    apiKey: string,
+    stripe: Stripe,
     webhookSecret: string
   ) {
-    this.stripe = new Stripe(apiKey, {
-      apiVersion: '2025-09-30.clover'
-    })
+    this.stripe = stripe
     this.webhookSecret = webhookSecret
     this.cryptoProvider = Stripe.createSubtleCryptoProvider()
   }

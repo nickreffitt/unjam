@@ -1,2 +1,2 @@
-export { BillingEngineerStore } from './BillingEngineerStore.ts'
+export { type BillingEngineerStore } from './BillingEngineerStore.ts'
 export { BillingEngineerStoreSupabase } from './BillingEngineerStoreSupabase.ts'

@@ -223,7 +223,9 @@ export class AuthManager {
             console.debug('[AuthManager] Emitted UserRequiresProfile event');
           }
         } catch (error) {
-          console.error('[AuthManager] Error converting user to UserProfile on sign in:', error);
+          console.error('[AuthManager] Error fetching user profile on sign in:', error);
+          // Don't change auth state on profile fetch errors - keep loading state
+          console.debug('[AuthManager] Keeping current auth state due to profile fetch error');
         }
       },
       onUserSignedOut: () => {
@@ -262,9 +264,9 @@ export class AuthManager {
             console.debug('[AuthManager] Emitted UserProfile auth state changed event (null)');
           }
         } catch (error) {
-          console.error('[AuthManager] Error converting user to UserProfile on auth state change:', error);
-          this.currentAuthUser = { status: 'not-signed-in' };
-          this.authEventEmitter.emitAuthStateChanged(this.currentAuthUser);
+          console.error('[AuthManager] Error fetching user profile on auth state change:', error);
+          // Don't change auth state on profile fetch errors - keep loading state
+          console.debug('[AuthManager] Keeping current auth state due to profile fetch error');
         }
       }
     });
@@ -274,26 +276,27 @@ export class AuthManager {
    * Converts a User object to UserProfile
    * This handles the mapping from auth system User to application domain UserProfile
    * Looks up the user profile from AuthProfileStore to get the complete profile information
+   * @throws Error if there's an error fetching the profile (network, permission, etc.)
+   * @returns UserProfile if found, null if user has no profile yet
    */
   private async convertUserToUserProfile(user: User): Promise<UserProfile | null> {
-    try {
-      console.debug(`[AuthManager] convertUserToUserProfile: Looking for profile with authId: ${user.id}`);
-      // First, try to get the existing profile from the store using auth ID
-      const existingProfile = await this.authProfileStore.getByAuthId(user.id);
-      console.debug(`[AuthManager] convertUserToUserProfile: Found profile:`, existingProfile);
+    console.debug(`[AuthManager] convertUserToUserProfile: Looking for profile with authId: ${user.id}`);
 
-      if (existingProfile) {
-        // Set the user property to establish 1:1 mapping (only for EngineerProfile)
-        if (existingProfile.type === 'engineer') {
-          existingProfile.user = user;
-        }
-        console.debug(`[AuthManager] convertUserToUserProfile: Returning profile with user attached`);
-        return existingProfile;
+    // Try to get the existing profile from the store using auth ID
+    // This will throw an error if there's a network/permission issue
+    const existingProfile = await this.authProfileStore.getByAuthId(user.id);
+    console.debug(`[AuthManager] convertUserToUserProfile: Found profile:`, existingProfile);
+
+    if (existingProfile) {
+      // Set the user property to establish 1:1 mapping (only for EngineerProfile)
+      if (existingProfile.type === 'engineer') {
+        existingProfile.user = user;
       }
-      console.debug(`[AuthManager] convertUserToUserProfile: No profile found, returning null`);
-    } catch (error) {
-      console.error('AuthManager: Error converting user to user profile:', error);
+      console.debug(`[AuthManager] convertUserToUserProfile: Returning profile with user attached`);
+      return existingProfile;
     }
+
+    console.debug(`[AuthManager] convertUserToUserProfile: No profile found, returning null`);
     return null;
   }
 }

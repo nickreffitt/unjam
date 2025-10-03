@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Clock, CheckCircle, Ticket, LogOut } from 'lucide-react';
+import { Clock, CheckCircle, Ticket, LogOut, Settings } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -20,6 +20,11 @@ const Sidebar: React.FC = () => {
       path: '/completed',
       label: 'Completed Tickets',
       icon: CheckCircle
+    },
+    {
+      path: '/settings',
+      label: 'Settings',
+      icon: Settings
     }
   ];
 
