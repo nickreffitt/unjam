@@ -35,7 +35,7 @@ describe('ApiManager', () => {
       // When creating ApiManager
       // Then it should throw an error
       expect(() => new ApiManager(mockSupabaseClient, ''))
-        .toThrow('ApiManager: edgeFunctionUrl is required');
+        .toThrow('ApiManager: apiUrl is required');
     });
 
     it('should create instance when all parameters are provided', () => {
@@ -85,7 +85,12 @@ describe('ApiManager', () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${mockAccessToken}`
           },
-          body: JSON.stringify({ profile_id: profileId })
+          body: JSON.stringify({
+            link_type: 'create_portal',
+            payload: {
+              profile_id: profileId
+            }
+          })
         }
       );
     });
