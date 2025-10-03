@@ -1,14 +1,13 @@
 import { serve } from "server"
 import { createClient } from "supabase"
 import Stripe from "stripe"
-import { BillingEventConverterStripe } from "@shared/events/BillingEventConverterStripe.ts"
-import { BillingEventConverterLocal } from "@shared/events/BillingEventConverterLocal.ts"
 import { BillingEventHandler } from "./BillingEventHandler.ts"
-import { BillingCustomerStoreSupabase } from "@shared/stores/BillingCustomer/BillingCustomerStoreSupabase.ts"
-import { BillingSubscriptionStoreSupabase } from "@shared/stores/BillingSubscription/BillingSubscriptionStoreSupabase.ts"
-import { BillingSubscriptionServiceStripe } from "@shared/services/BillingSubscriptionServiceStripe.ts"
-import { BillingInvoiceStoreSupabase } from "@shared/stores/BillingInvoice/BillingInvoiceStoreSupabase.ts"
-import { BillingCreditsStoreStripe } from "@shared/stores/BillingCredits/BillingCreditsStoreStripe.ts"
+import { BillingEventConverterLocal, BillingEventConverterStripe } from "@events/index.ts"
+import { BillingCustomerStoreSupabase } from "@stores/BillingCustomer/index.ts"
+import { BillingSubscriptionStoreSupabase } from "@stores/BillingSubscription/index.ts"
+import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts"
+import { BillingInvoiceStoreSupabase } from "@stores/BillingInvoice/index.ts"
+import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts"
 
 // Initialize environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
@@ -21,12 +20,12 @@ const stripe = new Stripe(stripeApiKey, {
   apiVersion: '2025-09-30.clover'
 })
 
-// Initialize stores
+// Initialize stores and services
 const customerStore = new BillingCustomerStoreSupabase(supabase)
 const subscriptionStore = new BillingSubscriptionStoreSupabase(supabase)
-const subscriptionService = new BillingSubscriptionServiceStripe(stripe)
 const invoiceStore = new BillingInvoiceStoreSupabase(supabase)
-const creditsStore = new BillingCreditsStoreStripe(stripe)
+const creditsService = new BillingCreditsServiceStripe(stripe)
+const subscriptionService = new BillingSubscriptionServiceStripe(stripe, creditsService)
 
 // Initialize converter based on environment
 const converter = enableStripe
@@ -42,8 +41,7 @@ const billingEventHandler = new BillingEventHandler(
   customerStore,
   subscriptionStore,
   subscriptionService,
-  invoiceStore,
-  creditsStore
+  invoiceStore
 )
 
 export const handler = async (request: Request): Promise<Response> => {

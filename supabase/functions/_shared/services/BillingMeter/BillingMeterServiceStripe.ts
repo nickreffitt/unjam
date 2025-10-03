@@ -1,11 +1,11 @@
 import Stripe from 'stripe'
-import type { BillingMeterStore, RecordTicketCompletionParams } from './BillingMeterStore.ts'
+import type { BillingMeterService, RecordTicketCompletionParams } from './BillingMeterService.ts'
 
 /**
  * Stripe implementation of BillingMeterStore using Stripe Meter Events API
  * Records usage events that will be aggregated and billed against credit grants
  */
-export class BillingMeterStoreStripe implements BillingMeterStore {
+export default class BillingMeterServiceStripe implements BillingMeterService {
   private stripe: Stripe
   private meterEventName: string
 

@@ -4,8 +4,8 @@
     "supabase": "npm:@supabase/supabase-js@2",
     "server": "https://deno.land/std@0.168.0/http/server.ts",
     "@types": "../../../common/types.ts",
-    "@shared/events/": "../_shared/events/",
-    "@shared/services/": "../_shared/services/",
-    "@shared/stores/": "../_shared/stores/"
+    "@events/": "../_shared/events/",
+    "@services/": "../_shared/services/",
+    "@stores/": "../_shared/stores/"
   }
 }

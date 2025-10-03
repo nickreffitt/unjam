@@ -1,8 +1,6 @@
 import { serve } from "server"
-import { BillingCustomerStoreSupabase } from '@stores/BillingCustomer/BillingCustomerStoreSupabase.ts'
-import { BillingLinksServiceStripe } from '@services/BillingLinksServiceStripe.ts'
-import { type BillingCustomerStore } from "@stores/BillingCustomer/BillingCustomerStore.ts";
-import { type BillingLinksService } from "@services/BillingLinksService.ts";
+import { type BillingCustomerStore, BillingCustomerStoreSupabase } from '@stores/BillingCustomer/index.ts'
+import { type BillingLinksService, BillingLinksServiceStripe } from '@services/BillingLinks/index.ts'
 import { createClient } from "supabase";
 import Stripe from "stripe";
 

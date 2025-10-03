@@ -12,7 +12,7 @@ export interface RecordTicketCompletionParams {
  * Interface for recording usage events that consume billing credits
  * Uses Stripe Meters to track usage that will be billed against credit grants
  */
-export interface BillingMeterStore {
+export interface BillingMeterService {
   /**
    * Records a ticket completion event that consumes customer credits
    * @param params - The ticket completion parameters

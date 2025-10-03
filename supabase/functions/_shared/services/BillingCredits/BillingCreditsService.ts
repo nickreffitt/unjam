@@ -15,10 +15,10 @@ export interface CreateCreditGrantParams {
 }
 
 /**
- * Interface for billing credits persistence using Stripe Credit Grants API
+ * Interface for billing credits service using Stripe Credit Grants API
  * Manages prepaid credits for customers
  */
-export interface BillingCreditsStore {
+export interface BillingCreditsService {
   /**
    * Creates a new credit grant for a customer
    * @param params - The credit grant parameters
