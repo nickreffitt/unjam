@@ -63,7 +63,7 @@ export const handler = async (request: Request): Promise<Response> => {
       }
     )
     const stripe = new Stripe(stripeApiKey, {
-      apiVersion: '2025-08-27.basil'
+      apiVersion: '2025-09-30.clover'
     })
 
     const billingCustomerStore: BillingCustomerStore = new BillingCustomerStoreSupabase(supabase)

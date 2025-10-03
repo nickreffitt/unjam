@@ -90,11 +90,12 @@ export class BillingEventHandler {
     console.info(`[BillingEventHandler] Handling subscription event: ${event.state}`)
 
     switch (event.state) {
-      case 'created':
+      case 'created': {
         await this.subscriptionStore.create(event.subscription)
         // No credit handling - credits granted when invoice paid
         break
-      case 'updated':
+      }
+      case 'updated': {
         // Fetch the old subscription to detect plan changes
         const oldSubscription = await this.subscriptionStore.fetch(event.subscription.id)
 
@@ -108,10 +109,12 @@ export class BillingEventHandler {
         // Downgrades and cancellations don't require immediate action
         // Credits will naturally expire at period end
         break
-      case 'deleted':
+      }
+      case 'deleted': {
         await this.subscriptionStore.delete(event.subscription.id)
         // Subscription ended - credits should already be expired or voided
         break
+      }
       default:
         throw new Error(`Unknown subscription event state: ${event.state}`)
     }

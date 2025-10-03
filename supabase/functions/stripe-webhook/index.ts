@@ -18,7 +18,7 @@ const enableStripe = Deno.env.get('WEBHOOKS_ENABLE_STRIPE')
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 const stripe = new Stripe(stripeApiKey, {
-  apiVersion: '2025-08-27.basil'
+  apiVersion: '2025-09-30.clover'
 })
 
 // Initialize stores

@@ -82,7 +82,7 @@ export class BillingCreditsStoreStripe implements BillingCreditsStore {
     console.info(`[BillingCreditsStoreStripe] Voiding credit grant: ${creditGrantId}`)
 
     try {
-      await this.stripe.billing.creditGrants.voidCreditGrant(creditGrantId)
+      await this.stripe.billing.creditGrants.voidGrant(creditGrantId)
       console.info(`✅ [BillingCreditsStoreStripe] Credit grant voided: ${creditGrantId}`)
     } catch (err) {
       const error = err as Error

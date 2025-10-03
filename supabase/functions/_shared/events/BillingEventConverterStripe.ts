@@ -15,7 +15,7 @@ export class BillingEventConverterStripe implements BillingEventConverter {
     webhookSecret: string
   ) {
     this.stripe = new Stripe(apiKey, {
-      apiVersion: '2025-08-27.basil'
+      apiVersion: '2025-09-30.clover'
     })
     this.webhookSecret = webhookSecret
     this.cryptoProvider = Stripe.createSubtleCryptoProvider()

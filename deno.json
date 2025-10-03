@@ -4,7 +4,7 @@
     "strict": true
   },
   "imports": {
-    "stripe": "npm:stripe@18",
+    "stripe": "npm:stripe@19",
     "supabase": "npm:@supabase/supabase-js@2",
     "server": "https://deno.land/std@0.168.0/http/server.ts",
     "@types": "./common/types.ts",
@@ -13,7 +13,6 @@
     "@shared/stores/": "./supabase/functions/_shared/stores/",
     "@services/": "./supabase/functions/_shared/services/",
     "@stores/": "./supabase/functions/_shared/stores/",
-    "@common": "./common"
   },
   "nodeModulesDir": "auto"
 }

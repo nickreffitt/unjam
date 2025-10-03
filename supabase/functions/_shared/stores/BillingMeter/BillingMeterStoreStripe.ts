@@ -15,7 +15,7 @@ export class BillingMeterStoreStripe implements BillingMeterStore {
    */
   constructor(apiKey: string, meterEventName: string = 'ticket_completed') {
     this.stripe = new Stripe(apiKey, {
-      apiVersion: '2025-08-27.basil'
+      apiVersion: '2025-09-30.clover'
     })
     this.meterEventName = meterEventName
   }
