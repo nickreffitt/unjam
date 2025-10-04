@@ -1,9 +1,8 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useRef } from 'react';
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
 import { ApiManager } from '@common/features/ApiManager';
-import { BillingAccountManager } from '@common/features/BillingAccountManager';
-import { BillingAccountStoreSupabase } from '@common/features/BillingAccountManager';
+import { BillingAccountManager, BillingAccountStoreSupabase } from '@common/features/BillingAccountManager';
 import type { EngineerProfile } from '@common/types';
 
 
@@ -21,6 +20,7 @@ interface BillingAccountManagerProviderProps {
 export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProviderProps> = ({ children }) => {
   const { authUser } = useAuthState();
   const { supabaseClient, supabaseUrl } = useSupabase();
+  const billingAccountStoreRef = useRef<BillingAccountStoreSupabase | null>(null);
 
   if (!authUser.profile) {
     throw new Error('No user profile available for billing account manager');
@@ -35,10 +35,24 @@ export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProvid
   // Initialize BillingAccountManager with dependencies
   const billingAccountManager = useMemo(() => {
     const billingAccountStore = new BillingAccountStoreSupabase(supabaseClient);
+    billingAccountStoreRef.current = billingAccountStore;
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
     const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
-    return new BillingAccountManager(billingAccountStore, apiManager);
-  }, [supabaseClient, supabaseUrl]);
+    return new BillingAccountManager(billingAccountStore, apiManager, engineerProfile);
+  }, [engineerProfile, supabaseClient, supabaseUrl]);
+
+  // Start listening to Postgres changes on mount, stop on unmount
+  useEffect(() => {
+    if (billingAccountStoreRef.current) {
+      billingAccountStoreRef.current.startListening();
+    }
+
+    return () => {
+      if (billingAccountStoreRef.current) {
+        billingAccountStoreRef.current.stopListening();
+      }
+    };
+  }, []);
 
   const contextValue: BillingAccountManagerContextType = useMemo(() => ({
     engineerProfile,

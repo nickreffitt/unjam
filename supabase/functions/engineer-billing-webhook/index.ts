@@ -2,20 +2,28 @@ import { serve } from "server"
 import { createClient } from "supabase"
 import Stripe from "stripe"
 import { BillingEventHandler } from "./BillingEventHandler.ts"
+import { BillingEngineerEventConverterStripe } from "@events/BillingEngineerEventConverterStripe.ts"
+import { BillingEngineerStoreSupabase } from "@stores/BillingEngineer/index.ts"
 
 // Initialize environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
 const stripeApiKey = Deno.env.get('STRIPE_API_KEY') as string
-const enableStripe = Deno.env.get('WEBHOOKS_ENABLE_STRIPE')
+const stripeWebhookSecret = Deno.env.get('STRIPE_ENGINEER_WEBHOOK_SIGNING_SECRET') as string
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 const stripe = new Stripe(stripeApiKey, {
   apiVersion: '2025-09-30.clover'
 })
 
+// Initialize stores
+const engineerStore = new BillingEngineerStoreSupabase(supabase)
+
+// Initialize converter
+const converter = new BillingEngineerEventConverterStripe(stripe, stripeWebhookSecret)
+
 // Initialize handler with all dependencies
-const billingEventHandler = new BillingEventHandler()
+const billingEventHandler = new BillingEventHandler(converter, engineerStore)
 
 export const handler = async (request: Request): Promise<Response> => {
   // Handle CORS preflight requests

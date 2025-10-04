@@ -50,7 +50,7 @@ const Logout: React.FC = () => {
       // Redirect after a brief delay
       setTimeout(() => {
         navigate('/auth', { replace: true });
-      }, 1500);
+      }, 2000);
     } catch (error) {
       console.error('Logout failed:', error);
       // Error is handled by useLogoutActions hook

@@ -4,6 +4,8 @@ import { type Ticket } from '@common/types';
 import { formatElapsedTime, formatLiveElapsedTime, getStatusDisplay } from '@dashboard/shared/utils/ticketFormatters';
 import { Clock, Check, Eye, type LucideIcon } from 'lucide-react';
 import EmptyState from '@dashboard/engineer/TicketList/components/EmptyState/EmptyState';
+import BillingVerificationAlert from '@dashboard/engineer/BillingAccount/components/BillingVerificationAlert/BillingVerificationAlert';
+import { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount/contexts/BillingAccountManagerContext';
 
 interface EmptyStateConfig {
   icon: LucideIcon;
@@ -67,13 +69,16 @@ const TicketsTable: React.FC<TicketsTableProps> = ({
   };
 
   return (
-    <div className="unjam-p-8 unjam-max-w-6xl unjam-mx-auto">
-      <div className="unjam-mb-8">
-        <h1 className="unjam-text-3xl unjam-font-bold unjam-text-gray-900 unjam-mb-2">{title}</h1>
-        <p className="unjam-text-gray-600">{description}</p>
-      </div>
+    <BillingAccountManagerProvider>
+      <div className="unjam-p-8 unjam-max-w-6xl unjam-mx-auto">
+        <div className="unjam-mb-8">
+          <h1 className="unjam-text-3xl unjam-font-bold unjam-text-gray-900 unjam-mb-2">{title}</h1>
+          <p className="unjam-text-gray-600">{description}</p>
+        </div>
 
-      <div className="unjam-bg-white unjam-rounded-lg unjam-shadow-sm unjam-border unjam-border-gray-200">
+        <BillingVerificationAlert />
+
+        <div className="unjam-bg-white unjam-rounded-lg unjam-shadow-sm unjam-border unjam-border-gray-200">
 
         <div className="unjam-overflow-x-auto">
           <table className="unjam-w-full">
@@ -146,6 +151,7 @@ const TicketsTable: React.FC<TicketsTableProps> = ({
         </div>
       </div>
     </div>
+    </BillingAccountManagerProvider>
   );
 };
 

@@ -27,7 +27,7 @@ export class SubscriptionStoreSupabase implements SubscriptionStore {
       .from('billing_customers')
       .select('stripe_customer_id')
       .eq('profile_id', profileId)
-      .single();
+      .maybeSingle();
 
     if (customerError || !customerData) {
       return null;
@@ -39,7 +39,7 @@ export class SubscriptionStoreSupabase implements SubscriptionStore {
       .select('*')
       .eq('stripe_customer_id', customerData.stripe_customer_id)
       .in('status', ['active', 'trialing'])
-      .single();
+      .maybeSingle();
 
     if (subscriptionError || !subscriptionData) {
       return null;

@@ -40,28 +40,30 @@ const NewTicketsList: React.FC = () => {
     <div className="unjam-h-full unjam-overflow-y-auto">
       {/* Error Display */}
       {claimError && (
-        <div className="unjam-mt-8 unjam-mb-6 unjam-bg-red-50 unjam-border unjam-border-red-200 unjam-rounded-lg unjam-p-4 unjam-max-w-6xl unjam-mx-auto unjam-px-8">
-          <div className="unjam-flex unjam-items-start unjam-justify-between">
-            <div className="unjam-flex">
+        <div className="unjam-mt-8 unjam-mb-6 unjam-max-w-6xl unjam-mx-auto unjam-px-8">
+          <div className="unjam-bg-red-50 unjam-border unjam-border-red-200 unjam-rounded-lg unjam-p-4">
+            <div className="unjam-flex unjam-items-start unjam-justify-between">
+              <div className="unjam-flex">
+                <div className="unjam-flex-shrink-0">
+                  <div className="unjam-w-5 unjam-h-5 unjam-bg-red-100 unjam-rounded-full unjam-flex unjam-items-center unjam-justify-center">
+                    <span className="unjam-text-red-600 unjam-text-sm unjam-font-semibold">!</span>
+                  </div>
+                </div>
+                <div className="unjam-ml-3">
+                  <h3 className="unjam-text-sm unjam-font-medium unjam-text-red-800">{claimError.title}</h3>
+                  <div className="unjam-mt-2 unjam-text-sm unjam-text-red-700">
+                    <p>{claimError.message}</p>
+                  </div>
+                </div>
+              </div>
               <div className="unjam-flex-shrink-0">
-                <div className="unjam-w-5 unjam-h-5 unjam-bg-red-100 unjam-rounded-full unjam-flex unjam-items-center unjam-justify-center">
-                  <span className="unjam-text-red-600 unjam-text-sm unjam-font-semibold">!</span>
-                </div>
+                <button
+                  onClick={() => setClaimError(null)}
+                  className="unjam-inline-flex unjam-text-red-400 hover:unjam-text-red-600 unjam-transition-colors"
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <div className="unjam-ml-3">
-                <h3 className="unjam-text-sm unjam-font-medium unjam-text-red-800">{claimError.title}</h3>
-                <div className="unjam-mt-2 unjam-text-sm unjam-text-red-700">
-                  <p>{claimError.message}</p>
-                </div>
-              </div>
-            </div>
-            <div className="unjam-flex-shrink-0">
-              <button
-                onClick={() => setClaimError(null)}
-                className="unjam-inline-flex unjam-text-red-400 hover:unjam-text-red-600 unjam-transition-colors"
-              >
-                <X size={20} />
-              </button>
             </div>
           </div>
         </div>

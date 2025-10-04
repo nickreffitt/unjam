@@ -1,5 +1,6 @@
 import React from 'react';
-import BillingAccount, { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount';
+import BillingAccount from '@dashboard/engineer/BillingAccount';
+import { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount/contexts/BillingAccountManagerContext';
 
 const Settings: React.FC = () => {
   return (

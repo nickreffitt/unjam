@@ -1,10 +1,12 @@
 import React from 'react';
+import { useBillingAccountManager } from './contexts/BillingAccountManagerContext';
 import { useBillingAccountState } from './hooks/useBillingAccountState';
 import { useBillingAccountActions } from './hooks/useBillingAccountActions';
 import { CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 
 const BillingAccount: React.FC = () => {
-  const { account, isLoading, error } = useBillingAccountState();
+  const { engineerProfile } = useBillingAccountManager();
+  const { engineerAccount: account, isLoading, error } = useBillingAccountState(engineerProfile.id);
   const { createAccountLink, isCreatingLink, linkError } = useBillingAccountActions();
 
   const handleManageAccount = async () => {

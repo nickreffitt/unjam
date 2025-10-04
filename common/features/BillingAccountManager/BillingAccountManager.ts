@@ -9,25 +9,33 @@ import type { ApiManager } from '@common/features/ApiManager';
 export class BillingAccountManager {
   private readonly billingAccountStore: BillingAccountStore;
   private readonly apiManager: ApiManager;
+  private readonly engineerProfile: EngineerProfile;
 
-  constructor(billingAccountStore: BillingAccountStore, apiManager: ApiManager) {
+  constructor(billingAccountStore: BillingAccountStore, 
+    apiManager: ApiManager,
+    engineerProfile: EngineerProfile) {
+
     if (!billingAccountStore) {
       throw new Error('BillingAccountManager: billingAccountStore is required');
     }
     if (!apiManager) {
       throw new Error('BillingAccountManager: apiManager is required');
     }
+    if (!engineerProfile) {
+      throw new Error('BillingAccountManager: engineerProfile is required');
+    }
+
     this.billingAccountStore = billingAccountStore;
     this.apiManager = apiManager;
+    this.engineerProfile = engineerProfile
   }
 
   /**
-   * Gets an engineer's billing account by their profile ID
-   * @param profileId - The engineer's profile ID
+   * Gets an engineer's billing account
    * @returns The engineer's billing account if found, null otherwise
    */
-  async getAccountByProfileId(profileId: string): Promise<EngineerAccount | null> {
-    return await this.billingAccountStore.getByProfileId(profileId);
+  async getAccount(): Promise<EngineerAccount | null> {
+    return await this.billingAccountStore.getByProfileId(this.engineerProfile.id);
   }
 
   /**

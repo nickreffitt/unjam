@@ -265,4 +265,12 @@ export interface EngineerAccount {
   disabledReason: string | null;
 }
 
+export type EngineerState = 'created' | 'updated' | 'deleted';
+
+export interface EngineerAccountEvent {
+  state: EngineerState;
+  account: EngineerAccount;
+}
+
 export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent | CheckoutSessionEvent;
+export type BillingEngineerEvent = EngineerAccountEvent;
