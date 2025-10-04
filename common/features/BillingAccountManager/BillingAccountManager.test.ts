@@ -42,14 +42,16 @@ describe('BillingAccountManager', () => {
       createBillingPortalLink: vi.fn(),
     } as any;
 
-    manager = new BillingAccountManager(mockStore, mockApiManager);
+    const engineerProfile = createTestEngineerProfile();
+    manager = new BillingAccountManager(mockStore, mockApiManager, engineerProfile);
   });
 
   describe('constructor', () => {
     it('throws error when billingAccountStore is not provided', () => {
       // when creating manager without store
       // then error should be thrown
-      expect(() => new BillingAccountManager(null as any, mockApiManager)).toThrow(
+      const engineerProfile = createTestEngineerProfile();
+      expect(() => new BillingAccountManager(null as any, mockApiManager, engineerProfile)).toThrow(
         'BillingAccountManager: billingAccountStore is required'
       );
     });
@@ -57,20 +59,29 @@ describe('BillingAccountManager', () => {
     it('throws error when apiManager is not provided', () => {
       // when creating manager without apiManager
       // then error should be thrown
-      expect(() => new BillingAccountManager(mockStore, null as any)).toThrow(
+      const engineerProfile = createTestEngineerProfile();
+      expect(() => new BillingAccountManager(mockStore, null as any, engineerProfile)).toThrow(
         'BillingAccountManager: apiManager is required'
+      );
+    });
+
+    it('throws error when engineerProfile is not provided', () => {
+      // when creating manager without engineerProfile
+      // then error should be thrown
+      expect(() => new BillingAccountManager(mockStore, mockApiManager, null as any)).toThrow(
+        'BillingAccountManager: engineerProfile is required'
       );
     });
   });
 
-  describe('getAccountByProfileId', () => {
+  describe('getAccount', () => {
     it('returns account when found', async () => {
       // given an account exists
       const account = createTestAccount();
       vi.mocked(mockStore.getByProfileId).mockResolvedValue(account);
 
-      // when getting account by profile ID
-      const result = await manager.getAccountByProfileId('eng-123');
+      // when getting account
+      const result = await manager.getAccount();
 
       // then account should be returned
       expect(result).toEqual(account);
@@ -81,12 +92,12 @@ describe('BillingAccountManager', () => {
       // given no account exists
       vi.mocked(mockStore.getByProfileId).mockResolvedValue(null);
 
-      // when getting account by profile ID
-      const result = await manager.getAccountByProfileId('eng-nonexistent');
+      // when getting account
+      const result = await manager.getAccount();
 
       // then null should be returned
       expect(result).toBeNull();
-      expect(mockStore.getByProfileId).toHaveBeenCalledWith('eng-nonexistent');
+      expect(mockStore.getByProfileId).toHaveBeenCalledWith('eng-123');
     });
   });
 
