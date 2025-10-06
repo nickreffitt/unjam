@@ -343,3 +343,6 @@ verify_jwt = true
 [functions.engineer-billing-webhook]
 enabled = true
 verify_jwt = false
+[functions.billing_credits]
+enabled = true
+verify_jwt = true

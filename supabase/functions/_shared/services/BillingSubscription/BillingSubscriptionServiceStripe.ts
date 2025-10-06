@@ -66,6 +66,65 @@ export class BillingSubscriptionServiceStripe implements BillingSubscriptionServ
   }
 
   /**
+   * Fetches an active subscription by customer ID from Stripe
+   * Returns the first active subscription found for the customer
+   */
+  async fetchActiveByCustomerId(customerId: string): Promise<Subscription | null> {
+    console.info(`[BillingSubscriptionServiceStripe] Fetching active subscription for customer: ${customerId}`)
+
+    try {
+      // List subscriptions for customer with product expanded
+      const subscriptions = await this.stripe.subscriptions.list({
+        customer: customerId,
+        status: 'active',
+        expand: ['data.items.data.price.product'],
+        limit: 1
+      })
+
+      if (subscriptions.data.length === 0) {
+        console.info(`[BillingSubscriptionServiceStripe] No active subscription found for customer: ${customerId}`)
+        return null
+      }
+
+      const stripeSubscription = subscriptions.data[0]
+
+      // Get the first subscription item
+      const firstItem = stripeSubscription.items.data[0]
+      if (!firstItem) {
+        console.error(`[BillingSubscriptionServiceStripe] Subscription ${stripeSubscription.id} has no items`)
+        return null
+      }
+
+      // Extract product info
+      const price = firstItem.price
+      const product = price.product as Stripe.Product
+      const planName = product.name
+      const creditPrice = parseInt(product.metadata.credit_price || '0', 10)
+
+      // Get current_period_end from subscription item
+      const currentPeriodEnd = firstItem.current_period_end
+
+      const subscription: Subscription = {
+        id: stripeSubscription.id,
+        customerId: typeof stripeSubscription.customer === 'string'
+          ? stripeSubscription.customer
+          : stripeSubscription.customer.id,
+        status: stripeSubscription.status,
+        planName,
+        creditPrice,
+        currentPeriodEnd
+      }
+
+      console.info(`[BillingSubscriptionServiceStripe] Successfully fetched active subscription: ${stripeSubscription.id}`)
+      return subscription
+    } catch (err) {
+      const error = err as Error
+      console.error(`[BillingSubscriptionServiceStripe] Failed to fetch active subscription for customer ${customerId}: ${error.message}`)
+      return null
+    }
+  }
+
+  /**
    * Creates a credit grant for a paid invoice
    * Calculates credits based on invoice amount and subscription credit price
    *

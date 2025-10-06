@@ -1,4 +1,4 @@
-import type { CreditGrant, CreditGrantAmount, CreditGrantCategory, CreditGrantApplicabilityConfig } from '@types'
+import type { CreditGrant, CreditGrantAmount, CreditGrantCategory, CreditGrantApplicabilityConfig, Subscription } from '@types'
 
 /**
  * Parameters for creating a credit grant
@@ -12,6 +12,15 @@ export interface CreateCreditGrantParams {
   effective_at?: number
   expires_at?: number
   metadata?: Record<string, string>
+}
+
+/**
+ * Credit balance information
+ */
+export interface CreditBalance {
+  availableBalanceCents: number
+  creditCount: number
+  creditPrice: number
 }
 
 /**
@@ -38,4 +47,11 @@ export interface BillingCreditsService {
    * @param creditGrantId - The credit grant ID to void
    */
   void(creditGrantId: string): Promise<void>
+
+  /**
+   * Fetches the current credit balance for a customer
+   * @param subscription - The customer's subscription containing creditPrice
+   * @returns Credit balance information including available balance and credit count
+   */
+  fetchCreditBalance(subscription: Subscription): Promise<CreditBalance>
 }

@@ -13,6 +13,13 @@ export interface BillingSubscriptionService {
   fetch(subscriptionId: string): Promise<Subscription | undefined>
 
   /**
+   * Fetches an active subscription by customer ID
+   * @param customerId - The billing provider's customer ID
+   * @returns The active subscription if found, null otherwise
+   */
+  fetchActiveByCustomerId(customerId: string): Promise<Subscription | null>
+
+  /**
    * Creates a credit grant for a paid invoice
    * Calculates credits based on invoice amount and subscription credit price
    *

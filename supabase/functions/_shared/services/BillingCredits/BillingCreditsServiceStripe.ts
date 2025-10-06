@@ -1,6 +1,6 @@
 import type Stripe from 'stripe'
-import type { BillingCreditsService, CreateCreditGrantParams } from './BillingCreditsService.ts'
-import type { CreditGrant } from '@types'
+import type { BillingCreditsService, CreateCreditGrantParams, CreditBalance } from './BillingCreditsService.ts'
+import type { CreditGrant, Subscription } from '@types'
 
 /**
  * Stripe implementation of BillingCreditsService using Stripe Credit Grants API
@@ -88,6 +88,43 @@ export class BillingCreditsServiceStripe implements BillingCreditsService {
       const error = err as Error
       console.error('[BillingCreditsServiceStripe] Failed to void credit grant:', error.message)
       throw new Error(`Failed to void credit grant: ${error.message}`)
+    }
+  }
+
+  /**
+   * Fetches the current credit balance for a customer from Stripe
+   */
+  async fetchCreditBalance(subscription: Subscription): Promise<CreditBalance> {
+    console.info(`[BillingCreditsServiceStripe] Fetching credit balance for customer: ${subscription.customerId}`)
+
+    try {
+      const summary = await this.stripe.billing.creditBalanceSummary.retrieve({
+        customer: subscription.customerId,
+        filter: {
+          type: 'applicability_scope',
+          applicability_scope: {
+            price_type: 'metered'
+          }
+        }
+      })
+
+      // Get the first balance entry (assumes single currency - USD)
+      const balance = summary.balances[0]
+      const availableBalanceCents = balance?.available_balance?.monetary?.value || 0
+      const creditPrice = subscription.creditPrice
+      const creditCount = availableBalanceCents / creditPrice
+
+      console.info(`✅ [BillingCreditsServiceStripe] Credit balance: ${creditCount} credits (${availableBalanceCents} cents at ${creditPrice} cents per credit)`)
+
+      return {
+        availableBalanceCents,
+        creditCount,
+        creditPrice
+      }
+    } catch (err) {
+      const error = err as Error
+      console.error('[BillingCreditsServiceStripe] Failed to fetch credit balance:', error.message)
+      throw new Error(`Failed to fetch credit balance: ${error.message}`)
     }
   }
 
