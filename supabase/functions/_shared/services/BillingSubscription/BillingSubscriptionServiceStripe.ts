@@ -73,11 +73,10 @@ export class BillingSubscriptionServiceStripe implements BillingSubscriptionServ
     console.info(`[BillingSubscriptionServiceStripe] Fetching active subscription for customer: ${customerId}`)
 
     try {
-      // List subscriptions for customer with product expanded
+      // List subscriptions for customer
       const subscriptions = await this.stripe.subscriptions.list({
         customer: customerId,
         status: 'active',
-        expand: ['data.items.data.price.product'],
         limit: 1
       })
 
@@ -95,9 +94,11 @@ export class BillingSubscriptionServiceStripe implements BillingSubscriptionServ
         return null
       }
 
-      // Extract product info
+      // Fetch the product separately to avoid nested expansion limits
       const price = firstItem.price
-      const product = price.product as Stripe.Product
+      const productId = typeof price.product === 'string' ? price.product : price.product.id
+      const product = await this.stripe.products.retrieve(productId)
+
       const planName = product.name
       const creditPrice = parseInt(product.metadata.credit_price || '0', 10)
 

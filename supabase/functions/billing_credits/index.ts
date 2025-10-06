@@ -5,6 +5,7 @@ import Stripe from "stripe";
 import { BillingCustomerStoreSupabase } from "@stores/BillingCustomer/index.ts";
 import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts";
 import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
+import type { CreditBalanceRequest, CreditBalanceResponse, CreditTransferRequest, CreditTransferResponse } from "@types";
 
 console.debug("Billing Credits function loaded")
 
@@ -69,10 +70,11 @@ export const handler = async (request: Request): Promise<Response> => {
         )
       }
 
-      const creditBalance = await billingCreditsHandler.fetchCreditBalance(profileId)
+      const balanceRequest: CreditBalanceRequest = { profile_id: profileId }
+      const response = await billingCreditsHandler.fetchCreditBalance(balanceRequest)
 
       return new Response(
-        JSON.stringify({ creditBalance }),
+        JSON.stringify(response),
         { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
@@ -82,7 +84,7 @@ export const handler = async (request: Request): Promise<Response> => {
       const body = await request.text()
       console.info('About to handle request body: ', body)
 
-      const payload = JSON.parse(body)
+      const payload: CreditTransferRequest = JSON.parse(body)
 
       if (!payload.profile_id || !payload.ticket_id) {
         console.error('[billing-credits] Missing profile_id or ticket_id in request')
@@ -92,10 +94,10 @@ export const handler = async (request: Request): Promise<Response> => {
         )
       }
 
-      await billingCreditsHandler.processCreditTransfer(payload)
+      const response = await billingCreditsHandler.processCreditTransfer(payload)
 
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify(response),
         { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }

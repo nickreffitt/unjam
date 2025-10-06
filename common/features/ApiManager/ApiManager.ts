@@ -1,5 +1,5 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
-import type { EngineerProfile } from '@common/types';
+import type { EngineerProfile, CreditBalanceResponse } from '@common/types';
 
 /**
  * ApiManager handles communication with the backend API
@@ -95,6 +95,32 @@ export class ApiManager {
     }
   }
 
+  /**
+   * Fetches the credit balance for a given profile
+   * @param profileId - The user profile ID
+   * @returns The credit balance amount
+   * @throws Error if the request fails
+   */
+  async fetchCreditBalance(profileId: string): Promise<number> {
+    console.info(`[ApiManager] Fetching credit balance for profile: ${profileId}`);
+
+    try {
+      const { creditBalance } = await this.makeAuthenticatedGetRequest<CreditBalanceResponse>(
+        'billing_credits',
+        { profile_id: profileId },
+        'Failed to fetch credit balance'
+      );
+
+      console.info(`[ApiManager] Successfully fetched credit balance: ${creditBalance}`);
+      return creditBalance;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error fetching credit balance:', error.message);
+      throw error;
+    }
+  }
+
 
   /**
    * Makes an authenticated POST request to an edge function
@@ -124,6 +150,46 @@ export class ApiManager {
         'Authorization': `Bearer ${session.access_token}`
       },
       body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `${errorContext}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Makes an authenticated GET request to an edge function
+   * @param endpoint - The edge function endpoint (e.g., 'billing_credits')
+   * @param params - Query parameters
+   * @param errorContext - Context string for error messages
+   * @returns The response data
+   * @throws Error if authentication fails or request fails
+   */
+  private async makeAuthenticatedGetRequest<T>(
+    endpoint: string,
+    params: Record<string, string>,
+    errorContext: string
+  ): Promise<T> {
+    // Get the current session to access the auth token
+    const { data: { session }, error: sessionError } = await this.supabaseClient.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error('No active session found. Please sign in.');
+    }
+
+    // Build query string
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.apiUrl}/${endpoint}?${queryString}`;
+
+    // Make request to edge function
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
     });
 
     if (!response.ok) {

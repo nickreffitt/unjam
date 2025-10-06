@@ -16,7 +16,7 @@ const Subscription: React.FC<SubscriptionProps> = ({
   clientReferenceId,
   customerEmail,
 }) => {
-  const { subscription, portalUrl, isLoading, error, hasActiveSubscription } = useSubscriptionState();
+  const { subscription, portalUrl, creditBalance, isLoading, error, hasActiveSubscription } = useSubscriptionState();
 
   if (isLoading) {
     return (
@@ -44,6 +44,7 @@ const Subscription: React.FC<SubscriptionProps> = ({
       <ManageSubscription
         subscription={subscription}
         portalUrl={portalUrl}
+        creditBalance={creditBalance}
         isLoading={false}
       />
     );

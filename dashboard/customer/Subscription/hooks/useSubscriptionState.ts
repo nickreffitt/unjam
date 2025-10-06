@@ -10,6 +10,7 @@ export const useSubscriptionState = () => {
   const { apiManager, subscriptionManager, userProfile } = useSubscriptionManager();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,13 +26,18 @@ export const useSubscriptionState = () => {
         setSubscription(activeSubscription);
 
         if (activeSubscription) {
-          console.info('[useSubscriptionState] Active subscription found, fetching billing portal link');
-          const url = await apiManager.createBillingPortalLink(userProfile.id);
+          console.info('[useSubscriptionState] Active subscription found, fetching billing portal link and credit balance');
+          const [url, balance] = await Promise.all([
+            apiManager.createBillingPortalLink(userProfile.id),
+            subscriptionManager.getCreditBalanceForProfile(userProfile.id)
+          ]);
           setPortalUrl(url);
-          console.info('[useSubscriptionState] Successfully fetched portal link');
+          setCreditBalance(balance);
+          console.info('[useSubscriptionState] Successfully fetched portal link and credit balance');
         } else {
           console.info('[useSubscriptionState] No active subscription found');
           setPortalUrl(null);
+          setCreditBalance(null);
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load subscription state';
@@ -39,6 +45,7 @@ export const useSubscriptionState = () => {
         setError(errorMessage);
         setSubscription(null);
         setPortalUrl(null);
+        setCreditBalance(null);
       } finally {
         setIsLoading(false);
       }
@@ -50,6 +57,7 @@ export const useSubscriptionState = () => {
   return {
     subscription,
     portalUrl,
+    creditBalance,
     isLoading,
     error,
     hasActiveSubscription: subscription !== null

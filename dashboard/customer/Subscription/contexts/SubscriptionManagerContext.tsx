@@ -51,7 +51,7 @@ export const SubscriptionManagerProvider: React.FC<SubscriptionManagerProviderPr
 
     const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
     const subscriptionStore = new SubscriptionStoreSupabase(supabaseClient);
-    const subscriptionManager = new SubscriptionManager(subscriptionStore);
+    const subscriptionManager = new SubscriptionManager(subscriptionStore, apiManager);
 
     return { apiManager, subscriptionManager };
   }, [supabaseClient, supabaseUrl]);

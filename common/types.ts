@@ -274,3 +274,21 @@ export interface EngineerAccountEvent {
 
 export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent | CheckoutSessionEvent;
 export type BillingEngineerEvent = EngineerAccountEvent;
+
+// Billing Credits API types
+export interface CreditBalanceRequest {
+  profile_id: string;
+}
+
+export interface CreditBalanceResponse {
+  creditBalance: number;
+}
+
+export interface CreditTransferRequest {
+  profile_id: string;
+  ticket_id: string;
+}
+
+export interface CreditTransferResponse {
+  success: boolean;
+}

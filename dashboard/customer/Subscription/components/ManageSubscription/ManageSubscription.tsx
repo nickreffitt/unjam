@@ -4,12 +4,14 @@ import type { Subscription } from '@common/types';
 interface ManageSubscriptionProps {
   subscription: Subscription;
   portalUrl: string | null;
+  creditBalance: number | null;
   isLoading: boolean;
 }
 
 const ManageSubscription: React.FC<ManageSubscriptionProps> = ({
   subscription,
   portalUrl,
+  creditBalance,
   isLoading,
 }) => {
   const handleManageSubscription = () => {
@@ -35,6 +37,15 @@ const ManageSubscription: React.FC<ManageSubscriptionProps> = ({
               {subscription.status}
             </span>
           </div>
+
+          {creditBalance !== null && (
+            <div>
+              <span className="unjam-text-gray-600">Credit Balance:</span>
+              <span className="unjam-ml-2 unjam-font-semibold">
+                {creditBalance}
+              </span>
+            </div>
+          )}
 
           {subscription.currentPeriodEnd && (
             <div>
