@@ -111,7 +111,7 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref ${{ env.PROJECT_ID }}
       - name: Upload zip file
-        run: supabase storage cp "${{ env.ZIP_FILE }}" "s3://extensions/${{ env.EXTENSION_ZIP_FILENAME }}" --experimental
+        run: supabase storage cp "${{ env.ZIP_FILE }}" "extensions/${{ env.EXTENSION_ZIP_FILENAME }}" --experimental
 
       - name: Build Docker image locally
         run: |
