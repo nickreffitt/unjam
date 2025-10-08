@@ -11,7 +11,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ engineerName, rating, onClose }
   return (
     <div data-testid="chat-header" className="unjam-p-4 unjam-flex unjam-items-center unjam-justify-between unjam-mb-0">
       <div className="unjam-flex unjam-items-center unjam-gap-2">
-        <span className="unjam-text-lg">
+        <span className="unjam-text-lg unjam-text-black">
           <MessageCircle size={18} />
         </span>
         <div className="unjam-flex unjam-items-center unjam-space-x-2">

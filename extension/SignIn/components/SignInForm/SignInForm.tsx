@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
-import { Mail, ArrowRight, Loader } from 'lucide-react';
+import { Mail, ArrowRight } from 'lucide-react';
 
 interface SignInFormProps {
-  onSubmit: (email: string) => Promise<void>;
+  onSubmit: (email: string) => void | Promise<void>;
   disabled?: boolean;
 }
 
-const SignInForm: React.FC<SignInFormProps> = ({
-  onSubmit,
-  disabled = false,
-}) => {
+const SignInForm: React.FC<SignInFormProps> = ({ onSubmit, disabled = false }) => {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
 
@@ -18,8 +15,9 @@ const SignInForm: React.FC<SignInFormProps> = ({
     return emailRegex.test(email);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.debug('SignInForm: Form submitted');
 
     if (!email.trim()) {
       setEmailError('Please enter your email address');
@@ -32,16 +30,12 @@ const SignInForm: React.FC<SignInFormProps> = ({
     }
 
     setEmailError('');
-
-    try {
-      await onSubmit(email);
-    } catch (error) {
-      // Error handling is done by parent component
-    }
+    console.debug('SignInForm: Calling onSubmit with email:', email);
+    onSubmit(email);
   };
 
   return (
-    <div className="unjam-w-full unjam-max-w-md unjam-space-y-6">
+    <div className="unjam-w-full unjam-space-y-4">
       <form onSubmit={handleSubmit} className="unjam-space-y-4">
         {/* Email Input */}
         <div>
@@ -75,20 +69,16 @@ const SignInForm: React.FC<SignInFormProps> = ({
           )}
         </div>
 
-        {/* OTP Button */}
+        {/* Sign In Button */}
         <button
           type="submit"
           disabled={disabled}
           className="unjam-group unjam-relative unjam-w-full unjam-flex unjam-justify-center unjam-py-2.5 unjam-px-4 unjam-border unjam-border-transparent unjam-text-sm unjam-font-medium unjam-rounded-md unjam-text-white unjam-bg-blue-600 hover:unjam-bg-blue-700 focus:unjam-outline-none focus:unjam-ring-2 focus:unjam-ring-offset-2 focus:unjam-ring-blue-500 disabled:unjam-opacity-50 disabled:unjam-cursor-not-allowed unjam-transition-colors"
         >
           <span className="unjam-absolute unjam-left-0 unjam-inset-y-0 unjam-flex unjam-items-center unjam-pl-3">
-            {disabled ? (
-              <Loader className="unjam-h-5 unjam-w-5 unjam-text-blue-500 group-hover:unjam-text-blue-400 unjam-animate-spin" />
-            ) : (
-              <ArrowRight className="unjam-h-5 unjam-w-5 unjam-text-blue-500 group-hover:unjam-text-blue-400" />
-            )}
+            <ArrowRight className="unjam-h-5 unjam-w-5 unjam-text-blue-500 group-hover:unjam-text-blue-400" />
           </span>
-          {disabled ? 'Sending code...' : 'Send code to my email'}
+          Send code to my email
         </button>
       </form>
     </div>

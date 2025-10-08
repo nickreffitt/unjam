@@ -29,6 +29,26 @@ export interface AuthUserStore {
   verifyMagicLink(tokenHash: string): Promise<User>;
 
   /**
+   * Sign in user with OTP (One-Time Password)
+   * Sends a 6-digit code to the user's email for passwordless authentication
+   *
+   * @param email - User's email address
+   * @throws Error if sign in fails
+   */
+  signInWithOtp(email: string): Promise<void>;
+
+  /**
+   * Verify an OTP token and sign in the user
+   * Verifies the 6-digit code from the email and authenticates the user
+   *
+   * @param email - User's email address
+   * @param token - The 6-digit OTP code from the email
+   * @returns Promise that resolves with the authenticated user
+   * @throws Error if verification fails
+   */
+  verifyOtp(email: string, token: string): Promise<User>;
+
+  /**
    * Sign in user with Google OAuth for web applications
    * Opens Google OAuth flow in the current window/tab
    *

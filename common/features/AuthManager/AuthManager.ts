@@ -94,6 +94,47 @@ export class AuthManager {
   }
 
   /**
+   * Sign in user with OTP (One-Time Password)
+   * Sends a 6-digit code to the user's email for passwordless authentication
+   *
+   * @param email - User's email address
+   * @throws Error if sign in fails
+   */
+  async signInWithOtp(email: string): Promise<void> {
+    console.debug('AuthManager: Delegating OTP sign in to AuthUserStore');
+    return this.authUserStore.signInWithOtp(email);
+  }
+
+  /**
+   * Verify an OTP token and sign in the user
+   * Verifies the 6-digit code from the email and authenticates the user
+   *
+   * @param email - User's email address
+   * @param token - The 6-digit OTP code from the email
+   * @returns Promise that resolves with the authenticated user
+   * @throws Error if verification fails
+   */
+  async verifyOtp(email: string, token: string): Promise<User> {
+    console.debug(`AuthManager: Delegating OTP verification to AuthUserStore. Email: ${email}, token: ${token}`);
+    const user = await this.authUserStore.verifyOtp(email, token);
+    const userProfile = await this.convertUserToUserProfile(user);
+    if (userProfile) {
+      this.currentAuthUser = {
+        status: 'signed-in',
+        user,
+        profile: userProfile
+      };
+    } else {
+      this.currentAuthUser = {
+        status: 'requires-profile',
+        user
+      };
+      this.authEventEmitter.emitUserRequiresProfile(this.currentAuthUser);
+    }
+    return user;
+  }
+
+  /**
    * Sign in user with Google OAuth for web applications
    * Opens Google OAuth flow in the current window/tab
    *

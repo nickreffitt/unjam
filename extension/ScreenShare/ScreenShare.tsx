@@ -111,7 +111,7 @@ const ScreenShare = forwardRef<ScreenShareRef, ScreenShareProps>(({ ticketId, en
     <div data-testid="screen-share" className={`unjam-w-120 unjam-bg-white unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans unjam-px-4 ${className}`}>
       <button
         onClick={handleScreenShareClick}
-        className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
+        className="unjam-w-full unjam-bg-white unjam-text-black unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
       >
         <ScreenShareIcon size={16} />
         Screenshare

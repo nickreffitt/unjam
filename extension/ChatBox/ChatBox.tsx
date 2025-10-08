@@ -40,7 +40,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ ticketId, engineerName, 
   const rating = 5.0;
 
   return (
-    <div data-testid="chat-box" className={`unjam-w-120 unjam-h-[450px] unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border unjam-border-gray-400 unjam-bg-blue-50 unjam-flex unjam-flex-col unjam-z-50 unjam-font-sans ${className}`}>
+    <div data-testid="chat-box" className={`unjam-w-120 unjam-h-[450px] unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-bg-blue-50 unjam-flex unjam-flex-col unjam-z-50 unjam-font-sans ${className}`}>
       {/* Chat Header */}
       <ChatHeader
         engineerName={engineerName}

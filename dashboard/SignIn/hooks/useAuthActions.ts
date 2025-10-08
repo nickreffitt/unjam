@@ -3,7 +3,8 @@ import { type ErrorDisplay } from '@common/types';
 import { useAuthManager } from '@dashboard/shared/contexts/AuthManagerContext';
 
 export interface UseAuthActionsReturn {
-  signInWithMagicLink: (email: string) => Promise<void>;
+  signInWithOtp: (email: string) => Promise<void>;
+  verifyOtp: (email: string, token: string) => Promise<void>;
   signInWithGoogleWeb: () => Promise<void>;
   signOut: () => Promise<void>;
   isLoading: boolean;
@@ -24,7 +25,7 @@ export const useAuthActions = (): UseAuthActionsReturn => {
     setError(null);
   }, []);
 
-  const signInWithMagicLink = useCallback(async (email: string): Promise<void> => {
+  const signInWithOtp = useCallback(async (email: string): Promise<void> => {
     if (!authManager) {
       setError({
         title: 'Configuration Error',
@@ -38,13 +39,42 @@ export const useAuthActions = (): UseAuthActionsReturn => {
 
     try {
       console.debug('useAuthActions: Sending magic link to:', email);
-      await authManager.signInWithMagicLink(email);
+      await authManager.signInWithOtp(email);
       console.debug('useAuthActions: Magic link sent successfully');
     } catch (error) {
       console.error('useAuthActions: Magic link failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to send magic link';
       setError({
         title: 'Sign In Failed',
+        message: errorMessage,
+      });
+      throw error; // Re-throw so UI can handle it
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authManager]);
+
+  const verifyOtp = useCallback(async (email: string, token: string): Promise<void> => {
+    if (!authManager) {
+      setError({
+        title: 'Configuration Error',
+        message: 'Authentication is not properly configured. Please check your Supabase settings.',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.debug('useAuthActions: Verifying OTP token for email:', email);
+      await authManager.verifyOtp(email, token);
+      console.debug('useAuthActions: OTP verified successfully');
+    } catch (error) {
+      console.error('useAuthActions: OTP verification failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to verify OTP';
+      setError({
+        title: 'Verification Failed',
         message: errorMessage,
       });
       throw error; // Re-throw so UI can handle it
@@ -112,7 +142,8 @@ export const useAuthActions = (): UseAuthActionsReturn => {
   }, [authManager]);
 
   return {
-    signInWithMagicLink,
+    signInWithOtp,
+    verifyOtp,
     signInWithGoogleWeb,
     signOut,
     isLoading,
