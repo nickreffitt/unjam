@@ -78,9 +78,44 @@ jobs:
 #          path: cypress/screenshots/
 #          if-no-files-found: ignore
 
+      - name: Build and upload extension to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Build the extension
+          npm run build:ext
+          npm run zip:ext
+
+          # Find the generated zip file
+          ZIP_FILE=$(find .output -name "*.zip" -type f | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Error: No zip file found in .output directory"
+            exit 1
+          fi
+
+          echo "Found extension zip: $ZIP_FILE"
+
+          # Upload to Supabase storage
+          FILENAME=$(basename "$ZIP_FILE")
+
+          curl -X POST \
+            "${SUPABASE_URL}/storage/v1/object/extensions/${FILENAME}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/zip" \
+            --data-binary "@${ZIP_FILE}"
+
+          echo "Extension uploaded successfully to extensions/${FILENAME}"
+
+          # Set environment variable for subsequent steps
+          echo "EXTENSION_ZIP_FILENAME=${FILENAME}" >> $GITHUB_ENV
+
       - name: Build Docker image locally
         run: |
-          docker build -f ./deploy/Dockerfile -t ${{ env.APP_NAME }}:latest .
+          docker build -f ./deploy/Dockerfile \
+            --build-arg EXTENSION_ZIP_FILENAME=${{ env.EXTENSION_ZIP_FILENAME }} \
+            -t ${{ env.APP_NAME }}:latest .
           docker save ${{ env.APP_NAME }}:latest -o /tmp/image.tar
           ls -la /tmp/image.tar
 
@@ -97,7 +132,7 @@ jobs:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
-          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY
+          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY,EXTENSION_ZIP_FILENAME
           script: |
             # Update system packages
             apt update
@@ -149,6 +184,7 @@ jobs:
             echo "VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> /tmp/.env.production
             echo "VITE_STRIPE_TABLE_ID=$STRIPE_TABLE_ID" >> /tmp/.env.production
             echo "VITE_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY" >> /tmp/.env.production
+            echo "VITE_EXTENSION_ZIP_FILENAME=$EXTENSION_ZIP_FILENAME" >> /tmp/.env.production
 
             # Run the new container
             docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 \

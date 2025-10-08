@@ -10,11 +10,28 @@ const Onboarding: React.FC = () => {
   const handleDownloadExtension = async () => {
     setIsLoading(true);
 
-    // Simulate download process
-    setTimeout(() => {
+    const extensionFilename = import.meta.env.VITE_EXTENSION_ZIP_FILENAME;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+    if (!extensionFilename || !supabaseUrl) {
+      console.error('Extension filename or Supabase URL not configured');
       setIsLoading(false);
-      setIsDownloaded(true);
-    }, 1000);
+      return;
+    }
+
+    // Construct download URL for public Supabase storage
+    const downloadUrl = `${supabaseUrl}/storage/v1/object/public/extensions/${extensionFilename}`;
+
+    // Trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = extensionFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setIsLoading(false);
+    setIsDownloaded(true);
   };
 
   // Redirect to BuyCredits after success is shown
