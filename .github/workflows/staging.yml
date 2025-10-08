@@ -96,12 +96,18 @@ jobs:
           fi
 
           echo "Found extension zip: $ZIP_FILE"
+
+          # Extract filename from path
+          FILENAME=$(basename "$ZIP_FILE")
+          echo "FILENAME=$FILENAME"
+
           # Set environment variable for subsequent steps
           echo "EXTENSION_ZIP_FILENAME=${FILENAME}" >> $GITHUB_ENV
+          echo "ZIP_FILE=${ZIP_FILE}" >> $GITHUB_ENV
 
       - uses: supabase/setup-cli@v1
       - name: Upload zip file
-        run: supabase storage cp "$ZIP_FILE" "s3://extensions/${FILENAME}"
+        run: supabase storage cp "${{ env.ZIP_FILE }}" "s3://extensions/${{ env.EXTENSION_ZIP_FILENAME }}" --experimental
 
       - name: Build Docker image locally
         run: |
