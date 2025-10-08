@@ -78,10 +78,15 @@ jobs:
 #          path: cypress/screenshots/
 #          if-no-files-found: ignore
 
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/supabase/supabase/master/scripts/install-cli.sh | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Build and upload extension to Supabase
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
           # Build the extension
           npm run build:ext
@@ -97,14 +102,11 @@ jobs:
 
           echo "Found extension zip: $ZIP_FILE"
 
-          # Upload to Supabase storage
+          # Upload to Supabase storage using CLI
           FILENAME=$(basename "$ZIP_FILE")
 
-          curl -X POST \
-            "${SUPABASE_URL}/storage/v1/object/extensions/${FILENAME}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Content-Type: application/zip" \
-            --data-binary "@${ZIP_FILE}"
+          supabase storage cp "$ZIP_FILE" "s3://extensions/${FILENAME}" \
+            --project-ref "$SUPABASE_PROJECT_REF"
 
           echo "Extension uploaded successfully to extensions/${FILENAME}"
 
