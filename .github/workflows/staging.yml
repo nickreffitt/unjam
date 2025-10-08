@@ -105,13 +105,13 @@ jobs:
           echo "EXTENSION_ZIP_FILENAME=${FILENAME}" >> $GITHUB_ENV
           echo "ZIP_FILE=${ZIP_FILE}" >> $GITHUB_ENV
 
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-      - name: Link Supabase project
-        run: supabase link --project-ref ${{ env.PROJECT_ID }}
-      - name: Upload zip file
-        run: supabase storage cp "${{ env.ZIP_FILE }}" "storage://extensions/${{ env.EXTENSION_ZIP_FILENAME }}" --experimental --linked
+      - name: Upload extension to Supabase Storage
+        run: |
+          npx tsx upload-extension.ts \
+            --url "${{ env.SUPABASE_URL }}" \
+            --key "${{ env.SUPABASE_ANON_KEY }}" \
+            --file "${{ env.ZIP_FILE }}" \
+            --name "${{ env.EXTENSION_ZIP_FILENAME }}"
 
       - name: Build Docker image locally
         run: |
