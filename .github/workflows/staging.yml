@@ -109,7 +109,7 @@ jobs:
         run: |
           npx tsx upload-extension.ts \
             --url "${{ env.SUPABASE_URL }}" \
-            --key "${{ env.SUPABASE_ANON_KEY }}" \
+            --key "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             --file "${{ env.ZIP_FILE }}" \
             --name "${{ env.EXTENSION_ZIP_FILENAME }}"
 
