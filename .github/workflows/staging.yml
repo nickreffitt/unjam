@@ -106,6 +106,10 @@ jobs:
           echo "ZIP_FILE=${ZIP_FILE}" >> $GITHUB_ENV
 
       - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Link Supabase project
+        run: supabase link --project-ref ${{ env.PROJECT_ID }}
       - name: Upload zip file
         run: supabase storage cp "${{ env.ZIP_FILE }}" "s3://extensions/${{ env.EXTENSION_ZIP_FILENAME }}" --experimental
 
