@@ -3,16 +3,16 @@ import { Navigate } from 'react-router-dom';
 import { useAuthActions } from './hooks/useAuthActions';
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 import SignInForm from './components/SignInForm/SignInForm';
-import EmailSent from './components/EmailSent/EmailSent';
+import OtpVerificationForm from './components/OtpVerificationForm/OtpVerificationForm';
 import ErrorDisplay from './components/ErrorDisplay/ErrorDisplay';
 
 /**
  * SignIn page component for the engineer dashboard
- * Handles magic link and Google OAuth authentication
+ * Handles OTP-based authentication
  */
 const SignIn: React.FC = () => {
-  const [isEmailSent, setIsEmailSent] = useState(false);
-  const [sentEmail, setSentEmail] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [email, setEmail] = useState('');
 
   const {
     isAuthenticated,
@@ -20,8 +20,8 @@ const SignIn: React.FC = () => {
     error: authStateError,
   } = useAuthState();
   const {
-    signInWithMagicLink,
-    signInWithGoogleWeb,
+    signInWithOtp,
+    verifyOtp,
     isLoading: authActionLoading,
     error: authActionError,
     clearError: clearAuthActionError,
@@ -47,37 +47,37 @@ const SignIn: React.FC = () => {
     );
   }
 
-  const handleMagicLinkSubmit = async (email: string): Promise<void> => {
-    try {
-      await signInWithMagicLink(email);
-      setSentEmail(email);
-      setIsEmailSent(true);
-    } catch (error) {
-      // Error is handled by useAuthActions hook
-      console.error('Magic link submission failed:', error);
-    }
+  const handleSignInSubmit = async (emailValue: string): Promise<void> => {
+    console.debug('SignIn: Submitting sign-in form with email:', emailValue);
+    await signInWithOtp(emailValue);
+    setEmail(emailValue);
+    setOtpSent(true);
+    console.debug('SignIn: OTP request sent');
   };
 
-  const handleGoogleSignIn = async (): Promise<void> => {
-    try {
-      await signInWithGoogleWeb();
-    } catch (error) {
-      // Error is handled by useAuthActions hook
-      console.error('Google sign in failed:', error);
-    }
+  const handleOtpSubmit = async (token: string): Promise<void> => {
+    console.debug('SignIn: Submitting OTP verification for email:', email);
+    await verifyOtp(email, token);
+    console.debug('SignIn: OTP verification request sent');
   };
 
   const handleReset = () => {
-    setIsEmailSent(false);
-    setSentEmail('');
+    console.debug('SignIn: Going back to email entry form');
+    setOtpSent(false);
+    setEmail('');
     clearError();
   };
 
-  if (isEmailSent) {
+  if (otpSent) {
     return (
       <div className="unjam-min-h-screen unjam-bg-gray-50 unjam-flex unjam-items-center unjam-justify-center unjam-py-12 unjam-px-4 sm:unjam-px-6 lg:unjam-px-8">
         <div className="unjam-max-w-md unjam-w-full unjam-space-y-8">
-          <EmailSent email={sentEmail} onReset={handleReset} />
+          <OtpVerificationForm
+            email={email}
+            onSubmit={handleOtpSubmit}
+            onReset={handleReset}
+            disabled={authActionLoading}
+          />
         </div>
       </div>
     );
@@ -110,9 +110,8 @@ const SignIn: React.FC = () => {
 
         {/* Sign In Form */}
         <SignInForm
-          onMagicLinkSubmit={handleMagicLinkSubmit}
-          onGoogleSignIn={handleGoogleSignIn}
-          isLoading={authActionLoading}
+          onSubmit={handleSignInSubmit}
+          disabled={authActionLoading}
         />
 
         {/* Footer */}

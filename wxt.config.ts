@@ -15,16 +15,22 @@ export default defineConfig({
   },
 
   manifest: {
-    name: 'Tickets Realtime',
-    description: 'Real-time ticket management system',
+    name: 'Unjam',
+    description: 'Fix your code instantly',
     version: '1.0.0',
     permissions: [
       'storage',
-      'activeTab'
+      'activeTab',
+      'scripting',
+      'tabs'
+    ],
+    host_permissions: [
+      'http://localhost:5175/*',
+      'https://unjam.nickreffitt.com/*' // Replace with your production domain
     ],
     action: {
       default_popup: 'popup.html',
-      default_title: 'Tickets Realtime'
+      default_title: 'Unjam'
     },
     options_page: 'options.html',
   },

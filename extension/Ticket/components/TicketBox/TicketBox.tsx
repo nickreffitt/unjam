@@ -150,7 +150,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       {/* Header */}
       <div className="unjam-flex unjam-items-center unjam-justify-between unjam-mb-3">
         <div className="unjam-flex unjam-items-center unjam-gap-2">
-          <span className="unjam-text-lg">{getStatusIcon()}</span>
+          <span className="unjam-text-lg unjam-text-gray-700">{getStatusIcon()}</span>
           <span className="unjam-text-sm unjam-font-medium unjam-text-gray-700">
             Ticket {ticket.id}
           </span>
@@ -168,7 +168,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       {ticket.status === 'waiting' && (
         <div className="unjam-text-center">
           <p className="unjam-text-gray-600 unjam-mb-2">Waiting for engineer...</p>
-          <div className="unjam-text-2xl unjam-font-mono unjam-mb-1">
+          <div className="unjam-text-2xl unjam-text-black unjam-font-mono unjam-mb-1">
             <Timer startTime={getTimerStartTime()} />
           </div>
           <p className="unjam-text-xs unjam-text-gray-500">ETA is ~2:30</p>
@@ -180,7 +180,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           <p className="unjam-text-gray-600 unjam-mb-2">
             {ticket.assignedTo?.name || 'Engineer'} is working on your issue
           </p>
-          <div className="unjam-text-2xl unjam-font-mono unjam-mb-1">
+          <div className="unjam-text-2xl unjam-text-black unjam-font-mono unjam-mb-1">
             <Timer startTime={getTimerStartTime()} />
           </div>
           <p className="unjam-text-xs unjam-text-gray-500 unjam-mb-4">ETA is ~2:30</p>
@@ -189,7 +189,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
             {ticket.assignedTo && (
               <button
                 onClick={handleToggleChat}
-                className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
+                className="unjam-w-full unjam-text-black unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
               >
                 <MessageCircle size={16} />
                 {isChatVisible ? 'Hide Chat' : 'Show Chat'}
@@ -197,7 +197,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
             )}
             <button
               onClick={handleMarkFixed}
-              className="unjam-w-full unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
+              className="unjam-w-full unjam-text-black unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"
             >
               <CheckCircle size={16} />
               This is fixed
@@ -213,17 +213,17 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           <div className="unjam-flex unjam-gap-2">
             <button
               onClick={handleConfirmFixed}
-              className="unjam-flex-1 unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
+              className="unjam-flex-1 unjam-width-half unjam-bg-white unjam-text-black unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
             >
               <CheckCircle size={14} />
-              Yes, it's fixed!
+              Fixed
             </button>
             <button
               onClick={handleMarkStillBroken}
-              className="unjam-flex-1 unjam-bg-white unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
+              className="unjam-flex-1 unjam-width-half unjam-bg-white unjam-text-black unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
             >
               <X size={14} />
-              Still broken
+              No
             </button>
           </div>
         </div>
@@ -241,7 +241,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="Share your feedback (optional)"
-            className="unjam-w-full unjam-p-2 unjam-border unjam-border-gray-300 unjam-rounded unjam-text-sm unjam-resize-none unjam-mb-4"
+            className="unjam-w-full unjam-bg-white unjam-text-black unjam-p-2 unjam-border unjam-border-gray-300 unjam-rounded unjam-text-sm unjam-resize-none unjam-mb-4"
             rows={3}
           />
           

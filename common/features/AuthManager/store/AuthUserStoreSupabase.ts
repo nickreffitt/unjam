@@ -168,6 +168,63 @@ export class AuthUserStoreSupabase implements AuthUserStore {
   }
 
   /**
+   * Sign in user with OTP (One-Time Password)
+   */
+  async signInWithOtp(email: string): Promise<void> {
+    console.debug('AuthUserStoreSupabase: Signing in with OTP for:', email);
+    try {
+      const { error } = await this.supabaseClient.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
+
+      if (error) {
+        console.error('AuthUserStoreSupabase: OTP sign in failed:', error);
+        throw new Error(`Failed to send OTP: ${error.message}`);
+      }
+
+      console.debug('AuthUserStoreSupabase: OTP sent successfully to:', email);
+    } catch (error) {
+      console.error('AuthUserStoreSupabase: Unexpected error during OTP sign in:', error);
+      throw error instanceof Error ? error : new Error('An unexpected error occurred during OTP sign in');
+    }
+  }
+
+  /**
+   * Verify an OTP token and sign in the user
+   */
+  async verifyOtp(email: string, token: string): Promise<User> {
+    console.debug('AuthUserStoreSupabase: Verifying OTP token for:', email);
+
+    try {
+      const { data, error } = await this.supabaseClient.auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
+      });
+
+      if (error) {
+        console.error('AuthUserStoreSupabase: OTP verification failed:', error);
+        throw new Error(`Failed to verify OTP: ${error.message}`);
+      }
+
+      if (!data.user) {
+        throw new Error('User not found in verification response');
+      }
+
+      // Convert Supabase user to our User type
+      const user = this.mapSupabaseUserToUser(data.user);
+      console.debug('AuthUserStoreSupabase: OTP verified successfully for user:', user);
+      return user;
+    } catch (error) {
+      console.error('AuthUserStoreSupabase: Unexpected error during OTP verification:', error);
+      throw error instanceof Error ? error : new Error('An unexpected error occurred during OTP verification');
+    }
+  }
+
+  /**
    * Sign in user with Google OAuth for web applications
    */
   async signInWithGoogleWeb(redirectUrl?: string): Promise<User> {
