@@ -89,6 +89,12 @@ export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ childr
       setIsLoading(false);
       setError(null);
     },
+    onUserProfileUpdated: (authUserEvent: AuthUser) => {
+      console.debug('[AuthManagerContext] onUserProfileUpdated received:', authUserEvent);
+      setAuthUser(authUserEvent);
+      setIsLoading(false);
+      setError(null);
+    },
     onUserSignedIn: (authUserEvent: AuthUser) => {
       console.debug('[AuthManagerContext] onUserSignedIn received:', authUserEvent);
       setAuthUser(authUserEvent);

@@ -10,6 +10,8 @@ CREATE TABLE profiles (
   email TEXT,
   github_username TEXT,
   specialties TEXT[] DEFAULT '{}',
+  extension_installed_at TIMESTAMP WITH TIME ZONE,
+  extension_installed_version TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

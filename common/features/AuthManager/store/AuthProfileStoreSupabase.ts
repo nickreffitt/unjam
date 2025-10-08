@@ -48,6 +48,8 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
         email: profile.email,
         github_username: profile.type === 'engineer' ? profile.githubUsername : undefined,
         specialties: profile.type === 'engineer' ? profile.specialties || [] : [],
+        extension_installed_at: (profile.extensionInstalledAt) ? profile.extensionInstalledAt.toISOString() : null,
+        extension_installed_version: profile.extensionInstalledVersion,
       }])
       .select()
       .single();
@@ -154,6 +156,8 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
         email: updatedProfile.email,
         github_username: updatedProfile.type === 'engineer' ? updatedProfile.githubUsername : undefined,
         specialties: updatedProfile.type === 'engineer' ? updatedProfile.specialties || [] : [],
+        extension_installed_at: (updatedProfile.extensionInstalledAt) ? updatedProfile.extensionInstalledAt.toISOString() : null,
+        extension_installed_version: updatedProfile.extensionInstalledVersion,
       })
       .eq('id', profileId)
       .select()
@@ -280,6 +284,8 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       name: row.name as string,
       email: row.email as string | undefined,
       authId: row.auth_id as string,
+      extensionInstalledAt: row.extension_installed_at ? new Date(row.extension_installed_at as string) : undefined,
+      extensionInstalledVersion: row.extension_installed_version as string | undefined,
     };
 
     const userType = row.type as UserType;

@@ -60,7 +60,14 @@ export default defineBackground(() => {
       try {
         await authManager.verifyOtp(email, token);
         console.log('=== OTP VERIFIED ===');
-        console.debug('Background script: OTP verified successfully, emitting success event');
+        console.debug('Background script: OTP verified successfully, marking extension installed');
+
+        // Mark extension as installed after successful authentication
+        const manifest = await browser.runtime.getManifest();
+        const version = manifest.version;
+        await authManager.markExtensionInstalled(version);
+        console.debug('Background script: Extension marked as installed, emitting success event');
+
         await extensionEventEmitter.emitVerifyOtpSuccess();
       } catch (error) {
         console.error('Background script: Failed to verify OTP:', error);

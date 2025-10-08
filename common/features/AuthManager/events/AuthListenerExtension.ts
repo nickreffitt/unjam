@@ -5,7 +5,7 @@ import { type AuthListener, type AuthListenerCallbacks } from './AuthListener';
 /**
  * Auth event types for extension messages
  */
-type AuthEventType = 'userRequiresProfile' | 'userProfileCreated' | 'userSignedIn' | 'userSignedOut' | 'authStateChanged';
+type AuthEventType = 'userRequiresProfile' | 'userProfileCreated' | 'userProfileUpdated' | 'userSignedIn' | 'userSignedOut' | 'authStateChanged';
 
 /**
  * Extension implementation of auth listener
@@ -97,6 +97,16 @@ export class AuthListenerExtension implements AuthListener {
               this.callbacks.onUserProfileCreated(authUser);
             } catch (error) {
               console.error('AuthListenerExtension: Error in onUserProfileCreated:', error);
+            }
+          }
+          break;
+
+        case 'userProfileUpdated':
+          if (this.callbacks.onUserProfileUpdated && authUser) {
+            try {
+              this.callbacks.onUserProfileUpdated(authUser);
+            } catch (error) {
+              console.error('AuthListenerExtension: Error in onUserProfileUpdated:', error);
             }
           }
           break;

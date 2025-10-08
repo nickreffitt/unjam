@@ -5,7 +5,7 @@ import { type AuthEventEmitter } from './AuthEventEmitter';
 /**
  * Auth event types for extension messages
  */
-type AuthEventType = 'userRequiresProfile' | 'userProfileCreated' | 'userSignedIn' | 'userSignedOut' | 'authStateChanged';
+type AuthEventType = 'userRequiresProfile' | 'userProfileCreated' | 'userProfileUpdated' | 'userSignedIn' | 'userSignedOut' | 'authStateChanged';
 
 /**
  * Extension background script implementation of the auth event emitter
@@ -34,6 +34,15 @@ export class AuthEventEmitterExtension implements AuthEventEmitter {
     this.broadcastAuthEvent('userProfileCreated', authUser);
     // Also emit signed in since they now have a complete profile
     this.emitUserSignedIn(authUser);
+  }
+
+  /**
+   * Emits a user profile updated event
+   * @param authUser - The AuthUser with updated profile
+   */
+  emitUserProfileUpdated(authUser: AuthUser): void {
+    console.debug('AuthEventEmitterExtension: emitUserProfileUpdated called with:', authUser);
+    this.broadcastAuthEvent('userProfileUpdated', authUser);
   }
 
   /**

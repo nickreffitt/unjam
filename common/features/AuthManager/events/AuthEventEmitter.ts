@@ -15,6 +15,12 @@ export interface AuthEventEmitter {
   emitUserProfileCreated(authUser: AuthUser): void;
 
   /**
+   * Emits a user profile updated event
+   * @param authUser - The AuthUser with updated profile
+   */
+  emitUserProfileUpdated(authUser: AuthUser): void;
+
+  /**
    * Emits a user signed in event
    * @param authUser - The AuthUser who signed in
    */

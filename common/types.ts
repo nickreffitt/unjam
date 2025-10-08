@@ -22,6 +22,8 @@ export interface CustomerProfile {
   type: 'customer';
   email?: string;
   authId?: string;         // The auth system ID (e.g., Supabase Auth user ID)
+  extensionInstalledAt?: Date;
+  extensionInstalledVersion?: string;
 }
 
 export interface EngineerProfile {
@@ -33,6 +35,8 @@ export interface EngineerProfile {
   githubUsername?: string;
   authId?: string;         // The auth system ID (e.g., Supabase Auth user ID)
   user?: User;             // 1:1 mapping with User from auth system
+  extensionInstalledAt?: Date;
+  extensionInstalledVersion?: string;
 }
 
 export type UserProfile = CustomerProfile | EngineerProfile;

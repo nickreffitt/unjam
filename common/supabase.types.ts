@@ -208,6 +208,8 @@ export type Database = {
           auth_id: string
           created_at: string | null
           email: string | null
+          extension_installed_at: string | null
+          extension_installed_version: string | null
           github_username: string | null
           id: string
           name: string
@@ -219,6 +221,8 @@ export type Database = {
           auth_id: string
           created_at?: string | null
           email?: string | null
+          extension_installed_at?: string | null
+          extension_installed_version?: string | null
           github_username?: string | null
           id: string
           name: string
@@ -230,6 +234,8 @@ export type Database = {
           auth_id?: string
           created_at?: string | null
           email?: string | null
+          extension_installed_at?: string | null
+          extension_installed_version?: string | null
           github_username?: string | null
           id?: string
           name?: string

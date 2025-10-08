@@ -4,7 +4,7 @@ import { type AuthListener, type AuthListenerCallbacks } from './AuthListener';
 /**
  * Auth event types for internal use
  */
-type AuthEventType = 'userRequiresProfile' | 'userProfileCreated' | 'userSignedIn' | 'userSignedOut' | 'authStateChanged';
+type AuthEventType = 'userRequiresProfile' | 'userProfileCreated' | 'userProfileUpdated' | 'userSignedIn' | 'userSignedOut' | 'authStateChanged';
 
 /**
  * Local storage implementation of auth listener
@@ -117,6 +117,15 @@ export class AuthListenerLocal implements AuthListener {
                 this.callbacks.onUserProfileCreated(deserializedAuthUser);
               } catch (error) {
                 console.error('AuthListenerLocal: Error in onUserProfileCreated:', error);
+              }
+            }
+            break;
+          case 'userProfileUpdated':
+            if (this.callbacks.onUserProfileUpdated && deserializedAuthUser) {
+              try {
+                this.callbacks.onUserProfileUpdated(deserializedAuthUser);
+              } catch (error) {
+                console.error('AuthListenerLocal: Error in onUserProfileUpdated:', error);
               }
             }
             break;

@@ -163,7 +163,12 @@ export class AuthProfileStoreLocal implements AuthProfileStore {
     try {
       const storedProfiles = localStorage.getItem(this.storageKey);
       if (storedProfiles) {
-        this.profiles = JSON.parse(storedProfiles);
+        const parsedProfiles = JSON.parse(storedProfiles);
+        // Convert date strings back to Date objects
+        this.profiles = parsedProfiles.map((profile: UserProfile) => ({
+          ...profile,
+          extensionInstalledAt: profile.extensionInstalledAt ? new Date(profile.extensionInstalledAt) : undefined,
+        }));
         console.debug(`AuthProfileStoreLocal: Loaded ${this.profiles.length} profiles from storage`);
       } else {
         this.profiles = [];

@@ -4,7 +4,7 @@ import { type AuthEventEmitter } from './AuthEventEmitter';
 /**
  * Auth event types for internal use
  */
-type AuthEventType = 'userRequiresProfile' | 'userProfileCreated' | 'userSignedIn' | 'userSignedOut' | 'authStateChanged';
+type AuthEventType = 'userRequiresProfile' | 'userProfileCreated' | 'userProfileUpdated' | 'userSignedIn' | 'userSignedOut' | 'authStateChanged';
 
 /**
  * Local storage implementation of the auth event emitter
@@ -34,6 +34,14 @@ export class AuthEventEmitterLocal implements AuthEventEmitter {
     this.emitWindowEvent('userProfileCreated', { authUser });
     // Also emit signed in since they now have a complete profile
     this.emitUserSignedIn(authUser);
+  }
+
+  /**
+   * Emits a user profile updated event
+   * @param authUser - The AuthUser with updated profile
+   */
+  emitUserProfileUpdated(authUser: AuthUser): void {
+    this.emitWindowEvent('userProfileUpdated', { authUser });
   }
 
   /**

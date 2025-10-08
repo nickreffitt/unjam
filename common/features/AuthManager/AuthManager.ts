@@ -238,6 +238,48 @@ export class AuthManager {
     return userProfile;
   }
 
+  /**
+   * Mark the extension as installed for the current user
+   * Updates the user's profile with installation timestamp and version
+   *
+   * @param version - The extension version being installed
+   * @throws Error if no user is signed in or profile update fails
+   */
+  async markExtensionInstalled(version: string): Promise<void> {
+    console.debug('AuthManager: Marking extension as installed, version:', version);
+
+    // Verify user is signed in
+    if (this.currentAuthUser.status !== 'signed-in') {
+      throw new Error('Cannot mark extension installed: No user is signed in');
+    }
+
+    const { profile } = this.currentAuthUser;
+    if (!profile) {
+      throw new Error("No profile set");
+    }
+
+    // Update profile with extension installation details
+    const updatedProfile = {
+      ...profile,
+      extensionInstalledAt: new Date(),
+      extensionInstalledVersion: version,
+    };
+
+    // Save updated profile to store
+    await this.authProfileStore.update(profile.id, updatedProfile);
+
+    // Update current auth user state
+    this.currentAuthUser = {
+      ...this.currentAuthUser,
+      profile: updatedProfile,
+    };
+
+    // Emit profile updated event
+    this.authEventEmitter.emitUserProfileUpdated(this.currentAuthUser);
+
+    console.debug('AuthManager: Extension installation marked successfully');
+  }
+
   private addAuthEventListenerCallbacks(): void {
     console.debug('[AuthManager] addAuthEventListenerCallbacks');
     this.authUserListener.updateCallbacks({

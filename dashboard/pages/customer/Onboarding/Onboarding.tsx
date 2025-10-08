@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Download, CheckCircle } from 'lucide-react';
+import { Download, CheckCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 
 const Onboarding: React.FC = () => {
-  const [isDownloaded, setIsDownloaded] = useState(false);
+  const { authUser } = useAuthState();
+  const [isWaitingForInstall, setIsWaitingForInstall] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -31,21 +34,30 @@ const Onboarding: React.FC = () => {
     document.body.removeChild(link);
 
     setIsLoading(false);
-    setIsDownloaded(true);
+    setIsWaitingForInstall(true);
   };
+
+  // Monitor for extension installation
+  useEffect(() => {
+    if (isWaitingForInstall && authUser.profile?.extensionInstalledAt) {
+      setIsWaitingForInstall(false);
+      setIsInstalled(true);
+    }
+  }, [isWaitingForInstall, authUser.profile?.extensionInstalledAt]);
 
   // Redirect to BuyCredits after success is shown
   useEffect(() => {
-    if (isDownloaded) {
+    if (isInstalled) {
       const timer = setTimeout(() => {
         navigate('/buy');
-      }, 1000);
+      }, 2000);
 
       return () => clearTimeout(timer);
     }
-  }, [isDownloaded, navigate]);
+  }, [isInstalled, navigate]);
 
-  if (isDownloaded) {
+  // Show "Extension Installed!" success state
+  if (isInstalled) {
     return (
       <div className="unjam-min-h-screen unjam-bg-gray-50 unjam-flex unjam-items-center unjam-justify-center unjam-py-12 unjam-px-4 sm:unjam-px-6 lg:unjam-px-8">
         <div className="unjam-max-w-md unjam-w-full unjam-space-y-8">
@@ -55,7 +67,7 @@ const Onboarding: React.FC = () => {
               <CheckCircle className="unjam-h-8 unjam-w-8 unjam-text-green-600" />
             </div>
             <h2 className="unjam-mt-6 unjam-text-3xl unjam-font-extrabold unjam-text-gray-900">
-              Extension Downloaded!
+              Extension Installed!
             </h2>
             <p className="unjam-mt-2 unjam-text-sm unjam-text-gray-600">
               Great! You're all set to continue with your setup.
@@ -70,7 +82,7 @@ const Onboarding: React.FC = () => {
                   Installation Complete
                 </h3>
                 <p className="unjam-mt-2 unjam-text-sm unjam-text-gray-600">
-                  The Unjam extension has been successfully downloaded. You'll be redirected to choose your subscription plan.
+                  The Unjam extension has been successfully installed. You'll be redirected to choose your subscription plan.
                 </p>
               </div>
               <div className="unjam-animate-spin unjam-h-4 unjam-w-4 unjam-border-2 unjam-border-blue-600 unjam-border-t-transparent unjam-rounded-full unjam-mx-auto"></div>
@@ -81,6 +93,53 @@ const Onboarding: React.FC = () => {
           <div className="unjam-text-center">
             <p className="unjam-text-xs unjam-text-gray-500">
               Redirecting you to select your plan...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show "Waiting for installation" pending state
+  if (isWaitingForInstall) {
+    return (
+      <div className="unjam-min-h-screen unjam-bg-gray-50 unjam-flex unjam-items-center unjam-justify-center unjam-py-12 unjam-px-4 sm:unjam-px-6 lg:unjam-px-8">
+        <div className="unjam-max-w-md unjam-w-full unjam-space-y-8">
+          {/* Header */}
+          <div className="unjam-text-center">
+            <div className="unjam-mx-auto unjam-h-16 unjam-w-16 unjam-flex unjam-items-center unjam-justify-center unjam-rounded-full unjam-bg-blue-100">
+              <Clock className="unjam-h-8 unjam-w-8 unjam-text-blue-600" />
+            </div>
+            <h2 className="unjam-mt-6 unjam-text-3xl unjam-font-extrabold unjam-text-gray-900">
+              Waiting for Installation
+            </h2>
+            <p className="unjam-mt-2 unjam-text-sm unjam-text-gray-600">
+              Please install the extension in your browser
+            </p>
+          </div>
+
+          {/* Waiting Card */}
+          <div className="unjam-bg-white unjam-py-8 unjam-px-6 unjam-shadow unjam-rounded-lg">
+            <div className="unjam-text-center unjam-space-y-4">
+              <div>
+                <h3 className="unjam-text-lg unjam-font-medium unjam-text-gray-900">
+                  Extension Downloaded
+                </h3>
+                <p className="unjam-mt-2 unjam-text-sm unjam-text-gray-600">
+                  The extension has been downloaded. Please install it in your browser to continue.
+                </p>
+              </div>
+              <div className="unjam-animate-spin unjam-h-6 unjam-w-6 unjam-border-4 unjam-border-blue-200 unjam-border-t-blue-600 unjam-rounded-full unjam-mx-auto"></div>
+              <p className="unjam-text-xs unjam-text-gray-500">
+                Waiting to detect installation...
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="unjam-text-center">
+            <p className="unjam-text-xs unjam-text-gray-500">
+              This page will automatically continue once the extension is installed
             </p>
           </div>
         </div>

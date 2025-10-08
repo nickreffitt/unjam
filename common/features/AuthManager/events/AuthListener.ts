@@ -19,6 +19,12 @@ export interface AuthListenerCallbacks {
   onUserProfileCreated?(authUser: AuthUser): void;
 
   /**
+   * Called when a user profile is updated
+   * @param authUser - The AuthUser with updated profile
+   */
+  onUserProfileUpdated?(authUser: AuthUser): void;
+
+  /**
    * Called when a user signs in
    * @param authUser - The AuthUser who signed in
    */
