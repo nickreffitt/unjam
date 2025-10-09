@@ -53,6 +53,8 @@ async function injectUI() {
 
 export default {
   matches: [
+    'http://localhost:5175/',
+    'https://unjam.nickreffitt.com/',
     'https://lovable.dev/projects/*',
     'https://replit.com/@*/*',
     'https://app.base44.com/apps/*',

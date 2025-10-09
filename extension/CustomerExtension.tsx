@@ -1,5 +1,5 @@
 import React from 'react';
-import ExtensionContainer from '@extension/ExtensionContainer/ExtensionContainer';
+//import ExtensionContainer from '@extension/ExtensionContainer/ExtensionContainer';
 import '@extension/styles.css';
 
 /**
@@ -20,7 +20,7 @@ const CustomerExtension: React.FC = () => {
       </div>
 
       {/* Reuse ExtensionContainer for consistent UI */}
-      <ExtensionContainer />
+      {/*<ExtensionContainer />*/}
     </div>
   );
 };

@@ -79,10 +79,10 @@ const CreditSuccess: React.FC = () => {
             <p className="unjam-text-xs unjam-text-slate-500">
               Need help? Contact our support team at{' '}
               <a
-                href="mailto:support@yourcompany.com"
+                href="mailto:support@unj.am"
                 className="unjam-text-blue-600 hover:unjam-underline"
               >
-                support@yourcompany.com
+                support@unj.am
               </a>
             </p>
           </div>
