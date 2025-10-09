@@ -12,6 +12,7 @@ import {
 import { useAuthListener } from '@common/features/AuthManager/hooks';
 import { type AuthUser, type ErrorDisplay } from '@common/types';
 import { useSupabase } from './SupabaseContext';
+import { AuthChangesSupabase } from '@common/features/AuthManager/store/AuthChangesSupabase';
 interface AuthManagerContextType {
   authManager: AuthManager | null;
   authUser: AuthUser;
@@ -67,9 +68,10 @@ export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ childr
     }
 
     const authUserListener = new AuthUserListenerLocal(authUserEventEmitter);
+    const authChanges = new AuthChangesSupabase(supabaseClient, authEventEmitter);
 
     // Create and store singleton
-    authManagerInstance = new AuthManager(authUserStore, authProfileStore, authEventEmitter, authUserListener);
+    authManagerInstance = new AuthManager(authUserStore, authProfileStore, authEventEmitter, authUserListener, authChanges);
 
     console.debug('[AuthManagerProvider] AuthManager successfully initialized');
     return authManagerInstance;

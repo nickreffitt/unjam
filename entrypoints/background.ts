@@ -5,6 +5,7 @@ import { AuthUserEventEmitterExtension } from '@common/features/AuthManager/stor
 import { AuthEventEmitterExtension } from '@common/features/AuthManager/events/AuthEventEmitterExtension';
 import { AuthUserListenerExtension } from '@common/features/AuthManager/events/AuthUserListenerExtension';
 import { createClient } from '@supabase/supabase-js';
+import { AuthChangesSupabase } from '@common/features/AuthManager/store/AuthChangesSupabase';
 
 export default defineBackground(() => {
   console.log('=== BACKGROUND SCRIPT STARTED ===');
@@ -29,8 +30,9 @@ export default defineBackground(() => {
   const authUserStore = new AuthUserStoreSupabase(supabaseClient, authUserEventEmitter);
   const authProfileStore = new AuthProfileStoreSupabase(supabaseClient);
   const authUserListener = new AuthUserListenerExtension(authUserEventEmitter);
+  const authChanges = new AuthChangesSupabase(supabaseClient, authEventEmitter);
 
-  const authManager = new AuthManager(authUserStore, authProfileStore, authEventEmitter, authUserListener);
+  const authManager = new AuthManager(authUserStore, authProfileStore, authEventEmitter, authUserListener, authChanges);
   console.debug('Background script: AuthManager initialized');
 
   // Create event emitter to send messages back to popup

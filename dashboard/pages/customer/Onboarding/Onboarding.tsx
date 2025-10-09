@@ -39,6 +39,7 @@ const Onboarding: React.FC = () => {
 
   // Monitor for extension installation
   useEffect(() => {
+    console.debug(`[Onboarding] isWaitingForInstall ${(isWaitingForInstall) ? "Yes" : "No"}, extensionInstalledAt: ${authUser.profile?.extensionInstalledAt}`)
     if (isWaitingForInstall && authUser.profile?.extensionInstalledAt) {
       setIsWaitingForInstall(false);
       setIsInstalled(true);

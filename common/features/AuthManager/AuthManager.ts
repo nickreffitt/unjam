@@ -3,6 +3,7 @@ import { type AuthUserStore } from './store/AuthUserStore';
 import { type AuthProfileStore } from './store/AuthProfileStore';
 import { type AuthEventEmitter } from './events/AuthEventEmitter';
 import { type AuthUserListener } from './events/AuthUserListener';
+import { type AuthChanges } from './store/AuthChanges';
 
 /**
  * AuthManager handles authentication using AuthUserStore abstraction
@@ -13,6 +14,7 @@ export class AuthManager {
   private authProfileStore: AuthProfileStore;
   private authEventEmitter: AuthEventEmitter;
   private authUserListener: AuthUserListener;
+  private authChanges: AuthChanges;
   private currentAuthUser: AuthUser;
 
   constructor(
@@ -20,6 +22,7 @@ export class AuthManager {
     authProfileStore: AuthProfileStore,
     authEventEmitter: AuthEventEmitter,
     authUserListener: AuthUserListener,
+    authChanges: AuthChanges,
   ) {
     if (!authUserStore) {
       throw new Error('AuthManager: authUserStore is required');
@@ -30,10 +33,14 @@ export class AuthManager {
     if (!authEventEmitter) {
       throw new Error('AuthManager: authEventEmitter is required');
     }
+    if (!authChanges) {
+      throw new Error('AuthManager: authChanges is required');
+    }
 
     this.authUserStore = authUserStore;
     this.authProfileStore = authProfileStore;
     this.authEventEmitter = authEventEmitter;
+    this.authChanges = authChanges;
     this.currentAuthUser = { status: 'loading' };
 
     // Set up AuthUserListener to bridge User events to UserProfile events
@@ -51,6 +58,7 @@ export class AuthManager {
   cleanup(): void {
     console.debug('AuthManager: Cleaning up event listeners');
     this.authUserListener.stopListening();
+    this.authChanges.stop();
   }
 
   /**
@@ -83,6 +91,7 @@ export class AuthManager {
         user,
         profile: userProfile
       };
+      this.startProfileChangesListener(userProfile.id);
     } else {
       this.currentAuthUser = {
         status: 'requires-profile',
@@ -124,6 +133,7 @@ export class AuthManager {
         user,
         profile: userProfile
       };
+      this.startProfileChangesListener(userProfile.id);
     } else {
       this.currentAuthUser = {
         status: 'requires-profile',
@@ -232,6 +242,9 @@ export class AuthManager {
       profile: userProfile
     };
 
+    // Start listening to profile changes
+    this.startProfileChangesListener(userProfile.id);
+
     // Emit profile created event
     this.authEventEmitter.emitUserProfileCreated(this.currentAuthUser);
 
@@ -280,6 +293,15 @@ export class AuthManager {
     console.debug('AuthManager: Extension installation marked successfully');
   }
 
+  /**
+   * Starts listening to profile changes for the current user
+   * Called whenever a user profile becomes available
+   */
+  private startProfileChangesListener(profileId: string): void {
+    console.debug('AuthManager: Starting profile changes listener for profile:', profileId);
+    this.authChanges.start(profileId);
+  }
+
   private addAuthEventListenerCallbacks(): void {
     console.debug('[AuthManager] addAuthEventListenerCallbacks');
     this.authUserListener.updateCallbacks({
@@ -294,6 +316,7 @@ export class AuthManager {
               user,
               profile: userProfile
             };
+            this.startProfileChangesListener(userProfile.id);
             this.authEventEmitter.emitUserSignedIn(this.currentAuthUser);
             console.debug('[AuthManager]: Emitted UserProfile signed in event');
           } else {
@@ -330,6 +353,7 @@ export class AuthManager {
                 user,
                 profile: userProfile
               };
+              this.startProfileChangesListener(userProfile.id);
               this.authEventEmitter.emitAuthStateChanged(this.currentAuthUser);
               console.debug('[AuthManager] Emitted UserProfile auth state changed event');
             } else {

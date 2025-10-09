@@ -1,6 +1,7 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
 import { type UserProfile, type UserType } from '@common/types';
 import { type AuthProfileStore } from './AuthProfileStore';
+import { AuthSupabaseRowMapper } from '../util/AuthSupabaseRowMapper';
 
 /**
  * Supabase implementation of the auth profile store
@@ -59,7 +60,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       throw new Error(`Failed to create profile: ${error.message}`);
     }
 
-    const createdProfile = this.mapRowToProfile(data);
+    const createdProfile = AuthSupabaseRowMapper.mapRowToProfile(data);
     console.debug('AuthProfileStoreSupabase: Created profile successfully:', createdProfile.id);
     return createdProfile;
   }
@@ -83,7 +84,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       throw new Error(`Failed to get profile by ID: ${error.message}`);
     }
 
-    return data ? this.mapRowToProfile(data) : null;
+    return data ? AuthSupabaseRowMapper.mapRowToProfile(data) : null;
   }
 
   /**
@@ -105,7 +106,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       throw new Error(`Failed to get profile by auth ID: ${error.message}`);
     }
 
-    return data ? this.mapRowToProfile(data) : null;
+    return data ? AuthSupabaseRowMapper.mapRowToProfile(data) : null;
   }
 
   /**
@@ -129,7 +130,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       throw new Error(`Failed to get profile by email: ${error.message}`);
     }
 
-    return data ? this.mapRowToProfile(data) : null;
+    return data ? AuthSupabaseRowMapper.mapRowToProfile(data) : null;
   }
 
   /**
@@ -171,7 +172,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       throw new Error(`Failed to update profile: ${error.message}`);
     }
 
-    const profile = this.mapRowToProfile(data);
+    const profile = AuthSupabaseRowMapper.mapRowToProfile(data);
     console.debug('AuthProfileStoreSupabase: Updated profile successfully:', profileId);
     return profile;
   }
@@ -198,7 +199,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       throw new Error(`Failed to get profiles by type: ${error.message}`);
     }
 
-    const profiles = data.map(row => this.mapRowToProfile(row));
+    const profiles = data.map(row => AuthSupabaseRowMapper.mapRowToProfile(row));
     console.debug(`AuthProfileStoreSupabase: Retrieved ${profiles.length} ${type} profiles`);
     return profiles;
   }
@@ -241,7 +242,7 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
       throw new Error(`Failed to get all profiles: ${error.message}`);
     }
 
-    const profiles = data.map(row => this.mapRowToProfile(row));
+    const profiles = data.map(row => AuthSupabaseRowMapper.mapRowToProfile(row));
     console.debug(`AuthProfileStoreSupabase: Retrieved ${profiles.length} profiles`);
     return profiles;
   }
@@ -275,33 +276,4 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
     console.debug('AuthProfileStoreSupabase: Cleared all profiles');
   }
 
-  /**
-   * Maps a database row to a UserProfile object
-   */
-  private mapRowToProfile(row: Record<string, unknown>): UserProfile {
-    const baseProfile = {
-      id: row.id as string,  // Use profile_id as the id for UserProfile
-      name: row.name as string,
-      email: row.email as string | undefined,
-      authId: row.auth_id as string,
-      extensionInstalledAt: row.extension_installed_at ? new Date(row.extension_installed_at as string) : undefined,
-      extensionInstalledVersion: row.extension_installed_version as string | undefined,
-    };
-
-    const userType = row.type as UserType;
-
-    if (userType === 'engineer') {
-      return {
-        ...baseProfile,
-        type: 'engineer',
-        githubUsername: row.github_username as string | undefined,
-        specialties: (row.specialties as string[]) || [],
-      };
-    } else {
-      return {
-        ...baseProfile,
-        type: 'customer',
-      };
-    }
-  }
 }

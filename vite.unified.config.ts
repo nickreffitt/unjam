@@ -44,5 +44,6 @@ export default defineConfig({
       '@dashboard': path.resolve(__dirname, './dashboard'),
       '@common': path.resolve(__dirname, './common'),
     },
+    dedupe: ['react', 'react-dom'],
   },
 })

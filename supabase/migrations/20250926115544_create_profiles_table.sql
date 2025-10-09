@@ -58,3 +58,5 @@ CREATE POLICY "Users can update their own profile" ON profiles
 -- Only allow users to delete their own profile
 CREATE POLICY "Users can delete their own profile" ON profiles
   FOR DELETE USING (auth.uid() = auth_id);
+
+ALTER publication supabase_realtime ADD TABLE profiles;

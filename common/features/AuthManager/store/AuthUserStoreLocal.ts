@@ -21,6 +21,13 @@ export class AuthUserStoreLocal implements AuthUserStore {
       this.authUserEventEmitter.emitAuthStateChanged(this.currentUser);
     }, 0);
   }
+  
+  signInWithOtp(email: string): Promise<void> {
+    throw new Error('Method not implemented.');
+  }
+  verifyOtp(email: string, token: string): Promise<User> {
+    throw new Error('Method not implemented.');
+  }
 
   /**
    * Sign in user with magic link (simulated)
