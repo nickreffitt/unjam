@@ -1,4 +1,5 @@
 import { ExtensionEventListener, ExtensionEventEmitter } from '@common/features/ExtensionManager/events';
+import { ExtensionStore } from '@common/features/ExtensionManager/store';
 import { AuthManager } from '@common/features/AuthManager/AuthManager';
 import { AuthUserStoreSupabase, AuthProfileStoreSupabase } from '@common/features/AuthManager';
 import { AuthUserEventEmitterExtension } from '@common/features/AuthManager/store/AuthUserEventEmitterExtension';
@@ -35,8 +36,47 @@ export default defineBackground(() => {
   const authManager = new AuthManager(authUserStore, authProfileStore, authEventEmitter, authUserListener, authChanges);
   console.debug('Background script: AuthManager initialized');
 
-  // Create event emitter to send messages back to popup
+  // Create extension store for persisting session
+  const extensionStore = new ExtensionStore();
+
+  // Create event emitter to send messages back to popup/content
   const extensionEventEmitter = new ExtensionEventEmitter();
+
+  // Helper function to save and emit current session
+  const saveAndEmitSession = async (session: any) => {
+    try {
+      // Save session to storage
+      await extensionStore.saveSession(session);
+      console.debug('Background script: Session saved to storage');
+
+      // Emit session to active listeners
+      await extensionEventEmitter.emitSupabaseSession(session);
+      console.debug('Background script: Session emitted to listeners:', session ? 'session exists' : 'no session');
+    } catch (error) {
+      console.error('Background script: Failed to save/emit session:', error);
+    }
+  };
+
+  // Helper function to get, save, and emit current session
+  const emitCurrentSession = async () => {
+    try {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (error) {
+        console.error('Background script: Error getting session:', error);
+        return;
+      }
+      await saveAndEmitSession(session);
+    } catch (error) {
+      console.error('Background script: Failed to emit session:', error);
+    }
+  };
+
+  // Listen for auth state changes and save/emit session updates
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    console.log('Background script: Auth state changed:', event);
+    console.debug('Background script: Saving and emitting session update');
+    await saveAndEmitSession(session);
+  });
 
   // Create event listener for extension messages
   const eventListener = new ExtensionEventListener({
@@ -71,6 +111,9 @@ export default defineBackground(() => {
         console.debug('Background script: Extension marked as installed, emitting success event');
 
         await extensionEventEmitter.emitVerifyOtpSuccess();
+
+        // Emit session after successful verification
+        await emitCurrentSession();
       } catch (error) {
         console.error('Background script: Failed to verify OTP:', error);
         const errorMessage = error instanceof Error ? error.message : 'Failed to verify OTP';

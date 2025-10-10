@@ -43,9 +43,9 @@ const TicketDetailsCard: React.FC<TicketDetailsCardProps> = ({
             <h3 className="unjam-text-sm unjam-font-medium unjam-text-gray-500 unjam-uppercase unjam-tracking-wide unjam-mb-2">Assigned To</h3>
             <div className="unjam-flex unjam-items-center">
               <div className="unjam-bg-blue-500 unjam-text-white unjam-rounded-full unjam-w-8 unjam-h-8 unjam-flex unjam-items-center unjam-justify-center unjam-text-sm unjam-font-medium unjam-mr-2">
-                {ticket.engineerName?.charAt(0) || 'J'}
+                {ticket.assignedTo?.name?.charAt(0) || ''}
               </div>
-              <span className="unjam-text-blue-600 unjam-font-medium">{ticket.engineerName || 'John'}</span>
+              <span className="unjam-text-blue-600 unjam-font-medium">{ticket.assignedTo?.name || ''}</span>
             </div>
           </div>
         )}

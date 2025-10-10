@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import { type UserProfile } from '@common/types';
+import type { Session } from '@supabase/supabase-js';
 
 /**
  * Event emitter for extension popup-to-background script communication
@@ -91,6 +92,18 @@ export class ExtensionEventEmitter {
     });
 
     return response?.user || null;
+  }
+
+  /**
+   * Emits a Supabase session event (background → content/popup)
+   * @param session - The Supabase session object
+   */
+  async emitSupabaseSession(session: Session | null): Promise<void> {
+    await this.sendMessage({
+      type: 'supabaseSession',
+      session,
+      timestamp: Date.now()
+    });
   }
 
   /**

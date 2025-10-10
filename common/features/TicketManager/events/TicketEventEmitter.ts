@@ -18,6 +18,12 @@ export interface TicketEventEmitter {
   emitTicketUpdated(ticket: Ticket): void;
 
   /**
+   * Emits a ticket claimed event
+   * @param ticket - The claimed ticket with engineer assignment
+   */
+  emitTicketClaimed(ticket: Ticket): void;
+
+  /**
    * Emits a ticket deleted event
    * @param ticketId - The ID of the deleted ticket
    */

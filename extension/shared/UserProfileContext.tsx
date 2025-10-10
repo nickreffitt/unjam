@@ -9,19 +9,15 @@ const UserProfileContext = createContext<UserProfileContextType | null>(null);
 
 interface UserProfileProviderProps {
   children: React.ReactNode;
+  customerProfile: CustomerProfile;
 }
 
-export const UserProfileProvider: React.FC<UserProfileProviderProps> = ({ children }) => {
-  // Centralized customer profile for all extension contexts
-  const customerProfile: CustomerProfile = useMemo(() => ({
-    id: 'CUST-EXT-001',
-    name: 'Extension Customer',
-    type: 'customer',
-    email: 'extension@customer.com'
-  }), []);
+export const UserProfileProvider: React.FC<UserProfileProviderProps> = ({ children, customerProfile }) => {
+  // Wrap in useMemo to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({ customerProfile }), [customerProfile]);
 
   return (
-    <UserProfileContext.Provider value={{ customerProfile }}>
+    <UserProfileContext.Provider value={contextValue}>
       {children}
     </UserProfileContext.Provider>
   );

@@ -16,7 +16,7 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [timeoutRemaining, setTimeoutRemaining] = useState(0);
-  const { ticketStore, ticketManager } = useTicketManager();
+  const { ticketManager } = useTicketManager();
 
   // Use ref to store ticket status to avoid recreating callbacks
   const ticketStatusRef = useRef<string | undefined>();
@@ -24,37 +24,45 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
 
   // Load ticket on mount
   useEffect(() => {
-    if (!ticketId || !ticketStore) return;
+    if (!ticketManager) {
+      throw new Error('No ticket store found')
+    }
+    if (!ticketId) {
+      throw new Error("No ticket ID given")
+    }
 
-    const foundTicket = ticketStore.get(ticketId);
-    if (foundTicket) {
-      // If the ticket is waiting and we're in active context, claim it using TicketManager
-      if (foundTicket.status === 'waiting' && window.location.pathname.includes('/active/') && ticketManager) {
-        ticketManager.claimTicket(ticketId).then(claimedTicket => {
-          setTicket(claimedTicket);
-          setElapsedTime(0);
-        }).catch(error => {
-          console.error('Failed to claim ticket in useTicketState:', error);
-          // Fall back to the original ticket
+    const loadTicket = async () => {
+      const foundTicket = await ticketManager.getTicket(ticketId);
+      if (foundTicket) {
+        // If the ticket is waiting and we're in active context, claim it using TicketManager
+        if (foundTicket.status === 'waiting' && window.location.pathname.includes('/active/') && ticketManager) {
+          ticketManager.claimTicket(ticketId).then(claimedTicket => {
+            setTicket(claimedTicket);
+            setElapsedTime(0);
+          }).catch(error => {
+            console.error('Failed to claim ticket in useTicketState:', error);
+            // Fall back to the original ticket
+            setTicket(foundTicket);
+            setElapsedTime(foundTicket.elapsedTime);
+          });
+        } else {
           setTicket(foundTicket);
           setElapsedTime(foundTicket.elapsedTime);
-        });
-      } else {
-        setTicket(foundTicket);
-        setElapsedTime(foundTicket.elapsedTime);
+        }
       }
-    }
-  }, [ticketId, ticketStore, ticketManager]);
+    };
+
+    loadTicket();
+  }, [ticketId, ticketManager]);
 
   // Handle ticket updates from other tabs (e.g., customer marking as still broken)
-  const handleTicketUpdated = useCallback((updatedTicket: Ticket) => {
+  const handleTicketUpdated = useCallback(async (updatedTicket: Ticket) => {
     if (updatedTicket.id === ticketId) {
       console.debug('useTicketState: Received ticket update for', ticketId, 'with status', updatedTicket.status);
       // Reload from store to get the latest data
-      if (!ticketStore) return;
 
-      ticketStore.reload();
-      const freshTicket = ticketStore.get(ticketId);
+      ticketManager.reload();
+      const freshTicket = await ticketManager.getTicket(ticketId);
       if (freshTicket) {
         setTicket(freshTicket);
         // Reset elapsed time when ticket goes back to in-progress
@@ -63,7 +71,7 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
         }
       }
     }
-  }, [ticketId, ticketStore]);
+  }, [ticketId, ticketManager]);
 
   // Memoize the callbacks object to prevent recreating the listener
   const ticketListenerCallbacks = useMemo(() => ({

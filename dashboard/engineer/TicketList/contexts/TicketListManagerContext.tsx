@@ -20,28 +20,26 @@ interface TicketListManagerProviderProps {
 
 export const TicketListManagerProvider: React.FC<TicketListManagerProviderProps> = ({ children }) => {
   const { authUser } = useAuthState();
-  const { ticketStore } = useTicketManager();
+  const { ticketStore, ticketChanges } = useTicketManager();
   const [newTicketList, setNewTicketList] = useState<TicketListItem[]>([]);
-  
+
   if (!authUser.profile) {
     throw new Error('No user profile available for chat manager');
   }
   const userProfile = authUser.profile;
-  
-  // Create TicketListManager instance using shared UserProfile and TicketStore
+
+  const ticketListManagerRef = useRef<TicketListManager | null>(null);
+
   const ticketListManager = useMemo(() => {
-    // Don't create manager if still loading or if no profile/store
-    if (!ticketStore) {
-      throw new Error('No ticket store for ticket list manager');
+    if (ticketListManagerRef.current) {
+      return ticketListManagerRef.current;
     }
 
-    const manager = new TicketListManager(userProfile, ticketStore);
+    const manager = new TicketListManager(userProfile, ticketStore, ticketChanges);
     console.debug('[TicketListManagerContext] TicketListManager created successfully');
+    ticketListManagerRef.current = manager;
     return manager;
-  }, [userProfile, ticketStore]);
-
-  const ticketListManagerRef = useRef(ticketListManager);
-  ticketListManagerRef.current = ticketListManager;
+  }, [userProfile, ticketStore, ticketChanges]);
 
   // Refresh new tickets from storage
   const refreshNewTicketList = useCallback(async () => {
@@ -76,6 +74,12 @@ export const TicketListManagerProvider: React.FC<TicketListManagerProviderProps>
     refreshNewTicketList();
   }, [refreshNewTicketList]);
 
+  const handleTicketClaimed = useCallback((ticket: Ticket) => {
+    console.debug('[TicketListManagerContext] Ticket claimed:', ticket.id);
+    refreshNewTicketList();
+  }, [refreshNewTicketList]);
+
+
   // Handler for when a ticket is updated
   const handleTicketUpdated = useCallback((ticket: Ticket) => {
     console.debug('[TicketListManagerContext] Ticket updated:', ticket.id, 'Status:', ticket.status);
@@ -95,6 +99,7 @@ export const TicketListManagerProvider: React.FC<TicketListManagerProviderProps>
   // Only set up ticket listener if we have a profile (dormant until profile exists)
   const listenerCallbacks = authUser.status === 'signed-in' ? {
     onTicketCreated: handleTicketCreated,
+    onTicketClaimed: handleTicketClaimed,
     onTicketUpdated: handleTicketUpdated,
     onTicketsCleared: handleTicketsCleared
   } : {};

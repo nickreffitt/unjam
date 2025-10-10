@@ -1,5 +1,6 @@
 import { browser, type Browser } from 'wxt/browser';
 import { type UserProfile } from '@common/types';
+import type { Session } from '@supabase/supabase-js';
 
 /**
  * Interface for objects that listen to extension events
@@ -46,6 +47,12 @@ export interface ExtensionEventListenerCallbacks {
    * @param error - The error message
    */
   onVerifyOtpFailure?(error: string): void;
+
+  /**
+   * Called when a Supabase session is received (background → content/popup)
+   * @param session - The Supabase session object
+   */
+  onSupabaseSession?(session: Session | null): void | Promise<void>;
 }
 
 /**
@@ -127,6 +134,8 @@ export class ExtensionEventListener {
         type?: string;
         email?: string;
         token?: string;
+        session?: Session | null;
+        error?: string;
       };
 
       console.debug('ExtensionEventListener: Received message', messageData.type);
@@ -189,6 +198,18 @@ export class ExtensionEventListener {
         case 'verifyOtpFailure':
           if (this.callbacks.onVerifyOtpFailure) {
             this.callbacks.onVerifyOtpFailure(messageData.error || 'Unknown error');
+          }
+          return { success: true };
+
+        case 'supabaseSession':
+          if (this.callbacks.onSupabaseSession) {
+            try {
+              await this.callbacks.onSupabaseSession(messageData.session || null);
+              return { success: true };
+            } catch (error) {
+              console.error('ExtensionEventListener: Error in onSupabaseSession:', error);
+              return { success: false, error: String(error) };
+            }
           }
           return { success: true };
 

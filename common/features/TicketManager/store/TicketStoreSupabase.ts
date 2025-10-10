@@ -1,17 +1,29 @@
+import { type SupabaseClient } from '@supabase/supabase-js';
 import { type Ticket, type TicketStatus, type EngineerProfile } from '@common/types';
 import { type TicketStore } from './TicketStore';
+import { type TicketEventEmitter } from '../events/TicketEventEmitter';
+import { TicketSupabaseRowMapper } from '../util/TicketSupabaseRowMapper';
 
 /**
  * Supabase implementation of the ticket store
- * Uses Supabase PostgreSQL database for persistence with real-time updates
- *
- * TODO: Implement actual Supabase integration
- * This is currently a stub implementation
+ * Uses Supabase PostgreSQL database for persistence with row-level security
+ * Emits events for create and update operations for local same-tab event handling
  */
 export class TicketStoreSupabase implements TicketStore {
-  constructor() {
-    // TODO: Initialize Supabase client and set up real-time subscriptions
-    console.debug('TicketStoreSupabase: Initialized (stub implementation)');
+  private supabaseClient: SupabaseClient;
+  private eventEmitter: TicketEventEmitter;
+  private readonly tableName: string = 'tickets';
+
+  constructor(supabaseClient: SupabaseClient, eventEmitter: TicketEventEmitter) {
+    if (!supabaseClient) {
+      throw new Error('TicketStoreSupabase: supabaseClient is required');
+    }
+    if (!eventEmitter) {
+      throw new Error('TicketStoreSupabase: eventEmitter is required');
+    }
+    this.supabaseClient = supabaseClient;
+    this.eventEmitter = eventEmitter;
+    console.debug('TicketStoreSupabase: Initialized');
   }
 
   /**
@@ -19,10 +31,47 @@ export class TicketStoreSupabase implements TicketStore {
    * @param ticket - The ticket to create
    * @returns The created ticket with any modifications (like generated ID)
    */
-  create(ticket: Ticket): Ticket {
-    // TODO: Insert ticket into Supabase tickets table
-    console.debug('TicketStoreSupabase: create() - TODO: Implement Supabase insertion');
-    throw new Error('TicketStoreSupabase.create() not yet implemented');
+  async create(ticket: Ticket): Promise<Ticket> {
+    // Validate required fields
+    if (!ticket.summary) {
+      throw new Error('summary is required for ticket creation');
+    }
+    if (!ticket.problemDescription) {
+      throw new Error('problemDescription is required for ticket creation');
+    }
+    if (!ticket.createdBy?.id) {
+      throw new Error('createdBy profile ID is required for ticket creation');
+    }
+
+    console.debug('TicketStoreSupabase: Creating ticket');
+
+    const ticketRow = TicketSupabaseRowMapper.mapTicketToRow(ticket);
+
+    // Omit the ID field to let the database generate its own UUID
+    const { id, ...ticketRowWithoutId } = ticketRow;
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .insert([ticketRowWithoutId])
+      .select(`
+        *,
+        created_by:profiles!tickets_created_by_fkey(*),
+        assigned_to:profiles!tickets_assigned_to_fkey(*)
+      `)
+      .single();
+
+    if (error) {
+      console.error('TicketStoreSupabase: Create failed:', error);
+      throw new Error(`Failed to create ticket: ${error.message}`);
+    }
+
+    const createdTicket = TicketSupabaseRowMapper.mapRowToTicket(data);
+    console.debug('TicketStoreSupabase: Created ticket successfully:', createdTicket.id);
+
+    // Emit event for ticket creation (for same-tab listeners)
+    this.eventEmitter.emitTicketCreated(createdTicket);
+
+    return createdTicket;
   }
 
   /**
@@ -32,10 +81,33 @@ export class TicketStoreSupabase implements TicketStore {
    * @param offset - Number of tickets to skip (for pagination)
    * @returns Array of tickets matching the status(es)
    */
-  getAllByStatus(ticketStatuses: TicketStatus | TicketStatus[], size: number, offset: number = 0): Ticket[] {
-    // TODO: Query Supabase tickets table with status filter and pagination
-    console.debug('TicketStoreSupabase: getAllByStatus() - TODO: Implement Supabase query');
-    throw new Error('TicketStoreSupabase.getAllByStatus() not yet implemented');
+  async getAllByStatus(
+    ticketStatuses: TicketStatus | TicketStatus[],
+    size: number,
+    offset: number = 0
+  ): Promise<Ticket[]> {
+    const statuses = Array.isArray(ticketStatuses) ? ticketStatuses : [ticketStatuses];
+    console.debug(`TicketStoreSupabase: Getting tickets by status (${statuses.join(', ')}), size: ${size}, offset: ${offset}`);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select(`
+        *,
+        created_by:profiles!tickets_created_by_fkey(*),
+        assigned_to:profiles!tickets_assigned_to_fkey(*)
+      `)
+      .in('status', statuses)
+      .range(offset, offset + size - 1)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('TicketStoreSupabase: Get all by status failed:', error);
+      throw new Error(`Failed to get tickets by status: ${error.message}`);
+    }
+
+    const tickets = data.map(row => TicketSupabaseRowMapper.mapRowToTicket(row));
+    console.debug(`TicketStoreSupabase: Retrieved ${tickets.length} tickets`);
+    return tickets;
   }
 
   /**
@@ -43,10 +115,25 @@ export class TicketStoreSupabase implements TicketStore {
    * @param ticketId - The ID of the ticket to retrieve
    * @returns The ticket if found, null otherwise
    */
-  get(ticketId: string): Ticket | null {
-    // TODO: Query Supabase tickets table by ID
-    console.debug('TicketStoreSupabase: get() - TODO: Implement Supabase query by ID');
-    throw new Error('TicketStoreSupabase.get() not yet implemented');
+  async get(ticketId: string): Promise<Ticket | null> {
+    console.debug('TicketStoreSupabase: Getting ticket by ID:', ticketId);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select(`
+        *,
+        created_by:profiles!tickets_created_by_fkey(*),
+        assigned_to:profiles!tickets_assigned_to_fkey(*)
+      `)
+      .eq('id', ticketId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('TicketStoreSupabase: Get by ID failed:', error);
+      throw new Error(`Failed to get ticket by ID: ${error.message}`);
+    }
+
+    return data ? TicketSupabaseRowMapper.mapRowToTicket(data) : null;
   }
 
   /**
@@ -56,10 +143,37 @@ export class TicketStoreSupabase implements TicketStore {
    * @returns The updated ticket
    * @throws Error if ticket is not found
    */
-  update(ticketId: string, updatedTicket: Ticket): Ticket {
-    // TODO: Update ticket in Supabase tickets table
-    console.debug('TicketStoreSupabase: update() - TODO: Implement Supabase update');
-    throw new Error('TicketStoreSupabase.update() not yet implemented');
+  async update(ticketId: string, updatedTicket: Ticket): Promise<Ticket> {
+    console.debug('TicketStoreSupabase: Updating ticket:', ticketId);
+
+    const ticketRow = TicketSupabaseRowMapper.mapTicketToRow(updatedTicket);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .update(ticketRow)
+      .eq('id', ticketId)
+      .select(`
+        *,
+        created_by:profiles!tickets_created_by_fkey(*),
+        assigned_to:profiles!tickets_assigned_to_fkey(*)
+      `)
+      .single();
+
+    if (error) {
+      console.error('TicketStoreSupabase: Update failed:', error);
+      if (error.code === 'PGRST116') {
+        throw new Error(`Ticket with ID ${ticketId} not found`);
+      }
+      throw new Error(`Failed to update ticket: ${error.message}`);
+    }
+
+    const ticket = TicketSupabaseRowMapper.mapRowToTicket(data);
+    console.debug('TicketStoreSupabase: Updated ticket successfully:', ticketId);
+
+    // Emit event for ticket update (for same-tab listeners)
+    this.eventEmitter.emitTicketUpdated(ticket);
+
+    return ticket;
   }
 
   /**
@@ -71,15 +185,35 @@ export class TicketStoreSupabase implements TicketStore {
    * @param offset - Number of tickets to skip (for pagination)
    * @returns Array of tickets assigned to the engineer with the specified status(es)
    */
-  getAllEngineerTicketsByStatus(
+  async getAllEngineerTicketsByStatus(
     engineerProfile: EngineerProfile,
     ticketStatuses: TicketStatus | TicketStatus[],
     size: number,
     offset: number = 0
-  ): Ticket[] {
-    // TODO: Query Supabase tickets table with engineer and status filters
-    console.debug('TicketStoreSupabase: getAllEngineerTicketsByStatus() - TODO: Implement Supabase query');
-    throw new Error('TicketStoreSupabase.getAllEngineerTicketsByStatus() not yet implemented');
+  ): Promise<Ticket[]> {
+    const statuses = Array.isArray(ticketStatuses) ? ticketStatuses : [ticketStatuses];
+    console.debug(`TicketStoreSupabase: Getting engineer ${engineerProfile.id} tickets by status (${statuses.join(', ')}), size: ${size}, offset: ${offset}`);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select(`
+        *,
+        created_by:profiles!tickets_created_by_fkey(*),
+        assigned_to:profiles!tickets_assigned_to_fkey(*)
+      `)
+      .eq('assigned_to', engineerProfile.id)
+      .in('status', statuses)
+      .range(offset, offset + size - 1)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('TicketStoreSupabase: Get engineer tickets by status failed:', error);
+      throw new Error(`Failed to get engineer tickets by status: ${error.message}`);
+    }
+
+    const tickets = data.map(row => TicketSupabaseRowMapper.mapRowToTicket(row));
+    console.debug(`TicketStoreSupabase: Retrieved ${tickets.length} engineer tickets`);
+    return tickets;
   }
 
   /**
@@ -88,10 +222,20 @@ export class TicketStoreSupabase implements TicketStore {
    * @param ticketStatus - The status to count
    * @returns Number of tickets with that status
    */
-  getCountByStatus(ticketStatus: TicketStatus): number {
-    // TODO: Query Supabase tickets table with count aggregation
-    console.debug('TicketStoreSupabase: getCountByStatus() - TODO: Implement Supabase count query');
-    throw new Error('TicketStoreSupabase.getCountByStatus() not yet implemented');
+  async getCountByStatus(ticketStatus: TicketStatus): Promise<number> {
+    console.debug(`TicketStoreSupabase: Getting count of ${ticketStatus} tickets`);
+
+    const { count, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('status', ticketStatus);
+
+    if (error) {
+      console.error('TicketStoreSupabase: Get count by status failed:', error);
+      throw new Error(`Failed to get count by status: ${error.message}`);
+    }
+
+    return count || 0;
   }
 
   /**
@@ -100,38 +244,82 @@ export class TicketStoreSupabase implements TicketStore {
    * @param customerId - The ID of the customer to find an active ticket for
    * @returns The active ticket if found, null otherwise
    */
-  getActiveTicketByCustomer(customerId: string): Ticket | null {
-    // TODO: Query Supabase tickets table for active ticket by customer
-    console.debug('TicketStoreSupabase: getActiveTicketByCustomer() - TODO: Implement Supabase query');
-    throw new Error('TicketStoreSupabase.getActiveTicketByCustomer() not yet implemented');
+  async getActiveTicketByCustomer(customerId: string): Promise<Ticket | null> {
+    console.debug('TicketStoreSupabase: Getting active ticket for customer:', customerId);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select(`
+        *,
+        created_by:profiles!tickets_created_by_fkey(*),
+        assigned_to:profiles!tickets_assigned_to_fkey(*)
+      `)
+      .eq('created_by', customerId)
+      .not('status', 'in', '(completed,auto-completed)')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('TicketStoreSupabase: Get active ticket by customer failed:', error);
+      throw new Error(`Failed to get active ticket by customer: ${error.message}`);
+    }
+
+    return data ? TicketSupabaseRowMapper.mapRowToTicket(data) : null;
   }
 
   /**
    * Gets all tickets (mainly for testing purposes)
    * @returns All tickets in the store
    */
-  getAll(): Ticket[] {
-    // TODO: Query all tickets from Supabase tickets table
-    console.debug('TicketStoreSupabase: getAll() - TODO: Implement Supabase query');
-    throw new Error('TicketStoreSupabase.getAll() not yet implemented');
+  async getAll(): Promise<Ticket[]> {
+    console.debug('TicketStoreSupabase: Getting all tickets');
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select(`
+        *,
+        created_by:profiles!tickets_created_by_fkey(*),
+        assigned_to:profiles!tickets_assigned_to_fkey(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('TicketStoreSupabase: Get all failed:', error);
+      throw new Error(`Failed to get all tickets: ${error.message}`);
+    }
+
+    const tickets = data.map(row => TicketSupabaseRowMapper.mapRowToTicket(row));
+    console.debug(`TicketStoreSupabase: Retrieved ${tickets.length} tickets`);
+    return tickets;
   }
 
   /**
    * Reloads tickets from storage
-   * Used when we need to sync with changes made by other tabs/sources
+   * Note: For Supabase implementation, this is a no-op since data is always fresh
    */
   reload(): void {
-    // TODO: Re-establish Supabase real-time subscriptions or refresh cached data
-    console.debug('TicketStoreSupabase: reload() - TODO: Implement Supabase refresh');
-    // For Supabase, this might not be necessary due to real-time subscriptions
+    console.debug('TicketStoreSupabase: Reload called (no-op for Supabase implementation)');
+    // No-op for Supabase since data is always fresh from the database
   }
 
   /**
    * Clears all tickets (mainly for testing purposes)
+   * WARNING: This will delete all tickets from the database
    */
-  clear(): void {
-    // TODO: Delete all tickets from Supabase tickets table
-    console.debug('TicketStoreSupabase: clear() - TODO: Implement Supabase deletion');
-    throw new Error('TicketStoreSupabase.clear() not yet implemented');
+  async clear(): Promise<void> {
+    console.warn('TicketStoreSupabase: Clearing all tickets from database');
+
+    const { error } = await this.supabaseClient
+      .from(this.tableName)
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+
+    if (error) {
+      console.error('TicketStoreSupabase: Clear failed:', error);
+      throw new Error(`Failed to clear tickets: ${error.message}`);
+    }
+
+    console.debug('TicketStoreSupabase: Cleared all tickets');
   }
 }

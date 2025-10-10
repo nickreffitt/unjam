@@ -18,6 +18,12 @@ export interface TicketListenerCallbacks {
   onTicketUpdated?(ticket: Ticket): void;
 
   /**
+   * Called when a ticket is claimed by an engineer
+   * @param ticket - The claimed ticket with engineer assignment
+   */
+  onTicketClaimed?(ticket: Ticket): void;
+
+  /**
    * Called when a ticket is deleted
    * @param ticketId - The ID of the deleted ticket
    */

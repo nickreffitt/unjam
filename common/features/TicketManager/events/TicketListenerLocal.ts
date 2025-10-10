@@ -116,6 +116,15 @@ export class TicketListenerLocal implements TicketListener {
               }
             }
             break;
+          case 'ticketClaimed':
+            if (this.callbacks.onTicketClaimed && deserializedTicket) {
+              try {
+                this.callbacks.onTicketClaimed(deserializedTicket);
+              } catch (error) {
+                console.error('TicketListenerLocal: Error in onTicketClaimed:', error);
+              }
+            }
+            break;
           case 'ticketDeleted':
             if (this.callbacks.onTicketDeleted && ticketId) {
               try {

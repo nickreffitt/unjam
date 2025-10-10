@@ -27,6 +27,14 @@ export class TicketEventEmitterLocal implements TicketEventEmitter {
   }
 
   /**
+   * Emits a ticket claimed event
+   * @param ticket - The claimed ticket with engineer assignment
+   */
+  emitTicketClaimed(ticket: Ticket): void {
+    this.emitWindowEvent('ticketClaimed', { ticket });
+  }
+
+  /**
    * Emits a ticket deleted event
    * @param ticketId - The ID of the deleted ticket
    */

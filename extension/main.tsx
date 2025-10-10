@@ -1,7 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import CustomerExtension from '@extension/CustomerExtension'
-import { UserProfileProvider } from '@extension/shared/UserProfileContext'
 import { TicketManagerProvider } from '@extension/Ticket/contexts/TicketManagerContext'
 import { ChatManagerProvider } from '@extension/ChatBox/contexts/ChatManagerContext'
 import { ScreenShareManagerProvider } from '@extension/ScreenShare/contexts/ScreenShareManagerContext'
@@ -9,7 +8,6 @@ import { ScreenShareManagerProvider } from '@extension/ScreenShare/contexts/Scre
 // Simple routing based on URL path
 const App = () => {
   return (
-    <UserProfileProvider>
       <TicketManagerProvider>
         <ChatManagerProvider>
           <ScreenShareManagerProvider>
@@ -17,7 +15,6 @@ const App = () => {
           </ScreenShareManagerProvider>
         </ChatManagerProvider>
       </TicketManagerProvider>
-    </UserProfileProvider>
   );
 };
 

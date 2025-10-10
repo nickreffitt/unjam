@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, MessageCircle, X, Star } from 'lucide-react';
+import { Clock, CheckCircle, MessageCircle, X, Star, Copy, Check } from 'lucide-react';
 import { type Ticket } from '@common/types';
 import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
 import { useTicketActions } from '@extension/Ticket/hooks/useTicketActions';
@@ -48,6 +48,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
 }) => {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Get state and actions from hooks
   const {
@@ -97,6 +98,24 @@ const TicketBox: React.FC<TicketBoxProps> = ({
     } else {
       setIsTicketVisible(false);
     }
+  };
+
+  const handleCopyTicketId = async () => {
+    if (!ticket) return;
+
+    try {
+      await navigator.clipboard.writeText(ticket.id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy ticket ID:', err);
+    }
+  };
+
+  const getTruncatedTicketId = () => {
+    if (!ticket) return '';
+    const firstPart = ticket.id.split('-')[0];
+    return firstPart;
   };
 
   const renderStars = () => {
@@ -151,9 +170,18 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       <div className="unjam-flex unjam-items-center unjam-justify-between unjam-mb-3">
         <div className="unjam-flex unjam-items-center unjam-gap-2">
           <span className="unjam-text-lg unjam-text-gray-700">{getStatusIcon()}</span>
-          <span className="unjam-text-sm unjam-font-medium unjam-text-gray-700">
-            Ticket {ticket.id}
-          </span>
+          <button
+            onClick={handleCopyTicketId}
+            className="unjam-flex unjam-items-center unjam-gap-1 unjam-text-sm unjam-font-medium unjam-text-gray-700 hover:unjam-text-gray-900 unjam-transition-colors"
+            title="Click to copy full ticket ID"
+          >
+            <span>Ticket {getTruncatedTicketId()}</span>
+            {copied ? (
+              <Check size={14} className="unjam-text-green-600" />
+            ) : (
+              <Copy size={14} className="unjam-opacity-60" />
+            )}
+          </button>
         </div>
         <button
           data-testid="ticket-box-close-button"

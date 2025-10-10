@@ -21,7 +21,7 @@ export class TicketStoreLocal implements TicketStore {
    * @param ticket - The ticket to create
    * @returns The created ticket with any modifications (like generated ID)
    */
-  create(ticket: Ticket): Ticket {
+  async create(ticket: Ticket): Promise<Ticket> {
     const newTicket = { ...ticket };
 
     // Add to the beginning of the array (most recent first)
@@ -43,7 +43,7 @@ export class TicketStoreLocal implements TicketStore {
    * @param offset - Number of tickets to skip (for pagination)
    * @returns Array of tickets matching the status(es)
    */
-  getAllByStatus(ticketStatuses: TicketStatus | TicketStatus[], size: number, offset: number = 0): Ticket[] {
+  async getAllByStatus(ticketStatuses: TicketStatus | TicketStatus[], size: number, offset: number = 0): Promise<Ticket[]> {
     const statusArray = Array.isArray(ticketStatuses) ? ticketStatuses : [ticketStatuses];
     const filteredTickets = this.tickets.filter(ticket => statusArray.includes(ticket.status));
 
@@ -58,7 +58,7 @@ export class TicketStoreLocal implements TicketStore {
    * @param ticketId - The ID of the ticket to retrieve
    * @returns The ticket if found, null otherwise
    */
-  get(ticketId: string): Ticket | null {
+  async get(ticketId: string): Promise<Ticket | null> {
     const ticket = this.tickets.find(t => t.id === ticketId);
 
     if (ticket) {
@@ -77,7 +77,7 @@ export class TicketStoreLocal implements TicketStore {
    * @returns The updated ticket
    * @throws Error if ticket is not found
    */
-  update(ticketId: string, updatedTicket: Ticket): Ticket {
+  async update(ticketId: string, updatedTicket: Ticket): Promise<Ticket> {
     const ticketIndex = this.tickets.findIndex(t => t.id === ticketId);
 
     if (ticketIndex === -1) {
@@ -108,12 +108,12 @@ export class TicketStoreLocal implements TicketStore {
    * @param offset - Number of tickets to skip (for pagination)
    * @returns Array of tickets assigned to the engineer with the specified status(es)
    */
-  getAllEngineerTicketsByStatus(
+  async getAllEngineerTicketsByStatus(
     engineerProfile: EngineerProfile,
     ticketStatuses: TicketStatus | TicketStatus[],
     size: number,
     offset: number = 0
-  ): Ticket[] {
+  ): Promise<Ticket[]> {
     const statusArray = Array.isArray(ticketStatuses) ? ticketStatuses : [ticketStatuses];
     const filteredTickets = this.tickets.filter(ticket =>
       statusArray.includes(ticket.status) &&
@@ -133,7 +133,7 @@ export class TicketStoreLocal implements TicketStore {
    * @param ticketStatus - The status to count
    * @returns Number of tickets with that status
    */
-  getCountByStatus(ticketStatus: TicketStatus): number {
+  async getCountByStatus(ticketStatus: TicketStatus): Promise<number> {
     return this.tickets.filter(ticket => ticket.status === ticketStatus).length;
   }
 
@@ -143,7 +143,7 @@ export class TicketStoreLocal implements TicketStore {
    * @param customerId - The ID of the customer to find an active ticket for
    * @returns The active ticket if found, null otherwise
    */
-  getActiveTicketByCustomer(customerId: string): Ticket | null {
+  async getActiveTicketByCustomer(customerId: string): Promise<Ticket | null> {
     const activeStatuses: TicketStatus[] = ['waiting', 'in-progress', 'awaiting-confirmation', 'marked-resolved'];
 
     const activeTicket = this.tickets.find(ticket =>
@@ -164,7 +164,7 @@ export class TicketStoreLocal implements TicketStore {
    * Gets all tickets (mainly for testing purposes)
    * @returns All tickets in the store
    */
-  getAll(): Ticket[] {
+  async getAll(): Promise<Ticket[]> {
     return [...this.tickets];
   }
 
@@ -179,7 +179,7 @@ export class TicketStoreLocal implements TicketStore {
   /**
    * Clears all tickets (mainly for testing purposes)
    */
-  clear(): void {
+  async clear(): Promise<void> {
     this.tickets = [];
     this.saveTicketsToStorage();
     console.debug('TicketStoreLocal: Cleared all tickets');

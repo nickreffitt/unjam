@@ -62,7 +62,7 @@ export const useTicketState = (): UseTicketStateReturn => {
         ticketManager.reload();
 
         // Check for existing active ticket
-        const existingActiveTicket = ticketManager.getActiveTicket();
+        const existingActiveTicket = await ticketManager.getActiveTicket();
         if (existingActiveTicket) {
           setActiveTicket(existingActiveTicket);
           setIsTicketVisible(true); // Show TicketBox when loading existing ticket
@@ -89,6 +89,15 @@ export const useTicketState = (): UseTicketStateReturn => {
     }
   }, [customerProfile.id, ticketManager]);
 
+  const handleTicketClaimed = useCallback((ticket: Ticket) => {
+    // Only update if this ticket belongs to our customer and is our active ticket
+    if (ticket.createdBy.id === customerProfile.id && activeTicketRef.current?.id === ticket.id) {
+      console.debug('useTicketState: Active ticket updated:', ticket.id);
+      ticketManager.reload();
+      setActiveTicket(ticket);
+    }
+  }, [customerProfile.id, ticketManager]);
+
   const handleTicketUpdated = useCallback((ticket: Ticket) => {
     // Only update if this ticket belongs to our customer and is our active ticket
     if (ticket.createdBy.id === customerProfile.id && activeTicketRef.current?.id === ticket.id) {
@@ -101,8 +110,9 @@ export const useTicketState = (): UseTicketStateReturn => {
   // Memoize the callbacks object to prevent recreating the listener
   const ticketListenerCallbacks = useMemo(() => ({
     onTicketCreated: handleTicketCreated,
+    onTicketClaimed: handleTicketClaimed,
     onTicketUpdated: handleTicketUpdated
-  }), [handleTicketCreated, handleTicketUpdated]);
+  }), [handleTicketClaimed, handleTicketCreated, handleTicketUpdated]);
 
   // Listen for cross-tab ticket events to keep context in sync
   useTicketListener(ticketListenerCallbacks);

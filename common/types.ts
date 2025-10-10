@@ -66,7 +66,7 @@ export interface TicketListItem {
   actions: string[];
 }
 
-export type TicketEventType = 'ticketCreated' | 'ticketUpdated' | 'ticketDeleted' | 'ticketsCleared' | 'ticketsLoaded';
+export type TicketEventType = 'ticketCreated' | 'ticketUpdated' | 'ticketClaimed' | 'ticketDeleted' | 'ticketsCleared' | 'ticketsLoaded';
 
 export type ChatEventType = 'chatMessageSent' | 'chatMessagesRead' | 'chatReloaded' | 'chatSenderIsTyping';
 

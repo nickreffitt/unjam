@@ -25,9 +25,6 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
    */
   async create(profile: UserProfile): Promise<UserProfile> {
     // Validate required fields
-    if (!profile.id) {
-      throw new Error('id is required for profile creation');
-    }
     if (!profile.authId) {
       throw new Error('authId is required for profile creation');
     }
@@ -42,7 +39,6 @@ export class AuthProfileStoreSupabase implements AuthProfileStore {
     const { data, error } = await this.supabaseClient
       .from(this.tableName)
       .insert([{
-        id: profile.id,
         auth_id: profile.authId,
         type: profile.type,
         name: profile.name,

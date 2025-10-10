@@ -10,7 +10,7 @@ export interface TicketStore {
    * @param ticket - The ticket to create
    * @returns The created ticket with any modifications (like generated ID)
    */
-  create(ticket: Ticket): Ticket;
+  create(ticket: Ticket): Promise<Ticket>;
 
   /**
    * Gets all tickets by status with pagination
@@ -19,14 +19,14 @@ export interface TicketStore {
    * @param offset - Number of tickets to skip (for pagination)
    * @returns Array of tickets matching the status(es)
    */
-  getAllByStatus(ticketStatuses: TicketStatus | TicketStatus[], size: number, offset?: number): Ticket[];
+  getAllByStatus(ticketStatuses: TicketStatus | TicketStatus[], size: number, offset?: number): Promise<Ticket[]>;
 
   /**
    * Gets a single ticket by ID
    * @param ticketId - The ID of the ticket to retrieve
    * @returns The ticket if found, null otherwise
    */
-  get(ticketId: string): Ticket | null;
+  get(ticketId: string): Promise<Ticket | null>;
 
   /**
    * Updates an existing ticket
@@ -35,7 +35,7 @@ export interface TicketStore {
    * @returns The updated ticket
    * @throws Error if ticket is not found
    */
-  update(ticketId: string, updatedTicket: Ticket): Ticket;
+  update(ticketId: string, updatedTicket: Ticket): Promise<Ticket>;
 
   /**
    * Gets tickets assigned to a specific engineer with specific status(es)
@@ -51,7 +51,7 @@ export interface TicketStore {
     ticketStatuses: TicketStatus | TicketStatus[],
     size: number,
     offset?: number
-  ): Ticket[];
+  ): Promise<Ticket[]>;
 
   /**
    * Gets the total count of tickets with a specific status
@@ -59,7 +59,7 @@ export interface TicketStore {
    * @param ticketStatus - The status to count
    * @returns Number of tickets with that status
    */
-  getCountByStatus(ticketStatus: TicketStatus): number;
+  getCountByStatus(ticketStatus: TicketStatus): Promise<number>;
 
   /**
    * Gets the active ticket for a specific customer
@@ -67,13 +67,13 @@ export interface TicketStore {
    * @param customerId - The ID of the customer to find an active ticket for
    * @returns The active ticket if found, null otherwise
    */
-  getActiveTicketByCustomer(customerId: string): Ticket | null;
+  getActiveTicketByCustomer(customerId: string): Promise<Ticket | null>;
 
   /**
    * Gets all tickets (mainly for testing purposes)
    * @returns All tickets in the store
    */
-  getAll(): Ticket[];
+  getAll(): Promise<Ticket[]>;
 
   /**
    * Reloads tickets from storage
@@ -84,5 +84,5 @@ export interface TicketStore {
   /**
    * Clears all tickets (mainly for testing purposes)
    */
-  clear(): void;
+  clear(): Promise<void>;
 }

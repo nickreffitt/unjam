@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-interface SupabaseContextType {
+export interface SupabaseContextType {
   supabaseClient: SupabaseClient;
   supabaseUrl: string;
 }
 
-const SupabaseContext = createContext<SupabaseContextType | null>(null);
+export const SupabaseContext = createContext<SupabaseContextType | null>(null);
 
 interface SupabaseProviderProps {
   children: React.ReactNode;

@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { TicketManager } from '@common/features/TicketManager';
-import { type TicketStore, TicketStoreLocal } from '@common/features/TicketManager/store';
+import { type TicketStore, type TicketChanges, TicketChangesSupabase, TicketStoreSupabase } from '@common/features/TicketManager/store';
+import { TicketEventEmitterLocal } from '@common/features/TicketManager/events';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
-import { type Ticket } from '@common/types';
+import { useSupabase } from '@extension/shared/contexts/SupabaseContext';
 
 interface TicketManagerContextType {
   ticketManager: TicketManager;
   ticketStore: TicketStore;
+  ticketChanges: TicketChanges;
 }
 
 const TicketManagerContext = createContext<TicketManagerContextType | null>(null);
@@ -17,16 +19,23 @@ interface TicketManagerProviderProps {
 
 export const TicketManagerProvider: React.FC<TicketManagerProviderProps> = ({ children }) => {
   const { customerProfile } = useUserProfile();
+  const { supabaseClient } = useSupabase();
 
   // Create shared instances using centralized customer profile
-  const { ticketStore, ticketManager } = useMemo(() => {
-    const store = new TicketStoreLocal();
-    const manager = new TicketManager(customerProfile, store);
-    return { ticketStore: store, ticketManager: manager };
-  }, [customerProfile]);
+  const { ticketStore, ticketChanges, ticketManager } = useMemo(() => {
+    if (!customerProfile) {
+      throw new Error('No profile set')
+    }
+    const eventEmitter = new TicketEventEmitterLocal();
+    const store = new TicketStoreSupabase(supabaseClient, eventEmitter);
+    const changes = new TicketChangesSupabase(supabaseClient, eventEmitter);
+    console.debug('Instantiating TicketManager in extension')
+    const manager = new TicketManager(customerProfile, store, changes);
+    return { ticketStore: store, ticketChanges: changes, ticketManager: manager };
+  }, [customerProfile, supabaseClient]);
 
   return (
-    <TicketManagerContext.Provider value={{ ticketManager, ticketStore }}>
+    <TicketManagerContext.Provider value={{ ticketManager, ticketStore, ticketChanges }}>
       {children}
     </TicketManagerContext.Provider>
   );

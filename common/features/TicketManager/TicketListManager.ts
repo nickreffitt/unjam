@@ -4,15 +4,21 @@ import type {
   UserProfile
 } from '@common/types';
 import { isEngineerProfile } from '@common/util';
-import { type TicketStore } from '@common/features/TicketManager/store';
+import { type TicketStore, type TicketChanges } from '@common/features/TicketManager/store';
 
 export class TicketListManager {
   private userProfile: UserProfile;
   private ticketStore: TicketStore;
+  private ticketChanges: TicketChanges;
 
-  constructor(userProfile: UserProfile, ticketStore: TicketStore) {
+  constructor(userProfile: UserProfile, ticketStore: TicketStore, ticketChanges: TicketChanges) {
     this.userProfile = userProfile;
     this.ticketStore = ticketStore;
+    this.ticketChanges = ticketChanges;
+
+    // Start listening for ticket changes if TicketChanges is provided
+    this.ticketChanges.start(userProfile.id);
+    console.debug('TicketListManager: Started listening for ticket changes');
   }
 
   /**
@@ -28,7 +34,7 @@ export class TicketListManager {
     }
 
     // Get waiting tickets from the store (includes abandoned tickets)
-    const waitingTickets = this.ticketStore.getAllByStatus('waiting', size, offset);
+    const waitingTickets = await this.ticketStore.getAllByStatus('waiting', size, offset);
 
     // Convert to TicketListItem format
     const ticketListItems: TicketListItem[] = waitingTickets.map(ticket => ({
@@ -60,7 +66,7 @@ export class TicketListManager {
     const ticketStatuses: TicketStatus[] = ['in-progress', 'awaiting-confirmation', 'marked-resolved'];
 
     // Get tickets with all active statuses assigned to this engineer directly from the store
-    const myActiveTickets = this.ticketStore.getAllEngineerTicketsByStatus(
+    const myActiveTickets = await this.ticketStore.getAllEngineerTicketsByStatus(
       engineerProfile,
       ticketStatuses,
       size,
@@ -97,7 +103,7 @@ export class TicketListManager {
     const ticketStatuses: TicketStatus[] = ['completed', 'auto-completed'];
 
     // Get completed and auto-completed tickets assigned to this engineer from the store
-    const allCompletedTickets = this.ticketStore.getAllEngineerTicketsByStatus(
+    const allCompletedTickets = await this.ticketStore.getAllEngineerTicketsByStatus(
       engineerProfile,
       ticketStatuses,
       size * 2, // Get more to ensure we have enough after sorting and pagination
@@ -132,6 +138,15 @@ export class TicketListManager {
    */
   reload(): void {
     this.ticketStore.reload();
+  }
+
+  /**
+   * Stops listening for ticket changes and cleans up resources
+   * Should be called when the manager is no longer needed
+   */
+  destroy(): void {
+    this.ticketChanges.stop();
+    console.debug('TicketListManager: Stopped listening for ticket changes');
   }
 
   /**

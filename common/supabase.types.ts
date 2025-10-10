@@ -224,7 +224,7 @@ export type Database = {
           extension_installed_at?: string | null
           extension_installed_version?: string | null
           github_username?: string | null
-          id: string
+          id?: string
           name: string
           specialties?: string[] | null
           type: Database["public"]["Enums"]["user_type"]
@@ -244,6 +244,72 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      tickets: {
+        Row: {
+          abandoned_at: string | null
+          assigned_to: string | null
+          auto_complete_timeout_at: string | null
+          claimed_at: string | null
+          created_at: string | null
+          created_by: string
+          estimated_time: string
+          id: string
+          marked_as_fixed_at: string | null
+          problem_description: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["ticket_status"]
+          summary: string
+          updated_at: string | null
+        }
+        Insert: {
+          abandoned_at?: string | null
+          assigned_to?: string | null
+          auto_complete_timeout_at?: string | null
+          claimed_at?: string | null
+          created_at?: string | null
+          created_by: string
+          estimated_time: string
+          id?: string
+          marked_as_fixed_at?: string | null
+          problem_description: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          summary: string
+          updated_at?: string | null
+        }
+        Update: {
+          abandoned_at?: string | null
+          assigned_to?: string | null
+          auto_complete_timeout_at?: string | null
+          claimed_at?: string | null
+          created_at?: string | null
+          created_by?: string
+          estimated_time?: string
+          id?: string
+          marked_as_fixed_at?: string | null
+          problem_description?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          summary?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -270,6 +336,13 @@ export type Database = {
         | "canceled"
         | "unpaid"
         | "paused"
+      ticket_status:
+        | "waiting"
+        | "in-progress"
+        | "awaiting-confirmation"
+        | "marked-resolved"
+        | "completed"
+        | "auto-completed"
       user_type: "customer" | "engineer"
     }
     CompositeTypes: {
@@ -419,6 +492,14 @@ export const Constants = {
         "canceled",
         "unpaid",
         "paused",
+      ],
+      ticket_status: [
+        "waiting",
+        "in-progress",
+        "awaiting-confirmation",
+        "marked-resolved",
+        "completed",
+        "auto-completed",
       ],
       user_type: ["customer", "engineer"],
     },

@@ -3,7 +3,7 @@ CREATE TYPE user_type AS ENUM ('customer', 'engineer');
 
 -- Create profiles table
 CREATE TABLE profiles (
-  id UUID NOT NULL PRIMARY KEY,
+  id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type user_type NOT NULL,
   name TEXT NOT NULL,
@@ -59,4 +59,5 @@ CREATE POLICY "Users can update their own profile" ON profiles
 CREATE POLICY "Users can delete their own profile" ON profiles
   FOR DELETE USING (auth.uid() = auth_id);
 
+-- Enable realtime for profiles table (for postgres_changes subscription)
 ALTER publication supabase_realtime ADD TABLE profiles;

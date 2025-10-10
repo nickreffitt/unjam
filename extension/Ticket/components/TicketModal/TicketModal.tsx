@@ -34,7 +34,7 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose }) => {
       console.debug('Ticket created with ID:', ticket.id);
 
       // Since storage events only work cross-tab, manually get the created ticket and update context
-      const createdTicket = ticketManager.getActiveTicket();
+      const createdTicket = await ticketManager.getActiveTicket();
       if (createdTicket) {
         console.debug('Setting active ticket in context:', createdTicket.id);
         setActiveTicket(createdTicket);

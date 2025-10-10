@@ -3,17 +3,23 @@ import {
   type UserProfile
 } from '@common/types';
 import { isCustomerProfile, isEngineerProfile } from '@common/util';
-import { type TicketStore } from '@common/features/TicketManager/store';
+import { type TicketStore, type TicketChanges } from '@common/features/TicketManager/store';
 
 const AUTO_COMPLETE_TIMEOUT_MINUTES = 30;
 
 export class TicketManager {
   private userProfile: UserProfile;
   private ticketStore: TicketStore;
+  private ticketChanges: TicketChanges;
 
-  constructor(userProfile: UserProfile, ticketStore: TicketStore) {
+  constructor(userProfile: UserProfile, ticketStore: TicketStore, ticketChanges: TicketChanges) {
     this.userProfile = userProfile;
     this.ticketStore = ticketStore;
+    this.ticketChanges = ticketChanges;
+
+    // Start listening for ticket changes if TicketChanges is provided
+    this.ticketChanges.start(userProfile.id);
+    console.debug('TicketManager: Started listening for ticket changes');
   }
 
   /**
@@ -42,7 +48,7 @@ export class TicketManager {
       elapsedTime: 0
     };
 
-    return this.ticketStore.create(newTicket);
+    return await this.ticketStore.create(newTicket);
   }
 
   /**
@@ -57,7 +63,7 @@ export class TicketManager {
     }
 
     // Get the ticket from the store
-    const ticket = this.ticketStore.get(ticketId);
+    const ticket = await this.ticketStore.get(ticketId);
     if (!ticket) {
       throw new Error(`Ticket with ID ${ticketId} not found`);
     }
@@ -70,10 +76,10 @@ export class TicketManager {
     const engineerProfile = this.userProfile;
 
     // Check if engineer has reached the maximum ticket limit (3 active tickets)
-    const activeTickets = this.ticketStore.getAllByStatus(['in-progress', 'awaiting-confirmation'], 100)
-      .filter(t => t.assignedTo?.id === engineerProfile.id);
+    const activeTickets = await this.ticketStore.getAllByStatus(['in-progress', 'awaiting-confirmation'], 100);
+    const engineerActiveTickets = activeTickets.filter(t => t.assignedTo?.id === engineerProfile.id);
 
-    if (activeTickets.length >= 3) {
+    if (engineerActiveTickets.length >= 3) {
       throw new Error('You must complete your active tickets before claiming more. Maximum 3 active tickets allowed.');
     }
 
@@ -85,7 +91,7 @@ export class TicketManager {
       claimedAt: new Date()
     };
 
-    return this.ticketStore.update(ticketId, updatedTicket);
+    return await this.ticketStore.update(ticketId, updatedTicket);
   }
 
   /**
@@ -100,7 +106,7 @@ export class TicketManager {
     }
 
     // Get the ticket from the store
-    const ticket = this.ticketStore.get(ticketId);
+    const ticket = await this.ticketStore.get(ticketId);
     if (!ticket) {
       throw new Error(`Ticket with ID ${ticketId} not found`);
     }
@@ -126,7 +132,7 @@ export class TicketManager {
       autoCompleteTimeoutAt,
     };
 
-    return this.ticketStore.update(ticketId, updatedTicket);
+    return await this.ticketStore.update(ticketId, updatedTicket);
   }
 
   /**
@@ -137,7 +143,7 @@ export class TicketManager {
    */
   async markAsResolved(ticketId: string): Promise<Ticket> {
     // Get the ticket from the store
-    const ticket = this.ticketStore.get(ticketId);
+    const ticket = await this.ticketStore.get(ticketId);
     if (!ticket) {
       throw new Error(`Ticket with ID ${ticketId} not found`);
     }
@@ -149,7 +155,7 @@ export class TicketManager {
       resolvedAt: new Date(),
     };
 
-    return this.ticketStore.update(ticketId, updatedTicket);
+    return await this.ticketStore.update(ticketId, updatedTicket);
   }
 
   /**
@@ -165,7 +171,7 @@ export class TicketManager {
     }
 
     // Get the ticket from the store
-    const ticket = this.ticketStore.get(ticketId);
+    const ticket = await this.ticketStore.get(ticketId);
     if (!ticket) {
       throw new Error(`Ticket with ID ${ticketId} not found`);
     }
@@ -185,7 +191,7 @@ export class TicketManager {
     };
 
     console.debug(`Customer ${customerProfile.name} marked ticket ${ticketId} as still broken`);
-    return this.ticketStore.update(ticketId, updatedTicket);
+    return await this.ticketStore.update(ticketId, updatedTicket);
   }
 
   /**
@@ -196,7 +202,7 @@ export class TicketManager {
    */
   async autoCompleteTicket(ticketId: string): Promise<Ticket> {
     // Get the ticket from the store
-    const ticket = this.ticketStore.get(ticketId);
+    const ticket = await this.ticketStore.get(ticketId);
     if (!ticket) {
       throw new Error(`Ticket with ID ${ticketId} not found`);
     }
@@ -215,7 +221,7 @@ export class TicketManager {
     };
 
     console.debug(`Auto-completing ticket ${ticketId} after timeout`);
-    return this.ticketStore.update(ticketId, updatedTicket);
+    return await this.ticketStore.update(ticketId, updatedTicket);
   }
 
   /**
@@ -230,7 +236,7 @@ export class TicketManager {
     }
 
     // Get the ticket from the store
-    const ticket = this.ticketStore.get(ticketId);
+    const ticket = await this.ticketStore.get(ticketId);
     if (!ticket) {
       throw new Error(`Ticket with ID ${ticketId} not found`);
     }
@@ -252,7 +258,19 @@ export class TicketManager {
     };
 
     console.debug(`Engineer ${engineerProfile.name} abandoned ticket ${ticketId}`);
-    return this.ticketStore.update(ticketId, updatedTicket);
+    return await this.ticketStore.update(ticketId, updatedTicket);
+  }
+
+  /**
+   * Gets a ticket by ID
+   * @param ticketId - The ID of the ticket to retrieve
+   * @returns The ticket or null if not found
+   */
+  async getTicket(ticketId: string): Promise<Ticket | null> {
+    if (!isEngineerProfile(this.userProfile)) {
+      throw new Error('Only engineers can fetch tickets');
+    }
+    return await this.ticketStore.get(ticketId);
   }
 
   /**
@@ -261,14 +279,14 @@ export class TicketManager {
    * @returns The active ticket or null if no active ticket exists
    * @throws Error if user is not a customer
    */
-  getActiveTicket(): Ticket | null {
+  async getActiveTicket(): Promise<Ticket | null> {
     if (!isCustomerProfile(this.userProfile)) {
       throw new Error('Only customers can check for active tickets');
     }
 
     // Now TypeScript knows this.userProfile is CustomerProfile
     const customerProfile = this.userProfile;
-    return this.ticketStore.getActiveTicketByCustomer(customerProfile.id);
+    return await this.ticketStore.getActiveTicketByCustomer(customerProfile.id);
   }
 
   /**
@@ -276,5 +294,14 @@ export class TicketManager {
    */
   reload(): void {
     this.ticketStore.reload();
+  }
+
+  /**
+   * Stops listening for ticket changes and cleans up resources
+   * Should be called when the manager is no longer needed
+   */
+  destroy(): void {
+    this.ticketChanges.stop();
+    console.debug('TicketManager: Stopped listening for ticket changes');
   }
 }
