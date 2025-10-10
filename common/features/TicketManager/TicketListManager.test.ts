@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TicketListManager } from './TicketListManager';
-import { type TicketStore, TicketStoreLocal } from '@common/features/TicketManager/store';
+import { type TicketStore, TicketStoreLocal, type TicketChanges } from '@common/features/TicketManager/store';
 import { type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('TicketListManager', () => {
   let ticketStore: TicketStore;
+  let mockTicketChanges: TicketChanges;
 
   // Create mock user profiles
   const mockCustomer: CustomerProfile = {
@@ -26,6 +27,12 @@ describe('TicketListManager', () => {
     // Create a fresh store for each test and populate with mock data
     ticketStore = new TicketStoreLocal();
     ticketStore.clear(); // Clear any existing data from localStorage
+
+    // Create mock TicketChanges
+    mockTicketChanges = {
+      start: async () => {},
+      stop: () => {}
+    };
 
     // Create test tickets
     const testTicket1 = {
@@ -58,7 +65,7 @@ describe('TicketListManager', () => {
   describe('listNewTickets', () => {
     it('should list new tickets when user is an engineer', async () => {
       // Given a TicketListManager instance for an engineer
-      const ticketListManager = new TicketListManager(mockEngineer, ticketStore);
+      const ticketListManager = new TicketListManager(mockEngineer, ticketStore, mockTicketChanges);
 
       // When listing new tickets
       const tickets = await ticketListManager.listNewTickets();
@@ -86,7 +93,7 @@ describe('TicketListManager', () => {
 
     it('should include abandoned tickets in the list', async () => {
       // Given a TicketListManager instance for an engineer
-      const ticketListManager = new TicketListManager(mockEngineer, ticketStore);
+      const ticketListManager = new TicketListManager(mockEngineer, ticketStore, mockTicketChanges);
 
       // When listing new tickets
       const tickets = await ticketListManager.listNewTickets();
@@ -99,7 +106,7 @@ describe('TicketListManager', () => {
 
     it('should format elapsed time correctly', async () => {
       // Given a TicketListManager instance for an engineer
-      const ticketListManager = new TicketListManager(mockEngineer, ticketStore);
+      const ticketListManager = new TicketListManager(mockEngineer, ticketStore, mockTicketChanges);
 
       // When listing new tickets
       const tickets = await ticketListManager.listNewTickets();
@@ -112,7 +119,7 @@ describe('TicketListManager', () => {
 
     it('should throw error when non-engineer tries to list tickets', async () => {
       // Given a TicketListManager instance for a customer
-      const ticketListManager = new TicketListManager(mockCustomer, ticketStore);
+      const ticketListManager = new TicketListManager(mockCustomer, ticketStore, mockTicketChanges);
 
       // When trying to list tickets as a customer
       // Then it should throw an error
@@ -172,7 +179,7 @@ describe('TicketListManager', () => {
       });
 
       // Given a TicketListManager instance for the engineer
-      const ticketListManager = new TicketListManager(mockEngineer, ticketStore);
+      const ticketListManager = new TicketListManager(mockEngineer, ticketStore, mockTicketChanges);
 
       // When listing active tickets
       const activeTickets = await ticketListManager.listActiveTickets();
@@ -200,7 +207,7 @@ describe('TicketListManager', () => {
 
     it('should throw error when non-engineer tries to list active tickets', async () => {
       // Given a TicketListManager instance for a customer
-      const ticketListManager = new TicketListManager(mockCustomer, ticketStore);
+      const ticketListManager = new TicketListManager(mockCustomer, ticketStore, mockTicketChanges);
 
       // When trying to list active tickets as a customer
       // Then it should throw an error

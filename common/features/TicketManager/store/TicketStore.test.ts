@@ -42,86 +42,87 @@ describe('TicketStoreLocal', () => {
   });
 
   describe('create', () => {
-    it('should create a new ticket and add it to the store', () => {
+    it('should create a new ticket and add it to the store', async () => {
       // Given a new ticket
       const newTicket = createMockTicket();
 
       // When creating the ticket
-      const createdTicket = ticketStore.create(newTicket);
+      const createdTicket = await ticketStore.create(newTicket);
 
       // Then it should return the ticket and add it to the store
       expect(createdTicket).toEqual(newTicket);
-      expect(ticketStore.getAll()).toHaveLength(1);
-      expect(ticketStore.getAll()[0]).toEqual(newTicket);
+      const allTickets = await ticketStore.getAll();
+      expect(allTickets).toHaveLength(1);
+      expect(allTickets[0]).toEqual(newTicket);
     });
 
-    it('should add new tickets to the beginning of the array', () => {
+    it('should add new tickets to the beginning of the array', async () => {
       // Given two tickets
       const firstTicket = createMockTicket({ id: 'TKT-FIRST' });
       const secondTicket = createMockTicket({ id: 'TKT-SECOND' });
 
       // When creating them in order
-      ticketStore.create(firstTicket);
-      ticketStore.create(secondTicket);
+      await ticketStore.create(firstTicket);
+      await ticketStore.create(secondTicket);
 
       // Then the most recent should be first
-      const allTickets = ticketStore.getAll();
+      const allTickets = await ticketStore.getAll();
       expect(allTickets[0].id).toBe('TKT-SECOND');
       expect(allTickets[1].id).toBe('TKT-FIRST');
     });
   });
 
   describe('get', () => {
-    it('should return a ticket when it exists', () => {
+    it('should return a ticket when it exists', async () => {
       // Given a ticket in the store
       const ticket = createMockTicket();
-      ticketStore.create(ticket);
+      await ticketStore.create(ticket);
 
       // When getting the ticket by ID
-      const foundTicket = ticketStore.get(ticket.id);
+      const foundTicket = await ticketStore.get(ticket.id);
 
       // Then it should return the ticket
       expect(foundTicket).toEqual(ticket);
     });
 
-    it('should return null when ticket does not exist', () => {
+    it('should return null when ticket does not exist', async () => {
       // Given an empty store
       // When trying to get a non-existent ticket
-      const foundTicket = ticketStore.get('NON-EXISTENT-ID');
+      const foundTicket = await ticketStore.get('NON-EXISTENT-ID');
 
       // Then it should return null
       expect(foundTicket).toBeNull();
     });
 
-    it('should return a copy of the ticket to prevent external mutations', () => {
+    it('should return a copy of the ticket to prevent external mutations', async () => {
       // Given a ticket in the store
       const ticket = createMockTicket();
-      ticketStore.create(ticket);
+      await ticketStore.create(ticket);
 
       // When getting the ticket
-      const foundTicket = ticketStore.get(ticket.id);
+      const foundTicket = await ticketStore.get(ticket.id);
 
       // Then modifying the returned ticket should not affect the store
       foundTicket!.summary = 'Modified summary';
-      const originalTicket = ticketStore.get(ticket.id);
+      const originalTicket = await ticketStore.get(ticket.id);
       expect(originalTicket!.summary).toBe('Test ticket summary');
     });
   });
 
   describe('getAllByStatus', () => {
-    it('should return tickets with matching status', () => {
+    it('should return tickets with matching status', async () => {
       // Given tickets with different statuses
       const waitingTicket = createMockTicket({ id: 'TKT-WAITING', status: 'waiting' });
       const inProgressTicket = createMockTicket({ id: 'TKT-PROGRESS', status: 'in-progress' });
       const completedTicket = createMockTicket({ id: 'TKT-COMPLETED', status: 'completed' });
 
-      ticketStore.create(waitingTicket);
-      ticketStore.create(inProgressTicket);
-      ticketStore.create(completedTicket);
+      await ticketStore.create(waitingTicket);
+      await ticketStore.create(inProgressTicket);
+      await ticketStore.create(completedTicket);
 
       // When getting tickets by status
-      const waitingTickets = ticketStore.getAllByStatus('waiting', 10);
-      const inProgressTickets = ticketStore.getAllByStatus('in-progress', 10);
+      const waitingTickets = await ticketStore.getAllByStatus('waiting', 10);
+      const inProgressTickets = await ticketStore.getAllByStatus('in-progress', 10);
 
       // Then it should return only matching tickets
       expect(waitingTickets).toHaveLength(1);
@@ -130,21 +131,21 @@ describe('TicketStoreLocal', () => {
       expect(inProgressTickets[0].id).toBe('TKT-PROGRESS');
     });
 
-    it('should return tickets with matching statuses when array is provided', () => {
+    it('should return tickets with matching statuses when array is provided', async () => {
       // Given tickets with different statuses
       const waitingTicket = createMockTicket({ id: 'TKT-WAITING', status: 'waiting' });
       const inProgressTicket = createMockTicket({ id: 'TKT-PROGRESS', status: 'in-progress' });
       const awaitingConfirmationTicket = createMockTicket({ id: 'TKT-AWAITING', status: 'awaiting-confirmation' });
       const completedTicket = createMockTicket({ id: 'TKT-COMPLETED', status: 'completed' });
 
-      ticketStore.create(waitingTicket);
-      ticketStore.create(inProgressTicket);
-      ticketStore.create(awaitingConfirmationTicket);
-      ticketStore.create(completedTicket);
+      await ticketStore.create(waitingTicket);
+      await ticketStore.create(inProgressTicket);
+      await ticketStore.create(awaitingConfirmationTicket);
+      await ticketStore.create(completedTicket);
 
       // When getting tickets by multiple statuses
-      const activeTickets = ticketStore.getAllByStatus(['in-progress', 'awaiting-confirmation'], 10);
-      const finishedTickets = ticketStore.getAllByStatus(['completed'], 10);
+      const activeTickets = await ticketStore.getAllByStatus(['in-progress', 'awaiting-confirmation'], 10);
+      const finishedTickets = await ticketStore.getAllByStatus(['completed'], 10);
 
       // Then it should return only matching tickets
       expect(activeTickets).toHaveLength(2);
@@ -154,16 +155,16 @@ describe('TicketStoreLocal', () => {
       expect(finishedTickets[0].id).toBe('TKT-COMPLETED');
     });
 
-    it('should support pagination with size parameter', () => {
+    it('should support pagination with size parameter', async () => {
       // Given multiple tickets with the same status
       for (let i = 0; i < 5; i++) {
         const ticket = createMockTicket({ id: `TKT-${i}`, status: 'waiting' });
-        ticketStore.create(ticket);
+        await ticketStore.create(ticket);
       }
 
       // When getting tickets with size limit
-      const firstPage = ticketStore.getAllByStatus('waiting', 2);
-      const secondPage = ticketStore.getAllByStatus('waiting', 2, 2);
+      const firstPage = await ticketStore.getAllByStatus('waiting', 2);
+      const secondPage = await ticketStore.getAllByStatus('waiting', 2, 2);
 
       // Then it should return the correct number of tickets
       expect(firstPage).toHaveLength(2);
@@ -171,18 +172,18 @@ describe('TicketStoreLocal', () => {
       expect(firstPage[0].id).not.toBe(secondPage[0].id);
     });
 
-    it('should support pagination with offset parameter', () => {
+    it('should support pagination with offset parameter', async () => {
       // Given 3 tickets with the same status
       const tickets = [];
       for (let i = 0; i < 3; i++) {
         const ticket = createMockTicket({ id: `TKT-${i}`, status: 'waiting' });
         tickets.push(ticket);
-        ticketStore.create(ticket);
+        await ticketStore.create(ticket);
       }
 
       // When getting tickets with offset
-      const withoutOffset = ticketStore.getAllByStatus('waiting', 2, 0);
-      const withOffset = ticketStore.getAllByStatus('waiting', 2, 1);
+      const withoutOffset = await ticketStore.getAllByStatus('waiting', 2, 0);
+      const withOffset = await ticketStore.getAllByStatus('waiting', 2, 1);
 
       // Then the results should be different
       expect(withoutOffset).toHaveLength(2);
@@ -192,10 +193,10 @@ describe('TicketStoreLocal', () => {
   });
 
   describe('update', () => {
-    it('should update an existing ticket', () => {
+    it('should update an existing ticket', async () => {
       // Given a ticket in the store
       const originalTicket = createMockTicket();
-      ticketStore.create(originalTicket);
+      await ticketStore.create(originalTicket);
 
       // When updating the ticket
       const updatedTicket = createMockTicket({
@@ -204,7 +205,7 @@ describe('TicketStoreLocal', () => {
         status: 'in-progress',
         assignedTo: mockEngineer
       });
-      const result = ticketStore.update(originalTicket.id, updatedTicket);
+      const result = await ticketStore.update(originalTicket.id, updatedTicket);
 
       // Then the ticket should be updated
       expect(result.summary).toBe('Updated summary');
@@ -212,50 +213,50 @@ describe('TicketStoreLocal', () => {
       expect(result.assignedTo).toEqual(mockEngineer);
 
       // And the store should contain the updated ticket
-      const storedTicket = ticketStore.get(originalTicket.id);
+      const storedTicket = await ticketStore.get(originalTicket.id);
       expect(storedTicket!.summary).toBe('Updated summary');
     });
 
-    it('should preserve the ticket ID when updating', () => {
+    it('should preserve the ticket ID when updating', async () => {
       // Given a ticket in the store
       const originalTicket = createMockTicket();
-      ticketStore.create(originalTicket);
+      await ticketStore.create(originalTicket);
 
       // When updating with a different ID
       const updatedTicket = createMockTicket({
         id: 'DIFFERENT-ID',
         summary: 'Updated summary'
       });
-      const result = ticketStore.update(originalTicket.id, updatedTicket);
+      const result = await ticketStore.update(originalTicket.id, updatedTicket);
 
       // Then the original ID should be preserved
       expect(result.id).toBe(originalTicket.id);
       expect(result.id).not.toBe('DIFFERENT-ID');
     });
 
-    it('should throw error when trying to update non-existent ticket', () => {
+    it('should throw error when trying to update non-existent ticket', async () => {
       // Given an empty store
       const ticketToUpdate = createMockTicket();
 
       // When trying to update a non-existent ticket
       // Then it should throw an error
-      expect(() => {
-        ticketStore.update('NON-EXISTENT-ID', ticketToUpdate);
-      }).toThrow('Ticket with ID NON-EXISTENT-ID not found');
+      await expect(async () => {
+        await ticketStore.update('NON-EXISTENT-ID', ticketToUpdate);
+      }).rejects.toThrow('Ticket with ID NON-EXISTENT-ID not found');
     });
   });
 
   describe('getCountByStatus', () => {
-    it('should return the correct count of tickets by status', () => {
+    it('should return the correct count of tickets by status', async () => {
       // Given tickets with different statuses
-      ticketStore.create(createMockTicket({ id: 'TKT-1', status: 'waiting' }));
-      ticketStore.create(createMockTicket({ id: 'TKT-2', status: 'waiting' }));
-      ticketStore.create(createMockTicket({ id: 'TKT-3', status: 'in-progress' }));
+      await ticketStore.create(createMockTicket({ id: 'TKT-1', status: 'waiting' }));
+      await ticketStore.create(createMockTicket({ id: 'TKT-2', status: 'waiting' }));
+      await ticketStore.create(createMockTicket({ id: 'TKT-3', status: 'in-progress' }));
 
       // When counting tickets by status
-      const waitingCount = ticketStore.getCountByStatus('waiting');
-      const inProgressCount = ticketStore.getCountByStatus('in-progress');
-      const completedCount = ticketStore.getCountByStatus('completed');
+      const waitingCount = await ticketStore.getCountByStatus('waiting');
+      const inProgressCount = await ticketStore.getCountByStatus('in-progress');
+      const completedCount = await ticketStore.getCountByStatus('completed');
 
       // Then it should return correct counts
       expect(waitingCount).toBe(2);
@@ -265,16 +266,16 @@ describe('TicketStoreLocal', () => {
   });
 
   describe('getAll', () => {
-    it('should return all tickets in the store', () => {
+    it('should return all tickets in the store', async () => {
       // Given multiple tickets
       const ticket1 = createMockTicket({ id: 'TKT-1' });
       const ticket2 = createMockTicket({ id: 'TKT-2' });
 
-      ticketStore.create(ticket1);
-      ticketStore.create(ticket2);
+      await ticketStore.create(ticket1);
+      await ticketStore.create(ticket2);
 
       // When getting all tickets
-      const allTickets = ticketStore.getAll();
+      const allTickets = await ticketStore.getAll();
 
       // Then it should return all tickets
       expect(allTickets).toHaveLength(2);
@@ -282,32 +283,35 @@ describe('TicketStoreLocal', () => {
       expect(allTickets.map(t => t.id)).toContain('TKT-2');
     });
 
-    it('should return a copy of the tickets array', () => {
+    it('should return a copy of the tickets array', async () => {
       // Given a ticket in the store
       const ticket = createMockTicket();
-      ticketStore.create(ticket);
+      await ticketStore.create(ticket);
 
       // When getting all tickets
-      const allTickets = ticketStore.getAll();
+      const allTickets = await ticketStore.getAll();
 
       // Then modifying the returned array should not affect the store
       allTickets.pop();
-      expect(ticketStore.getAll()).toHaveLength(1);
+      const allTicketsAgain = await ticketStore.getAll();
+      expect(allTicketsAgain).toHaveLength(1);
     });
   });
 
   describe('clear', () => {
-    it('should remove all tickets from the store', () => {
+    it('should remove all tickets from the store', async () => {
       // Given tickets in the store
-      ticketStore.create(createMockTicket({ id: 'TKT-1' }));
-      ticketStore.create(createMockTicket({ id: 'TKT-2' }));
-      expect(ticketStore.getAll()).toHaveLength(2);
+      await ticketStore.create(createMockTicket({ id: 'TKT-1' }));
+      await ticketStore.create(createMockTicket({ id: 'TKT-2' }));
+      const allTickets = await ticketStore.getAll();
+      expect(allTickets).toHaveLength(2);
 
       // When clearing the store
       ticketStore.clear();
 
       // Then the store should be empty
-      expect(ticketStore.getAll()).toHaveLength(0);
+      const allTicketsAfterClear = await ticketStore.getAll();
+      expect(allTicketsAfterClear).toHaveLength(0);
     });
   });
 
@@ -320,26 +324,26 @@ describe('TicketStoreLocal', () => {
       specialties: ['backend']
     };
 
-    it('should return only tickets assigned to the specific engineer with the specified status', () => {
+    it('should return only tickets assigned to the specific engineer with the specified status', async () => {
       // Given tickets assigned to different engineers
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-1',
         status: 'in-progress',
         assignedTo: mockEngineer
       }));
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-2',
         status: 'in-progress',
         assignedTo: anotherEngineer
       }));
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-3',
         status: 'completed',
         assignedTo: mockEngineer
       }));
 
       // When getting in-progress tickets for mockEngineer
-      const engineerTickets = ticketStore.getAllEngineerTicketsByStatus(
+      const engineerTickets = await ticketStore.getAllEngineerTicketsByStatus(
         mockEngineer,
         'in-progress',
         10,
@@ -353,36 +357,36 @@ describe('TicketStoreLocal', () => {
       expect(engineerTickets[0].status).toBe('in-progress');
     });
 
-    it('should return tickets assigned to the specific engineer with multiple specified statuses', () => {
+    it('should return tickets assigned to the specific engineer with multiple specified statuses', async () => {
       // Given tickets assigned to the engineer with different statuses
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-1',
         status: 'in-progress',
         assignedTo: mockEngineer
       }));
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-2',
         status: 'awaiting-confirmation',
         assignedTo: mockEngineer
       }));
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-3',
         status: 'marked-resolved',
         assignedTo: mockEngineer
       }));
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-4',
         status: 'completed',
         assignedTo: mockEngineer
       }));
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-5',
         status: 'in-progress',
         assignedTo: anotherEngineer
       }));
 
       // When getting active status tickets for mockEngineer
-      const activeTickets = ticketStore.getAllEngineerTicketsByStatus(
+      const activeTickets = await ticketStore.getAllEngineerTicketsByStatus(
         mockEngineer,
         ['in-progress', 'awaiting-confirmation', 'marked-resolved'],
         10,
@@ -402,16 +406,16 @@ describe('TicketStoreLocal', () => {
       });
     });
 
-    it('should return empty array when no tickets match the criteria', () => {
+    it('should return empty array when no tickets match the criteria', async () => {
       // Given tickets not assigned to the engineer
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-1',
         status: 'in-progress',
         assignedTo: anotherEngineer
       }));
 
       // When getting tickets for mockEngineer
-      const engineerTickets = ticketStore.getAllEngineerTicketsByStatus(
+      const engineerTickets = await ticketStore.getAllEngineerTicketsByStatus(
         mockEngineer,
         'in-progress',
         10,
@@ -422,10 +426,10 @@ describe('TicketStoreLocal', () => {
       expect(engineerTickets).toHaveLength(0);
     });
 
-    it('should support pagination', () => {
+    it('should support pagination', async () => {
       // Given multiple tickets assigned to the engineer
       for (let i = 1; i <= 5; i++) {
-        ticketStore.create(createMockTicket({
+        await ticketStore.create(createMockTicket({
           id: `TKT-${i}`,
           status: 'in-progress',
           assignedTo: mockEngineer
@@ -433,7 +437,7 @@ describe('TicketStoreLocal', () => {
       }
 
       // When getting first 2 tickets
-      const firstPage = ticketStore.getAllEngineerTicketsByStatus(
+      const firstPage = await ticketStore.getAllEngineerTicketsByStatus(
         mockEngineer,
         'in-progress',
         2,
@@ -444,7 +448,7 @@ describe('TicketStoreLocal', () => {
       expect(firstPage).toHaveLength(2);
 
       // When getting next 2 tickets
-      const secondPage = ticketStore.getAllEngineerTicketsByStatus(
+      const secondPage = await ticketStore.getAllEngineerTicketsByStatus(
         mockEngineer,
         'in-progress',
         2,
@@ -457,26 +461,26 @@ describe('TicketStoreLocal', () => {
       expect(secondPage[0].id).not.toBe(firstPage[1].id);
     });
 
-    it('should only return tickets with exact status match', () => {
+    it('should only return tickets with exact status match', async () => {
       // Given tickets with different statuses assigned to the engineer
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-1',
         status: 'in-progress',
         assignedTo: mockEngineer
       }));
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-2',
         status: 'completed',
         assignedTo: mockEngineer
       }));
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-3',
         status: 'waiting',
         assignedTo: mockEngineer
       }));
 
       // When getting only completed tickets
-      const completedTickets = ticketStore.getAllEngineerTicketsByStatus(
+      const completedTickets = await ticketStore.getAllEngineerTicketsByStatus(
         mockEngineer,
         'completed',
         10,
@@ -489,16 +493,16 @@ describe('TicketStoreLocal', () => {
       expect(completedTickets[0].status).toBe('completed');
     });
 
-    it('should exclude tickets with no assignedTo', () => {
+    it('should exclude tickets with no assignedTo', async () => {
       // Given tickets without assignment
-      ticketStore.create(createMockTicket({
+      await ticketStore.create(createMockTicket({
         id: 'TKT-1',
         status: 'waiting'
         // no assignedTo field
       }));
 
       // When getting waiting tickets for the engineer
-      const engineerTickets = ticketStore.getAllEngineerTicketsByStatus(
+      const engineerTickets = await ticketStore.getAllEngineerTicketsByStatus(
         mockEngineer,
         'waiting',
         10,
