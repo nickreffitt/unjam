@@ -41,7 +41,7 @@ export const useScreenShareActions = (
       const screenShareManager = createScreenShareManagerRef.current(ticketIdRef.current);
 
       // First, respond to the request to mark it as accepted
-      screenShareManager.respondToRequest(request, 'accepted', customerProfileRef.current);
+      await screenShareManager.respondToRequest(request, 'accepted', customerProfileRef.current);
       console.debug('Screenshare request accepted');
 
       // Then immediately start the session
@@ -70,11 +70,11 @@ export const useScreenShareActions = (
     }
   }, []); // Empty dependency array - stable callback
 
-  const handleRejectRequest = useCallback((request: ScreenShareRequest) => {
+  const handleRejectRequest = useCallback(async (request: ScreenShareRequest) => {
     console.debug('Rejecting screenshare request:', request.id);
     try {
       const screenShareManager = createScreenShareManagerRef.current(ticketIdRef.current);
-      screenShareManager.respondToRequest(request, 'rejected', customerProfileRef.current);
+      await screenShareManager.respondToRequest(request, 'rejected', customerProfileRef.current);
       console.debug('Screenshare request rejected');
 
       // Reload the ScreenShareManager to sync with the updated request in localStorage
@@ -97,7 +97,7 @@ export const useScreenShareActions = (
       const screenShareManager = createScreenShareManagerRef.current(ticketIdRef.current);
 
       // First, check if there's already an accepted request from the engineer
-      const activeRequest = screenShareManager.getActiveRequest();
+      const activeRequest = await screenShareManager.getActiveRequest();
 
       if (activeRequest &&
           activeRequest.status === 'accepted' &&
@@ -117,7 +117,7 @@ export const useScreenShareActions = (
         // No accepted engineer request, create a new customer-initiated request
         console.debug('No accepted engineer request found, creating customer-initiated request');
 
-        screenShareManager.startCall(
+        await screenShareManager.startCall(
           customerProfileRef.current,  // sender (customer)
           engineerProfileRef.current   // receiver (engineer)
         );

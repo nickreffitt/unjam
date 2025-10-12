@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WebRTCManager } from './WebRTCManager';
-import { WebRTCSignalingStore } from './store';
+import { WebRTCSignalingStoreLocal } from './store';
 import type { UserProfile } from '@common/types';
 
 // Mock WebRTCService
@@ -25,7 +25,7 @@ vi.mock('./WebRTCService', () => ({
 describe('WebRTCManager', () => {
   const sessionId = 'session-123';
   let webrtcManager: WebRTCManager;
-  let signalingStore: WebRTCSignalingStore;
+  let signalingStore: WebRTCSignalingStoreLocal;
   let mockWebRTCService: any;
 
   const mockLocalUser: UserProfile = {
@@ -49,7 +49,7 @@ describe('WebRTCManager', () => {
     vi.clearAllMocks();
 
     // Create store
-    signalingStore = new WebRTCSignalingStore();
+    signalingStore = new WebRTCSignalingStoreLocal();
 
     // Create mock WebRTC service
     mockWebRTCService = {

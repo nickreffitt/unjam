@@ -56,7 +56,7 @@ export class ChatEventEmitterLocal implements ChatEventEmitter {
   }
 
   /**
-   * Emits a storage event for cross-tab communication only
+   * Emits events for both same-tab and cross-tab communication
    */
   private emitWindowEvent(type: ChatEventType, data: Record<string, unknown>): void {
     if (typeof window === 'undefined') return; // Skip in non-browser environments
@@ -67,13 +67,19 @@ export class ChatEventEmitterLocal implements ChatEventEmitter {
       timestamp: Date.now()
     };
 
-    // Use a temporary localStorage key to trigger storage events across tabs
+    // 1. Emit custom window event for same-tab communication
+    const customEvent = new CustomEvent('chat-event', {
+      detail: eventPayload
+    });
+    window.dispatchEvent(customEvent);
+
+    // 2. Use localStorage to trigger storage events for cross-tab communication
     const eventKey = 'chatstore-event';
     localStorage.setItem(eventKey, JSON.stringify(eventPayload));
 
     // Clean up immediately to avoid cluttering localStorage
     localStorage.removeItem(eventKey);
 
-    console.debug('ChatEventEmitterLocal: Emitting storage event:', type, data);
+    console.debug('ChatEventEmitterLocal: Emitting both window and storage events:', type, data);
   }
 }

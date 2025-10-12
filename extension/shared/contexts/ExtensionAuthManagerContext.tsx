@@ -12,6 +12,8 @@ interface ExtensionAuthManagerContextType {
   signInWithOtp: (email: string) => Promise<void>;
   verifyOtp: (token: string) => Promise<void>;
   resetOtpSent: () => void;
+  setOtpSent: (value: boolean) => void;
+  setEmail: (email: string) => void;
 }
 
 const ExtensionAuthManagerContext = createContext<ExtensionAuthManagerContextType | null>(null);
@@ -183,6 +185,8 @@ export const ExtensionAuthManagerProvider: React.FC<ExtensionAuthManagerProvider
     signInWithOtp,
     verifyOtp,
     resetOtpSent,
+    setOtpSent,
+    setEmail,
   };
 
   return (

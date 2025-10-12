@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ScreenShareSessionStore } from './ScreenShareSessionStore';
+import { ScreenShareSessionStoreLocal } from './ScreenShareSessionStoreLocal';
 import { type UserProfile, type ScreenShareSession, type SessionStatus } from '@common/types';
 
-describe('ScreenShareSessionStore', () => {
-  let store: ScreenShareSessionStore;
+describe('ScreenShareSessionStoreLocal', () => {
+  let store: ScreenShareSessionStoreLocal;
   let mockCustomer: UserProfile;
   let mockEngineer: UserProfile;
 
@@ -12,7 +12,7 @@ describe('ScreenShareSessionStore', () => {
     localStorage.clear();
     vi.clearAllMocks();
 
-    store = new ScreenShareSessionStore();
+    store = new ScreenShareSessionStoreLocal();
 
     mockCustomer = {
       id: 'cust-456',
@@ -30,7 +30,7 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('create', () => {
-    it('should create a new screen share session with generated ID and timestamps', () => {
+    it('should create a new screen share session with generated ID and timestamps', async () => {
       // given session data without ID and timestamps
       const sessionData = {
         ticketId: 'ticket-789',
@@ -42,7 +42,7 @@ describe('ScreenShareSessionStore', () => {
       };
 
       // when creating the session
-      const created = store.create(sessionData);
+      const created = await store.create(sessionData);
 
       // then the session should have ID and timestamps
       expect(created.id).toBeTruthy();
@@ -58,7 +58,7 @@ describe('ScreenShareSessionStore', () => {
       expect(created.endedAt).toBeUndefined();
     });
 
-    it('should persist the session to localStorage', () => {
+    it('should persist the session to localStorage', async () => {
       // given localStorage is empty
       expect(localStorage.getItem('screenShareSessions')).toBeNull();
 
@@ -70,7 +70,7 @@ describe('ScreenShareSessionStore', () => {
         subscriber: mockEngineer,
         status: 'active' as SessionStatus,
       };
-      store.create(sessionData);
+      await store.create(sessionData);
 
       // then the session should be in localStorage
       const stored = localStorage.getItem('screenShareSessions');
@@ -82,9 +82,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('getById', () => {
-    it('should return a session by ID', () => {
+    it('should return a session by ID', async () => {
       // given a created session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -93,7 +93,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting by ID
-      const retrieved = store.getById(created.id);
+      const retrieved = await store.getById(created.id);
 
       // then the session should be returned
       expect(retrieved).toBeDefined();
@@ -101,18 +101,18 @@ describe('ScreenShareSessionStore', () => {
       expect(retrieved!.ticketId).toBe('ticket-789');
     });
 
-    it('should return undefined for non-existent ID', () => {
+    it('should return undefined for non-existent ID', async () => {
       // given no sessions exist
       // when getting by non-existent ID
-      const retrieved = store.getById('non-existent');
+      const retrieved = await store.getById('non-existent');
 
       // then undefined should be returned
       expect(retrieved).toBeUndefined();
     });
 
-    it('should return a copy to prevent external mutations', () => {
+    it('should return a copy to prevent external mutations', async () => {
       // given a created session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -121,19 +121,19 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting by ID and modifying it
-      const retrieved = store.getById(created.id);
+      const retrieved = await store.getById(created.id);
       retrieved!.status = 'ended';
 
       // then the original should be unchanged
-      const retrievedAgain = store.getById(created.id);
+      const retrievedAgain = await store.getById(created.id);
       expect(retrievedAgain!.status).toBe('active');
     });
   });
 
   describe('getActiveByTicketId', () => {
-    it('should return initializing session for a ticket', () => {
+    it('should return initializing session for a ticket', async () => {
       // given an initializing session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -142,7 +142,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting active session
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then the initializing session should be returned
       expect(active).toBeDefined();
@@ -150,9 +150,9 @@ describe('ScreenShareSessionStore', () => {
       expect(active!.status).toBe('initializing');
     });
 
-    it('should return active session for a ticket', () => {
+    it('should return active session for a ticket', async () => {
       // given an active session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -161,7 +161,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting active session
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then the active session should be returned
       expect(active).toBeDefined();
@@ -169,9 +169,9 @@ describe('ScreenShareSessionStore', () => {
       expect(active!.status).toBe('active');
     });
 
-    it('should not return ended or error sessions', () => {
+    it('should not return ended or error sessions', async () => {
       // given ended and error sessions
-      store.create({
+      await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-111',
         publisher: mockCustomer,
@@ -179,7 +179,7 @@ describe('ScreenShareSessionStore', () => {
         status: 'ended',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-222',
         publisher: mockCustomer,
@@ -189,15 +189,15 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting active session
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then undefined should be returned
       expect(active).toBeUndefined();
     });
 
-    it('should return the most recent active session if multiple exist', () => {
+    it('should return the most recent active session if multiple exist', async () => {
       // given multiple active sessions (edge case)
-      const session1 = store.create({
+      const session1 = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-111',
         publisher: mockCustomer,
@@ -207,7 +207,7 @@ describe('ScreenShareSessionStore', () => {
 
       vi.setSystemTime(new Date(Date.now() + 1000));
 
-      const session2 = store.create({
+      const session2 = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-222',
         publisher: mockCustomer,
@@ -216,7 +216,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting active session
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then the first active session should be returned (first match wins)
       expect(active!.id).toBe(session1.id);
@@ -224,9 +224,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('getByTicketId', () => {
-    it('should return all sessions for a ticket sorted by newest first', () => {
+    it('should return all sessions for a ticket sorted by newest first', async () => {
       // given multiple sessions for the same ticket
-      const session1 = store.create({
+      const session1 = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-111',
         publisher: mockCustomer,
@@ -236,7 +236,7 @@ describe('ScreenShareSessionStore', () => {
 
       vi.setSystemTime(new Date(Date.now() + 1000));
 
-      const session2 = store.create({
+      const session2 = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-222',
         publisher: mockCustomer,
@@ -245,7 +245,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting by ticket ID
-      const sessions = store.getByTicketId('ticket-789');
+      const sessions = await store.getByTicketId('ticket-789');
 
       // then both sessions should be returned with newest first
       expect(sessions).toHaveLength(2);
@@ -253,10 +253,10 @@ describe('ScreenShareSessionStore', () => {
       expect(sessions[1].id).toBe(session1.id);
     });
 
-    it('should return empty array for ticket with no sessions', () => {
+    it('should return empty array for ticket with no sessions', async () => {
       // given no sessions for a ticket
       // when getting by ticket ID
-      const sessions = store.getByTicketId('no-sessions');
+      const sessions = await store.getByTicketId('no-sessions');
 
       // then empty array should be returned
       expect(sessions).toEqual([]);
@@ -264,9 +264,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('getByRequestId', () => {
-    it('should return all sessions for a request', () => {
+    it('should return all sessions for a request', async () => {
       // given sessions for the same request
-      const session1 = store.create({
+      const session1 = await store.create({
         ticketId: 'ticket-111',
         requestId: 'request-789',
         publisher: mockCustomer,
@@ -274,7 +274,7 @@ describe('ScreenShareSessionStore', () => {
         status: 'ended',
       });
 
-      const session2 = store.create({
+      const session2 = await store.create({
         ticketId: 'ticket-222',
         requestId: 'request-789',
         publisher: mockCustomer,
@@ -283,7 +283,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting by request ID
-      const sessions = store.getByRequestId('request-789');
+      const sessions = await store.getByRequestId('request-789');
 
       // then both sessions should be returned
       expect(sessions).toHaveLength(2);
@@ -293,9 +293,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('update', () => {
-    it('should update session status', () => {
+    it('should update session status', async () => {
       // given an active session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -307,7 +307,7 @@ describe('ScreenShareSessionStore', () => {
       vi.setSystemTime(new Date(originalActivity + 1000));
 
       // when updating status
-      const updated = store.update(created.id, { status: 'active' });
+      const updated = await store.update(created.id, { status: 'active' });
 
       // then the status should be updated
       expect(updated).toBeDefined();
@@ -315,9 +315,9 @@ describe('ScreenShareSessionStore', () => {
       expect(updated!.lastActivityAt.getTime()).toBeGreaterThan(originalActivity);
     });
 
-    it('should update stream ID', () => {
+    it('should update stream ID', async () => {
       // given a session without stream ID
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -326,16 +326,16 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when updating stream ID
-      const updated = store.update(created.id, { streamId: 'new-stream-123' });
+      const updated = await store.update(created.id, { streamId: 'new-stream-123' });
 
       // then the stream ID should be updated
       expect(updated).toBeDefined();
       expect(updated!.streamId).toBe('new-stream-123');
     });
 
-    it('should set endedAt when status changes to ended', () => {
+    it('should set endedAt when status changes to ended', async () => {
       // given an active session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -344,7 +344,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when updating status to ended
-      const updated = store.update(created.id, { status: 'ended' });
+      const updated = await store.update(created.id, { status: 'ended' });
 
       // then endedAt should be set
       expect(updated).toBeDefined();
@@ -352,9 +352,9 @@ describe('ScreenShareSessionStore', () => {
       expect(updated!.endedAt).toBeInstanceOf(Date);
     });
 
-    it('should set error message when provided', () => {
+    it('should set error message when provided', async () => {
       // given an active session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -363,7 +363,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when updating with error
-      const updated = store.update(created.id, {
+      const updated = await store.update(created.id, {
         status: 'error',
         errorMessage: 'Connection lost',
       });
@@ -374,18 +374,18 @@ describe('ScreenShareSessionStore', () => {
       expect(updated!.errorMessage).toBe('Connection lost');
     });
 
-    it('should return undefined for non-existent session', () => {
+    it('should return undefined for non-existent session', async () => {
       // given no sessions
       // when updating non-existent session
-      const updated = store.update('non-existent', { status: 'ended' });
+      const updated = await store.update('non-existent', { status: 'ended' });
 
       // then undefined should be returned
       expect(updated).toBeUndefined();
     });
 
-    it('should persist updates to localStorage', () => {
+    it('should persist updates to localStorage', async () => {
       // given a created session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -394,7 +394,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when updating status
-      store.update(created.id, { status: 'active' });
+      await store.update(created.id, { status: 'active' });
 
       // then the updated status should be in localStorage
       const stored = localStorage.getItem('screenShareSessions');
@@ -404,9 +404,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('updateActivity', () => {
-    it('should update last activity timestamp', () => {
+    it('should update last activity timestamp', async () => {
       // given a session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -418,18 +418,18 @@ describe('ScreenShareSessionStore', () => {
       vi.setSystemTime(new Date(originalActivity + 5000));
 
       // when updating activity
-      const updated = store.updateActivity(created.id);
+      const updated = await store.updateActivity(created.id);
 
       // then activity timestamp should be updated
       expect(updated).toBe(true);
-      const session = store.getById(created.id);
+      const session = await store.getById(created.id);
       expect(session!.lastActivityAt.getTime()).toBeGreaterThan(originalActivity);
     });
 
-    it('should return false for non-existent session', () => {
+    it('should return false for non-existent session', async () => {
       // given no sessions
       // when updating activity of non-existent session
-      const updated = store.updateActivity('non-existent');
+      const updated = await store.updateActivity('non-existent');
 
       // then false should be returned
       expect(updated).toBe(false);
@@ -437,9 +437,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('endSession', () => {
-    it('should end an active session', () => {
+    it('should end an active session', async () => {
       // given an active session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -448,7 +448,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when ending the session
-      const ended = store.endSession(created.id);
+      const ended = await store.endSession(created.id);
 
       // then the session should be ended with timestamp
       expect(ended).toBeDefined();
@@ -458,9 +458,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('markError', () => {
-    it('should mark session as error with message', () => {
+    it('should mark session as error with message', async () => {
       // given an active session
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -469,7 +469,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when marking as error
-      const errored = store.markError(created.id, 'Stream connection failed');
+      const errored = await store.markError(created.id, 'Stream connection failed');
 
       // then the session should have error status and message
       expect(errored).toBeDefined();
@@ -480,9 +480,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('getAll', () => {
-    it('should return all sessions', () => {
+    it('should return all sessions', async () => {
       // given multiple sessions
-      store.create({
+      await store.create({
         ticketId: 'ticket-111',
         requestId: 'request-111',
         publisher: mockCustomer,
@@ -490,7 +490,7 @@ describe('ScreenShareSessionStore', () => {
         status: 'active',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-222',
         requestId: 'request-222',
         publisher: mockCustomer,
@@ -499,7 +499,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting all sessions
-      const all = store.getAll();
+      const all = await store.getAll();
 
       // then all sessions should be returned
       expect(all).toHaveLength(2);
@@ -509,9 +509,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('getActiveSessions', () => {
-    it('should return only initializing and active sessions', () => {
+    it('should return only initializing and active sessions', async () => {
       // given various sessions
-      const active = store.create({
+      const active = await store.create({
         ticketId: 'ticket-111',
         requestId: 'request-111',
         publisher: mockCustomer,
@@ -519,7 +519,7 @@ describe('ScreenShareSessionStore', () => {
         status: 'active',
       });
 
-      const initializing = store.create({
+      const initializing = await store.create({
         ticketId: 'ticket-222',
         requestId: 'request-222',
         publisher: mockCustomer,
@@ -527,7 +527,7 @@ describe('ScreenShareSessionStore', () => {
         status: 'initializing',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-333',
         requestId: 'request-333',
         publisher: mockCustomer,
@@ -535,7 +535,7 @@ describe('ScreenShareSessionStore', () => {
         status: 'ended',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-444',
         requestId: 'request-444',
         publisher: mockCustomer,
@@ -544,7 +544,7 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when getting active sessions
-      const activeSessions = store.getActiveSessions();
+      const activeSessions = await store.getActiveSessions();
 
       // then only active and initializing sessions should be returned
       expect(activeSessions).toHaveLength(2);
@@ -554,9 +554,9 @@ describe('ScreenShareSessionStore', () => {
   });
 
   describe('clear', () => {
-    it('should remove all sessions', () => {
+    it('should remove all sessions', async () => {
       // given multiple sessions
-      store.create({
+      await store.create({
         ticketId: 'ticket-111',
         requestId: 'request-111',
         publisher: mockCustomer,
@@ -564,7 +564,7 @@ describe('ScreenShareSessionStore', () => {
         status: 'active',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-222',
         requestId: 'request-222',
         publisher: mockCustomer,
@@ -573,17 +573,17 @@ describe('ScreenShareSessionStore', () => {
       });
 
       // when clearing
-      store.clear();
+      await store.clear();
 
       // then no sessions should remain
-      expect(store.getAll()).toEqual([]);
+      expect(await store.getAll()).toEqual([]);
     });
   });
 
   describe('reload', () => {
-    it('should reload sessions from localStorage', () => {
+    it('should reload sessions from localStorage', async () => {
       // given a session in the store
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         requestId: 'request-456',
         publisher: mockCustomer,
@@ -599,11 +599,11 @@ describe('ScreenShareSessionStore', () => {
       store.reload();
 
       // then the reloaded session should have the updated status
-      const reloaded = store.getById(created.id);
+      const reloaded = await store.getById(created.id);
       expect(reloaded!.status).toBe('ended');
     });
 
-    it('should handle corrupted localStorage gracefully', () => {
+    it('should handle corrupted localStorage gracefully', async () => {
       // given corrupted data in localStorage
       localStorage.setItem('screenShareSessions', 'invalid json');
 
@@ -611,12 +611,12 @@ describe('ScreenShareSessionStore', () => {
       store.reload();
 
       // then store should be empty and not throw
-      expect(store.getAll()).toEqual([]);
+      expect(await store.getAll()).toEqual([]);
     });
   });
 
   describe('localStorage persistence', () => {
-    it('should load existing sessions from localStorage on construction', () => {
+    it('should load existing sessions from localStorage on construction', async () => {
       // given sessions in localStorage
       const existingSessions = [
         {
@@ -633,10 +633,10 @@ describe('ScreenShareSessionStore', () => {
       localStorage.setItem('screenShareSessions', JSON.stringify(existingSessions));
 
       // when creating a new store instance
-      const newStore = new ScreenShareSessionStore();
+      const newStore = new ScreenShareSessionStoreLocal();
 
       // then existing sessions should be loaded
-      const loaded = newStore.getAll();
+      const loaded = await newStore.getAll();
       expect(loaded).toHaveLength(1);
       expect(loaded[0].id).toBe('existing-1');
       expect(loaded[0].startedAt).toBeInstanceOf(Date);

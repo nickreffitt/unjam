@@ -68,6 +68,12 @@ const SignIn: React.FC = () => {
     clearError();
   };
 
+  const handleShowOtpForm = (emailValue: string) => {
+    console.debug('SignIn: Showing OTP verification form with email:', emailValue);
+    setEmail(emailValue);
+    setOtpSent(true);
+  };
+
   if (otpSent) {
     return (
       <div className="unjam-min-h-screen unjam-bg-gray-50 unjam-flex unjam-items-center unjam-justify-center unjam-py-12 unjam-px-4 sm:unjam-px-6 lg:unjam-px-8">
@@ -111,6 +117,7 @@ const SignIn: React.FC = () => {
         {/* Sign In Form */}
         <SignInForm
           onSubmit={handleSignInSubmit}
+          onShowOtpForm={handleShowOtpForm}
           disabled={authActionLoading}
         />
 

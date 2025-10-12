@@ -101,8 +101,8 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
   }, [userProfile]);
 
   // Load initial state
-  const loadState = useCallback(() => {
-    const activeRequest = screenShareManager.getActiveRequest();
+  const loadState = useCallback(async () => {
+    const activeRequest = await screenShareManager.getActiveRequest();
     const activeSession = screenShareManager.getActiveSession();
 
     setCurrentRequest(activeRequest || null);
@@ -169,7 +169,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
       }
     }, [screenShareManager, ticketId, deriveUIState, currentRequest, clearExpirationTimer]),
 
-    onScreenShareSessionUpdated: useCallback((session: ScreenShareSession) => {
+    onScreenShareSessionUpdated: useCallback(async (session: ScreenShareSession) => {
       screenShareManager.reload();
       if (session.ticketId === ticketId) {
         // Handle connection loss scenarios
@@ -202,7 +202,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
 
         if (session.status === 'active') {
           console.debug('Subscribing to stream for session', session);
-          screenShareManager.subscribeToStream(session.id);
+          await screenShareManager.subscribeToStream(session.id);
         }
 
         setUIState(deriveUIState(currentRequest, session));

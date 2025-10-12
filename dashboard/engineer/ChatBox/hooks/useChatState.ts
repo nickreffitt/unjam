@@ -117,7 +117,7 @@ export const useChatState = (
     onChatMessageReceived: handleChatMessageReceived,
     onChatReloaded: handleChatReloaded,
     onChatReceiverIsTyping: handleChatReceiverIsTyping
-  }), []); // Empty dependency array - callbacks are stable with refs
+  }), [handleChatMessageReceived, handleChatReceiverIsTyping, handleChatReloaded]); // Empty dependency array - callbacks are stable with refs
 
   // Listen for real-time chat events with stable callbacks
   useChatListener(chatListenerCallbacks);

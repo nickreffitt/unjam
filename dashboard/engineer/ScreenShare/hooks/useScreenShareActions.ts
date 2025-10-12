@@ -18,7 +18,7 @@ export const useScreenShareActions = (ticketId: string): UseScreenShareActionsRe
     return createScreenShareManager(ticketId);
   }, [createScreenShareManager, ticketId]);
 
-  const requestScreenShare = (customer: UserProfile) => {
+  const requestScreenShare = async (customer: UserProfile) => {
     if (!userProfile || userProfile.type !== 'engineer') {
       console.error('No engineer profile available for screen share request');
       return;
@@ -26,13 +26,13 @@ export const useScreenShareActions = (ticketId: string): UseScreenShareActionsRe
 
     try {
       console.debug('Requesting screen share from customer:', customer.name);
-      screenShareManager.requestScreenShare(userProfile, customer);
+      await screenShareManager.requestScreenShare(userProfile, customer);
     } catch (error) {
       console.error('Failed to request screen share:', error);
     }
   };
 
-  const acceptCall = (request: ScreenShareRequest | null) => {
+  const acceptCall = async (request: ScreenShareRequest | null) => {
     if (!userProfile || userProfile.type !== 'engineer') {
       console.error('No engineer profile available to accept call');
       return;
@@ -44,14 +44,14 @@ export const useScreenShareActions = (ticketId: string): UseScreenShareActionsRe
 
     try {
       console.debug('Accepting incoming screen share call:', request);
-      
-      screenShareManager.acceptCall(request.id, userProfile);
+
+      await screenShareManager.acceptCall(request.id, userProfile);
     } catch (error) {
       console.error('Failed to accept screen share call:', error);
     }
   };
 
-  const rejectCall = (request: ScreenShareRequest | null) => {
+  const rejectCall = async (request: ScreenShareRequest | null) => {
     if (!userProfile || userProfile.type !== 'engineer') {
       console.error('No engineer profile available to reject call');
       return;
@@ -63,7 +63,7 @@ export const useScreenShareActions = (ticketId: string): UseScreenShareActionsRe
 
     try {
       console.debug('Rejecting incoming screen share call:', request);
-      screenShareManager.rejectCall(request?.id, userProfile);
+      await screenShareManager.rejectCall(request?.id, userProfile);
     } catch (error) {
       console.error('Failed to reject screen share call:', error);
     }

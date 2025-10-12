@@ -1,2 +1,2 @@
 export { ChatManager } from './ChatManager';
-export { ChatStore } from './store';
+export type { ChatStore } from './store';

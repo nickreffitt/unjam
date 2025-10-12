@@ -132,6 +132,7 @@ export interface WebRTCError {
 
 export interface WebRTCSignal {
   id: string;
+  ticketId: string;
   sessionId: string;
   from: UserProfile;
   to: UserProfile;

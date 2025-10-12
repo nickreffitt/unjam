@@ -1,17 +1,27 @@
 import { type ChatMessage, type UserProfile } from '@common/types';
 import { type ChatStore } from '@common/features/ChatManager/store';
+import { type ChatChanges } from './store/ChatChanges';
 
 export class ChatManager {
   private readonly ticketId: string;
   private readonly sender: UserProfile;
   private readonly receiver: UserProfile;
   private readonly chatStore: ChatStore;
+  private readonly changes: ChatChanges;
 
-  constructor(ticketId: string, sender: UserProfile, receiver: UserProfile, chatStore: ChatStore) {
+  constructor(
+    ticketId: string, 
+    sender: UserProfile, 
+    receiver: UserProfile,
+    chatStore: ChatStore,
+    changes: ChatChanges) {
     this.ticketId = ticketId;
     this.sender = sender;
     this.receiver = receiver;
     this.chatStore = chatStore;
+    this.changes = changes;
+
+    this.changes.start();
   }
 
   /**
@@ -37,7 +47,7 @@ export class ChatManager {
     };
 
     // Store the message
-    const createdMessage = this.chatStore.create(message);
+    const createdMessage = await this.chatStore.create(message);
 
     console.debug(
       `ChatManager: Message sent from ${this.sender.name} to ${this.receiver.name} for ticket ${this.ticketId}`
@@ -61,7 +71,7 @@ export class ChatManager {
       throw new Error('Offset cannot be negative');
     }
 
-    const messages = this.chatStore.getRecent(size, offset);
+    const messages = await this.chatStore.getRecent(size, offset);
 
     console.debug(
       `ChatManager: Retrieved ${messages.length} messages for ticket ${this.ticketId}`
@@ -79,7 +89,7 @@ export class ChatManager {
       return;
     }
 
-    this.chatStore.markAsRead(messageIds);
+    await this.chatStore.markAsRead(messageIds);
 
     console.debug(
       `ChatManager: Marked ${messageIds.length} messages as read for ticket ${this.ticketId}`
@@ -90,8 +100,8 @@ export class ChatManager {
    * Gets the total count of messages in the chat
    * @returns Number of messages
    */
-  getMessageCount(): number {
-    return this.chatStore.getCount();
+  async getMessageCount(): Promise<number> {
+    return await this.chatStore.getCount();
   }
 
   /**
@@ -136,5 +146,14 @@ export class ChatManager {
     console.debug(
       `ChatManager: ${this.sender.name} is typing for ticket ${this.ticketId}`
     );
+  }
+
+  /**
+   * Stops listening for changes and cleans up resources
+   * Should be called when the manager is no longer needed
+   */
+  destroy(): void {
+    this.changes.stop();
+    console.debug('ChangeManager: Stopped listening for changes');
   }
 }

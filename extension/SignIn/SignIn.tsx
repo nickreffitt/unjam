@@ -16,6 +16,8 @@ const SignIn: React.FC = () => {
     otpSent,
     email,
     resetOtpSent,
+    setOtpSent,
+    setEmail,
     error
   } = useExtensionAuthManager();
 
@@ -34,6 +36,12 @@ const SignIn: React.FC = () => {
   const handleReset = () => {
     console.debug('SignIn: Going back to email entry form');
     resetOtpSent();
+  };
+
+  const handleShowOtpForm = (emailValue: string) => {
+    console.debug('SignIn: Showing OTP verification form with email:', emailValue);
+    setEmail(emailValue);
+    setOtpSent(true);
   };
 
   if (otpSent) {
@@ -77,7 +85,11 @@ const SignIn: React.FC = () => {
         )}
 
         {/* Sign In Form */}
-        <SignInForm onSubmit={handleSignInSubmit} disabled={isLoading} />
+        <SignInForm
+          onSubmit={handleSignInSubmit}
+          onShowOtpForm={handleShowOtpForm}
+          disabled={isLoading}
+        />
 
         {/* Footer */}
         <div className="unjam-text-center">

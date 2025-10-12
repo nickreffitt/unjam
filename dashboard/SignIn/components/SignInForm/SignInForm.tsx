@@ -3,11 +3,13 @@ import { Mail, ArrowRight, Loader } from 'lucide-react';
 
 interface SignInFormProps {
   onSubmit: (email: string) => Promise<void>;
+  onShowOtpForm: (email: string) => void;
   disabled?: boolean;
 }
 
 const SignInForm: React.FC<SignInFormProps> = ({
   onSubmit,
+  onShowOtpForm,
   disabled = false,
 }) => {
   const [email, setEmail] = useState('');
@@ -38,6 +40,21 @@ const SignInForm: React.FC<SignInFormProps> = ({
     } catch (error) {
       // Error handling is done by parent component
     }
+  };
+
+  const handleShowOtpForm = () => {
+    if (!email.trim()) {
+      setEmailError('Please enter your email address');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+
+    setEmailError('');
+    onShowOtpForm(email);
   };
 
   return (
@@ -91,6 +108,16 @@ const SignInForm: React.FC<SignInFormProps> = ({
           {disabled ? 'Sending code...' : 'Send code to my email'}
         </button>
       </form>
+
+      {/* Already have code button */}
+      <button
+        type="button"
+        onClick={handleShowOtpForm}
+        disabled={disabled}
+        className="unjam-w-full unjam-flex unjam-justify-center unjam-items-center unjam-py-2.5 unjam-px-4 unjam-border unjam-border-gray-300 unjam-rounded-md unjam-text-sm unjam-font-medium unjam-text-gray-700 unjam-bg-white hover:unjam-bg-gray-50 focus:unjam-outline-none focus:unjam-ring-2 focus:unjam-ring-offset-2 focus:unjam-ring-blue-500 disabled:unjam-opacity-50 disabled:unjam-cursor-not-allowed unjam-transition-colors"
+      >
+        I have a code
+      </button>
     </div>
   );
 };

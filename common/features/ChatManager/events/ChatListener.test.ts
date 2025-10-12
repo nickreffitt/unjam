@@ -100,8 +100,8 @@ describe('ChatListener', () => {
       // when starting to listen again
       listener.startListening();
 
-      // then should only add listener once
-      expect(mockWindow.addEventListener).toHaveBeenCalledTimes(1);
+      // then should only add listeners once (2 calls: one for storage, one for chat-event)
+      expect(mockWindow.addEventListener).toHaveBeenCalledTimes(2);
     });
 
     it('should not listen in non-browser environment', () => {

@@ -85,12 +85,12 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
   }, [clearOutgoingExpirationTimer]);
 
   // Function to refresh state from storage
-  const refreshState = useCallback(() => {
+  const refreshState = useCallback(async () => {
     console.debug('useScreenShareState: Refreshing state for ticket', ticketId);
     try {
       screenShareManager.reload();
 
-      const request = screenShareManager.getActiveRequest();
+      const request = await screenShareManager.getActiveRequest();
       const session = screenShareManager.getActiveSession();
       console.debug('useScreenShareState: Retrieved request from manager:', request);
       console.debug('useScreenShareState: Retrieved session from manager:', session);

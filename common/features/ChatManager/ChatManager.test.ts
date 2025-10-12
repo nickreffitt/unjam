@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ChatManager } from './ChatManager';
-import { ChatStore } from './store';
+import { type ChatStore, ChatStoreLocal, type ChatChanges } from './store';
 import { ChatEventEmitterLocal } from './events/ChatEventEmitterLocal';
 import { type CustomerProfile, type EngineerProfile } from '@common/types';
 
@@ -8,6 +8,7 @@ describe('ChatManager', () => {
   const ticketId = 'TKT-123';
   let chatManager: ChatManager;
   let chatStore: ChatStore;
+  let mockChanges: ChatChanges;
 
   const mockCustomer: CustomerProfile = {
     id: 'customer-1',
@@ -23,15 +24,21 @@ describe('ChatManager', () => {
     email: 'jane@example.com'
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear localStorage
     localStorage.clear();
     // Reset console mocks
     vi.clearAllMocks();
+    // Create mock ChatChanges object
+    mockChanges = {
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn(),
+    };
     // Create ChatStore and ChatManager instances
     const eventEmitter = new ChatEventEmitterLocal();
-    chatStore = new ChatStore(ticketId, eventEmitter);
-    chatManager = new ChatManager(ticketId, mockCustomer, mockEngineer, chatStore);
+    chatStore = new ChatStoreLocal(ticketId, eventEmitter);
+    await chatStore.clear();
+    chatManager = new ChatManager(ticketId, mockCustomer, mockEngineer, chatStore, mockChanges);
   });
 
   describe('constructor', () => {
@@ -43,8 +50,12 @@ describe('ChatManager', () => {
 
     it('should create ChatManager with engineer as sender', () => {
       const engineerEventEmitter = new ChatEventEmitterLocal();
-      const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
-      const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
+      const engineerChatStore = new ChatStoreLocal(ticketId, engineerEventEmitter);
+      const engineerChanges: ChatChanges = {
+        start: vi.fn().mockResolvedValue(undefined),
+        stop: vi.fn(),
+      };
+      const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore, engineerChanges);
       expect(engineerChatManager.getSender()).toEqual(mockEngineer);
       expect(engineerChatManager.getReceiver()).toEqual(mockCustomer);
     });
@@ -182,8 +193,8 @@ describe('ChatManager', () => {
   });
 
   describe('getMessageCount', () => {
-    it('should return 0 initially', () => {
-      expect(chatManager.getMessageCount()).toBe(0);
+    it('should return 0 initially', async () => {
+      expect(await chatManager.getMessageCount()).toBe(0);
     });
 
     it('should return correct count after sending messages', async () => {
@@ -191,7 +202,7 @@ describe('ChatManager', () => {
       await chatManager.send('Message 2');
       await chatManager.send('Message 3');
 
-      expect(chatManager.getMessageCount()).toBe(3);
+      expect(await chatManager.getMessageCount()).toBe(3);
     });
   });
 
@@ -202,8 +213,12 @@ describe('ChatManager', () => {
 
       // Simulate another tab/instance adding messages
       const anotherEventEmitter = new ChatEventEmitterLocal();
-      const anotherChatStore = new ChatStore(ticketId, anotherEventEmitter);
-      const anotherChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, anotherChatStore);
+      const anotherChatStore = new ChatStoreLocal(ticketId, anotherEventEmitter);
+      const anotherChanges: ChatChanges = {
+        start: vi.fn().mockResolvedValue(undefined),
+        stop: vi.fn(),
+      };
+      const anotherChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, anotherChatStore, anotherChanges);
       await anotherChatManager.send('Message from engineer');
 
       // Act
@@ -221,14 +236,22 @@ describe('ChatManager', () => {
     it('should allow chat between customer and engineer', async () => {
       // Customer sends a message
       const customerEventEmitter = new ChatEventEmitterLocal();
-      const customerChatStore = new ChatStore(ticketId, customerEventEmitter);
-      const customerChat = new ChatManager(ticketId, mockCustomer, mockEngineer, customerChatStore);
+      const customerChatStore = new ChatStoreLocal(ticketId, customerEventEmitter);
+      const customerChanges: ChatChanges = {
+        start: vi.fn().mockResolvedValue(undefined),
+        stop: vi.fn(),
+      };
+      const customerChat = new ChatManager(ticketId, mockCustomer, mockEngineer, customerChatStore, customerChanges);
       await customerChat.send('Hello, I need help');
 
       // Engineer loads the chat
       const engineerEventEmitter = new ChatEventEmitterLocal();
-      const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
-      const engineerChat = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
+      const engineerChatStore = new ChatStoreLocal(ticketId, engineerEventEmitter);
+      const engineerChanges: ChatChanges = {
+        start: vi.fn().mockResolvedValue(undefined),
+        stop: vi.fn(),
+      };
+      const engineerChat = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore, engineerChanges);
       let messages = await engineerChat.getRecent();
 
       expect(messages).toHaveLength(1);
@@ -261,8 +284,12 @@ describe('ChatManager', () => {
     it('should work for engineer chat manager', () => {
       // Arrange
       const engineerEventEmitter = new ChatEventEmitterLocal();
-      const engineerChatStore = new ChatStore(ticketId, engineerEventEmitter);
-      const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore);
+      const engineerChatStore = new ChatStoreLocal(ticketId, engineerEventEmitter);
+      const engineerChanges: ChatChanges = {
+        start: vi.fn().mockResolvedValue(undefined),
+        stop: vi.fn(),
+      };
+      const engineerChatManager = new ChatManager(ticketId, mockEngineer, mockCustomer, engineerChatStore, engineerChanges);
 
       // Act
       engineerChatManager.markIsTyping();

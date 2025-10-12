@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { WebRTCService } from './WebRTCService';
-import { WebRTCSignalingStore } from './store';
+import { WebRTCSignalingStoreLocal } from './store';
 import { ICEServerService } from './ICEServerService';
 import type { UserProfile, WebRTCServiceConfig } from '@common/types';
 
-// Mock WebRTCSignalingStore
+// Mock WebRTCSignalingStoreLocal
 vi.mock('./store');
-const MockWebRTCSignalingStore = vi.mocked(WebRTCSignalingStore);
+const MockWebRTCSignalingStoreLocal = vi.mocked(WebRTCSignalingStoreLocal);
 
 // Mock RTCPeerConnection
 const mockPeerConnection = {
@@ -42,13 +42,15 @@ Object.defineProperty(navigator, 'mediaDevices', {
 describe('WebRTCService', () => {
   let service: WebRTCService;
   let mockSignalingStore: any;
+  let mockEventEmitter: any;
+  let mockSignalChanges: any;
   let mockLocalUser: UserProfile;
   let mockRemoteUser: UserProfile;
   let config: WebRTCServiceConfig;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    MockWebRTCSignalingStore.mockClear();
+    MockWebRTCSignalingStoreLocal.mockClear();
 
     // Reset RTCPeerConnection mock
     mockPeerConnection.createOffer.mockResolvedValue({ type: 'offer', sdp: 'test-offer' });
@@ -84,12 +86,27 @@ describe('WebRTCService', () => {
 
     mockSignalingStore = {
       create: vi.fn(),
-      getUnprocessedForSession: vi.fn().mockReturnValue([]),
+      getUnprocessedForSession: vi.fn().mockResolvedValue([]),
       markProcessed: vi.fn(),
       clear: vi.fn(),
       deleteBySessionId: vi.fn(),
+      reload: vi.fn(),
     };
-    MockWebRTCSignalingStore.mockImplementation(() => mockSignalingStore);
+    MockWebRTCSignalingStoreLocal.mockImplementation(() => mockSignalingStore);
+
+    mockEventEmitter = {
+      emitWebRTCStateChanged: vi.fn(),
+      emitWebRTCError: vi.fn(),
+      emitWebRTCRemoteStream: vi.fn(),
+      emitWebRTCIceCandidate: vi.fn(),
+      emitWebRTCOfferCreated: vi.fn(),
+      emitWebRTCAnswerCreated: vi.fn(),
+    };
+
+    mockSignalChanges = {
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn(),
+    };
 
     mockLocalUser = {
       id: 'user-123',
@@ -106,11 +123,14 @@ describe('WebRTCService', () => {
     };
 
     config = {
+      ticketId: 'ticket-001',
       sessionId: 'session-789',
       localUser: mockLocalUser,
       remoteUser: mockRemoteUser,
       isPublisher: true,
       signalingStore: mockSignalingStore,
+      signalChanges: mockSignalChanges,
+      eventEmitter: mockEventEmitter,
     };
 
     service = new WebRTCService(config);

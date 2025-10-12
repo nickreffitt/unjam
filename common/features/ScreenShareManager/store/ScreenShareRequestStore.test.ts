@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ScreenShareRequestStore } from './ScreenShareRequestStore';
+import { ScreenShareRequestStoreLocal } from './ScreenShareRequestStoreLocal';
 import { type UserProfile, type ScreenShareStatus, type ScreenShareRequest } from '@common/types';
 
-describe('ScreenShareRequestStore', () => {
-  let store: ScreenShareRequestStore;
+describe('ScreenShareRequestStoreLocal', () => {
+  let store: ScreenShareRequestStoreLocal;
   let mockEngineer: UserProfile;
   let mockCustomer: UserProfile;
 
@@ -12,7 +12,7 @@ describe('ScreenShareRequestStore', () => {
     localStorage.clear();
     vi.clearAllMocks();
 
-    store = new ScreenShareRequestStore();
+    store = new ScreenShareRequestStoreLocal();
 
     mockEngineer = {
       id: 'eng-123',
@@ -30,7 +30,7 @@ describe('ScreenShareRequestStore', () => {
   });
 
   describe('create', () => {
-    it('should create a new screen share request with generated ID and timestamps', () => {
+    it('should create a new screen share request with generated ID and timestamps', async () => {
       // given a request without ID and timestamps
       const requestData = {
         ticketId: 'ticket-789',
@@ -41,7 +41,7 @@ describe('ScreenShareRequestStore', () => {
       };
 
       // when creating the request
-      const created = store.create(requestData);
+      const created = await store.create(requestData);
 
       // then the request should have ID and timestamps
       expect(created.id).toBeTruthy();
@@ -55,7 +55,7 @@ describe('ScreenShareRequestStore', () => {
       expect(created.updatedAt).toBeInstanceOf(Date);
     });
 
-    it('should persist the request to localStorage', () => {
+    it('should persist the request to localStorage', async () => {
       // given localStorage is empty
       expect(localStorage.getItem('screenShareRequests')).toBeNull();
 
@@ -66,7 +66,7 @@ describe('ScreenShareRequestStore', () => {
         receiver: mockCustomer,
         status: 'pending' as ScreenShareStatus,
       };
-      store.create(requestData);
+      await store.create(requestData);
 
       // then the request should be in localStorage
       const stored = localStorage.getItem('screenShareRequests');
@@ -78,9 +78,9 @@ describe('ScreenShareRequestStore', () => {
   });
 
   describe('getById', () => {
-    it('should return a request by ID', () => {
+    it('should return a request by ID', async () => {
       // given a created request
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -88,7 +88,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting by ID
-      const retrieved = store.getById(created.id);
+      const retrieved = await store.getById(created.id);
 
       // then the request should be returned
       expect(retrieved).toBeDefined();
@@ -96,18 +96,18 @@ describe('ScreenShareRequestStore', () => {
       expect(retrieved!.ticketId).toBe('ticket-789');
     });
 
-    it('should return undefined for non-existent ID', () => {
+    it('should return undefined for non-existent ID', async () => {
       // given no requests exist
       // when getting by non-existent ID
-      const retrieved = store.getById('non-existent');
+      const retrieved = await store.getById('non-existent');
 
       // then undefined should be returned
       expect(retrieved).toBeUndefined();
     });
 
-    it('should return a copy of the request to prevent external mutations', () => {
+    it('should return a copy of the request to prevent external mutations', async () => {
       // given a created request
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -115,19 +115,19 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting by ID and modifying it
-      const retrieved = store.getById(created.id);
+      const retrieved = await store.getById(created.id);
       retrieved!.status = 'cancelled';
 
       // then the original should be unchanged
-      const retrievedAgain = store.getById(created.id);
+      const retrievedAgain = await store.getById(created.id);
       expect(retrievedAgain!.status).toBe('pending');
     });
   });
 
   describe('getByTicketId', () => {
-    it('should return all requests for a ticket sorted by newest first', () => {
+    it('should return all requests for a ticket sorted by newest first', async () => {
       // given multiple requests for the same ticket created at different times
-      const request1 = store.create({
+      const request1 = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -137,7 +137,7 @@ describe('ScreenShareRequestStore', () => {
       // Simulate time passing
       vi.setSystemTime(new Date(Date.now() + 1000));
 
-      const request2 = store.create({
+      const request2 = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -145,7 +145,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting by ticket ID
-      const requests = store.getByTicketId('ticket-789');
+      const requests = await store.getByTicketId('ticket-789');
 
       // then both requests should be returned with newest first
       expect(requests).toHaveLength(2);
@@ -153,25 +153,25 @@ describe('ScreenShareRequestStore', () => {
       expect(requests[1].id).toBe(request1.id);
     });
 
-    it('should return empty array for ticket with no requests', () => {
+    it('should return empty array for ticket with no requests', async () => {
       // given no requests for a ticket
       // when getting by ticket ID
-      const requests = store.getByTicketId('no-requests');
+      const requests = await store.getByTicketId('no-requests');
 
       // then empty array should be returned
       expect(requests).toEqual([]);
     });
 
-    it('should not return requests for other tickets', () => {
+    it('should not return requests for other tickets', async () => {
       // given requests for different tickets
-      store.create({
+      await store.create({
         ticketId: 'ticket-111',
         sender: mockEngineer,
         receiver: mockCustomer,
         status: 'pending',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-222',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -179,7 +179,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting by specific ticket ID
-      const requests = store.getByTicketId('ticket-111');
+      const requests = await store.getByTicketId('ticket-111');
 
       // then only that ticket's requests should be returned
       expect(requests).toHaveLength(1);
@@ -188,9 +188,9 @@ describe('ScreenShareRequestStore', () => {
   });
 
   describe('getActiveByTicketId', () => {
-    it('should return pending request for a ticket', () => {
+    it('should return pending request for a ticket', async () => {
       // given a pending request
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -198,7 +198,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting active request
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then the pending request should be returned
       expect(active).toBeDefined();
@@ -206,9 +206,9 @@ describe('ScreenShareRequestStore', () => {
       expect(active!.status).toBe('pending');
     });
 
-    it('should return accepted request for a ticket', () => {
+    it('should return accepted request for a ticket', async () => {
       // given an accepted request
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -216,7 +216,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting active request
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then the accepted request should be returned
       expect(active).toBeDefined();
@@ -224,9 +224,9 @@ describe('ScreenShareRequestStore', () => {
       expect(active!.status).toBe('accepted');
     });
 
-    it('should return active request for a ticket', () => {
+    it('should return active request for a ticket', async () => {
       // given an active request
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -234,7 +234,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting active request
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then the active request should be returned
       expect(active).toBeDefined();
@@ -242,16 +242,16 @@ describe('ScreenShareRequestStore', () => {
       expect(active!.status).toBe('active');
     });
 
-    it('should not return ended or rejected requests', () => {
+    it('should not return ended or rejected requests', async () => {
       // given ended and rejected requests
-      store.create({
+      await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
         status: 'ended',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -259,15 +259,15 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting active request
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then undefined should be returned
       expect(active).toBeUndefined();
     });
 
-    it('should return undefined for ticket with no active requests', () => {
+    it('should return undefined for ticket with no active requests', async () => {
       // given a cancelled request
-      store.create({
+      await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -275,13 +275,13 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting active request
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then undefined should be returned
       expect(active).toBeUndefined();
     });
 
-    it('should return undefined for expired requests', () => {
+    it('should return undefined for expired requests', async () => {
       // given a request that has already expired (simulate by creating one with past expiry time)
       const expiredRequest = {
         ticketId: 'ticket-789',
@@ -290,7 +290,7 @@ describe('ScreenShareRequestStore', () => {
         status: 'pending' as const,
       };
 
-      const created = store.create(expiredRequest);
+      const created = await store.create(expiredRequest);
 
       // Manually set the expiry time to past (hack for testing)
       const requests = (store as any).requests;
@@ -298,7 +298,7 @@ describe('ScreenShareRequestStore', () => {
       request.expiresAt = new Date(Date.now() - 1000); // 1 second ago
 
       // when getting active request
-      const active = store.getActiveByTicketId('ticket-789');
+      const active = await store.getActiveByTicketId('ticket-789');
 
       // then undefined should be returned because request has expired
       expect(active).toBeUndefined();
@@ -306,9 +306,9 @@ describe('ScreenShareRequestStore', () => {
   });
 
   describe('updateStatus', () => {
-    it('should update the status of an existing request', () => {
+    it('should update the status of an existing request', async () => {
       // given a pending request
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -320,7 +320,7 @@ describe('ScreenShareRequestStore', () => {
       vi.setSystemTime(new Date(originalTime + 1000));
 
       // when updating status to accepted
-      const updated = store.updateStatus(created.id, 'accepted');
+      const updated = await store.updateStatus(created.id, 'accepted');
 
       // then the status should be updated
       expect(updated).toBeDefined();
@@ -328,9 +328,9 @@ describe('ScreenShareRequestStore', () => {
       expect(updated!.updatedAt.getTime()).toBeGreaterThan(created.updatedAt.getTime());
     });
 
-    it('should persist the updated status to localStorage', () => {
+    it('should persist the updated status to localStorage', async () => {
       // given a created request
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -338,7 +338,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when updating status
-      store.updateStatus(created.id, 'active');
+      await store.updateStatus(created.id, 'active');
 
       // then the updated status should be in localStorage
       const stored = localStorage.getItem('screenShareRequests');
@@ -346,10 +346,10 @@ describe('ScreenShareRequestStore', () => {
       expect(parsed[0].status).toBe('active');
     });
 
-    it('should return undefined for non-existent request', () => {
+    it('should return undefined for non-existent request', async () => {
       // given no requests
       // when updating status of non-existent request
-      const updated = store.updateStatus('non-existent', 'accepted');
+      const updated = await store.updateStatus('non-existent', 'accepted');
 
       // then undefined should be returned
       expect(updated).toBeUndefined();
@@ -357,9 +357,9 @@ describe('ScreenShareRequestStore', () => {
   });
 
   describe('delete', () => {
-    it('should delete an existing request', () => {
+    it('should delete an existing request', async () => {
       // given a created request
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -367,23 +367,23 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when deleting the request
-      const deleted = store.delete(created.id);
+      const deleted = await store.delete(created.id);
 
       // then the request should be deleted
       expect(deleted).toBe(true);
-      expect(store.getById(created.id)).toBeUndefined();
+      expect(await store.getById(created.id)).toBeUndefined();
     });
 
-    it('should remove the deleted request from localStorage', () => {
+    it('should remove the deleted request from localStorage', async () => {
       // given two created requests
-      const request1 = store.create({
+      const request1 = await store.create({
         ticketId: 'ticket-111',
         sender: mockEngineer,
         receiver: mockCustomer,
         status: 'pending',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-222',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -391,7 +391,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when deleting one request
-      store.delete(request1.id);
+      await store.delete(request1.id);
 
       // then only the other request should remain in localStorage
       const stored = localStorage.getItem('screenShareRequests');
@@ -400,10 +400,10 @@ describe('ScreenShareRequestStore', () => {
       expect(parsed[0].ticketId).toBe('ticket-222');
     });
 
-    it('should return false for non-existent request', () => {
+    it('should return false for non-existent request', async () => {
       // given no requests
       // when deleting non-existent request
-      const deleted = store.delete('non-existent');
+      const deleted = await store.delete('non-existent');
 
       // then false should be returned
       expect(deleted).toBe(false);
@@ -411,16 +411,16 @@ describe('ScreenShareRequestStore', () => {
   });
 
   describe('getAll', () => {
-    it('should return all requests', () => {
+    it('should return all requests', async () => {
       // given multiple requests
-      store.create({
+      await store.create({
         ticketId: 'ticket-111',
         sender: mockEngineer,
         receiver: mockCustomer,
         status: 'pending',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-222',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -428,7 +428,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when getting all requests
-      const all = store.getAll();
+      const all = await store.getAll();
 
       // then all requests should be returned
       expect(all).toHaveLength(2);
@@ -436,10 +436,10 @@ describe('ScreenShareRequestStore', () => {
       expect(all.some(r => r.ticketId === 'ticket-222')).toBe(true);
     });
 
-    it('should return empty array when no requests exist', () => {
+    it('should return empty array when no requests exist', async () => {
       // given no requests
       // when getting all requests
-      const all = store.getAll();
+      const all = await store.getAll();
 
       // then empty array should be returned
       expect(all).toEqual([]);
@@ -447,16 +447,16 @@ describe('ScreenShareRequestStore', () => {
   });
 
   describe('clear', () => {
-    it('should remove all requests', () => {
+    it('should remove all requests', async () => {
       // given multiple requests
-      store.create({
+      await store.create({
         ticketId: 'ticket-111',
         sender: mockEngineer,
         receiver: mockCustomer,
         status: 'pending',
       });
 
-      store.create({
+      await store.create({
         ticketId: 'ticket-222',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -464,15 +464,15 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when clearing all requests
-      store.clear();
+      await store.clear();
 
       // then no requests should remain
-      expect(store.getAll()).toEqual([]);
+      expect(await store.getAll()).toEqual([]);
     });
 
-    it('should clear localStorage', () => {
+    it('should clear localStorage', async () => {
       // given requests in store
-      store.create({
+      await store.create({
         ticketId: 'ticket-111',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -480,7 +480,7 @@ describe('ScreenShareRequestStore', () => {
       });
 
       // when clearing
-      store.clear();
+      await store.clear();
 
       // then localStorage should be empty
       const stored = localStorage.getItem('screenShareRequests');
@@ -490,9 +490,9 @@ describe('ScreenShareRequestStore', () => {
   });
 
   describe('reload', () => {
-    it('should reload requests from localStorage', () => {
+    it('should reload requests from localStorage', async () => {
       // given a request in the store
-      const created = store.create({
+      const created = await store.create({
         ticketId: 'ticket-789',
         sender: mockEngineer,
         receiver: mockCustomer,
@@ -507,11 +507,11 @@ describe('ScreenShareRequestStore', () => {
       store.reload();
 
       // then the reloaded request should have the updated status
-      const reloaded = store.getById(created.id);
+      const reloaded = await store.getById(created.id);
       expect(reloaded!.status).toBe('accepted');
     });
 
-    it('should handle corrupted localStorage gracefully', () => {
+    it('should handle corrupted localStorage gracefully', async () => {
       // given corrupted data in localStorage
       localStorage.setItem('screenShareRequests', 'invalid json');
 
@@ -519,12 +519,12 @@ describe('ScreenShareRequestStore', () => {
       store.reload();
 
       // then store should be empty and not throw
-      expect(store.getAll()).toEqual([]);
+      expect(await store.getAll()).toEqual([]);
     });
   });
 
   describe('localStorage persistence', () => {
-    it('should load existing requests from localStorage on construction', () => {
+    it('should load existing requests from localStorage on construction', async () => {
       // given requests in localStorage
       const existingRequests = [
         {
@@ -540,10 +540,10 @@ describe('ScreenShareRequestStore', () => {
       localStorage.setItem('screenShareRequests', JSON.stringify(existingRequests));
 
       // when creating a new store instance
-      const newStore = new ScreenShareRequestStore();
+      const newStore = new ScreenShareRequestStoreLocal();
 
       // then existing requests should be loaded
-      const loaded = newStore.getAll();
+      const loaded = await newStore.getAll();
       expect(loaded).toHaveLength(1);
       expect(loaded[0].id).toBe('existing-1');
       expect(loaded[0].createdAt).toBeInstanceOf(Date);

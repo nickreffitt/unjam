@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ChatStore } from '@common/features/ChatManager/store/ChatStore';
+import { ChatStoreLocal } from '@common/features/ChatManager/store/ChatStoreLocal';
 import { ChatEventEmitterLocal } from '@common/features/ChatManager/events/ChatEventEmitterLocal';
 import { type ChatMessage, type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('ChatStore', () => {
   const ticketId = 'TKT-123';
-  let chatStore: ChatStore;
+  let chatStore: ChatStoreLocal;
 
   const mockCustomer: CustomerProfile = {
     id: 'customer-1',
@@ -38,45 +38,46 @@ describe('ChatStore', () => {
     vi.clearAllMocks();
     // Create new instance with event emitter
     const eventEmitter = new ChatEventEmitterLocal();
-    chatStore = new ChatStore(ticketId, eventEmitter);
+    chatStore = new ChatStoreLocal(ticketId, eventEmitter);
   });
 
   describe('constructor', () => {
-    it('should initialize with empty messages when no stored data exists', () => {
-      const messages = chatStore.getAll();
+    it('should initialize with empty messages when no stored data exists', async () => {
+      const messages = await chatStore.getAll();
       expect(messages).toEqual([]);
     });
 
-    it('should load messages from localStorage if they exist', () => {
+    it('should load messages from localStorage if they exist', async () => {
       // Arrange
       const storedMessages = [mockMessage];
       localStorage.setItem(`chatStore-${ticketId}`, JSON.stringify(storedMessages));
 
       // Act
-      const newChatStore = new ChatStore(ticketId);
+      const eventEmitter = new ChatEventEmitterLocal();
+      const newChatStore = new ChatStoreLocal(ticketId, eventEmitter);
 
       // Assert
-      const messages = newChatStore.getAll();
+      const messages = await newChatStore.getAll();
       expect(messages).toHaveLength(1);
       expect(messages[0].content).toBe(mockMessage.content);
     });
   });
 
   describe('create', () => {
-    it('should create a new message and return it', () => {
+    it('should create a new message and return it', async () => {
       // Act
-      const createdMessage = chatStore.create(mockMessage);
+      const createdMessage = await chatStore.create(mockMessage);
 
       // Assert
       expect(createdMessage).toEqual(mockMessage);
-      const messages = chatStore.getAll();
+      const messages = await chatStore.getAll();
       expect(messages).toHaveLength(1);
       expect(messages[0]).toEqual(mockMessage);
     });
 
-    it('should save messages to localStorage', () => {
+    it('should save messages to localStorage', async () => {
       // Act
-      chatStore.create(mockMessage);
+      await chatStore.create(mockMessage);
 
       // Assert
       const stored = localStorage.getItem(`chatStore-${ticketId}`);
@@ -86,19 +87,19 @@ describe('ChatStore', () => {
       expect(parsedMessages[0].content).toBe(mockMessage.content);
     });
 
-    it('should maintain chronological order', () => {
+    it('should maintain chronological order', async () => {
       // Arrange
       const message1 = { ...mockMessage, id: 'MSG-1', createdAt: new Date('2024-01-01T10:00:00Z') };
       const message2 = { ...mockMessage, id: 'MSG-2', createdAt: new Date('2024-01-01T10:01:00Z') };
       const message3 = { ...mockMessage, id: 'MSG-3', createdAt: new Date('2024-01-01T10:02:00Z') };
 
       // Act
-      chatStore.create(message1);
-      chatStore.create(message2);
-      chatStore.create(message3);
+      await chatStore.create(message1);
+      await chatStore.create(message2);
+      await chatStore.create(message3);
 
       // Assert
-      const messages = chatStore.getAll();
+      const messages = await chatStore.getAll();
       expect(messages).toHaveLength(3);
       expect(messages[0].id).toBe('MSG-1');
       expect(messages[1].id).toBe('MSG-2');
@@ -107,10 +108,10 @@ describe('ChatStore', () => {
   });
 
   describe('getRecent', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // Create 5 messages
       for (let i = 1; i <= 5; i++) {
-        chatStore.create({
+        await chatStore.create({
           ...mockMessage,
           id: `MSG-${i}`,
           content: `Message ${i}`,
@@ -119,9 +120,9 @@ describe('ChatStore', () => {
       }
     });
 
-    it('should return messages in ascending chronological order', () => {
+    it('should return messages in ascending chronological order', async () => {
       // Act
-      const messages = chatStore.getRecent(3);
+      const messages = await chatStore.getRecent(3);
 
       // Assert
       expect(messages).toHaveLength(3);
@@ -130,9 +131,9 @@ describe('ChatStore', () => {
       expect(messages[2].id).toBe('MSG-3');
     });
 
-    it('should respect size parameter', () => {
+    it('should respect size parameter', async () => {
       // Act
-      const messages = chatStore.getRecent(2);
+      const messages = await chatStore.getRecent(2);
 
       // Assert
       expect(messages).toHaveLength(2);
@@ -140,9 +141,9 @@ describe('ChatStore', () => {
       expect(messages[1].id).toBe('MSG-2');
     });
 
-    it('should respect offset parameter', () => {
+    it('should respect offset parameter', async () => {
       // Act
-      const messages = chatStore.getRecent(2, 2);
+      const messages = await chatStore.getRecent(2, 2);
 
       // Assert
       expect(messages).toHaveLength(2);
@@ -150,9 +151,9 @@ describe('ChatStore', () => {
       expect(messages[1].id).toBe('MSG-4');
     });
 
-    it('should return remaining messages when size exceeds available', () => {
+    it('should return remaining messages when size exceeds available', async () => {
       // Act
-      const messages = chatStore.getRecent(10, 3);
+      const messages = await chatStore.getRecent(10, 3);
 
       // Assert
       expect(messages).toHaveLength(2); // Only MSG-4 and MSG-5 remain
@@ -160,53 +161,53 @@ describe('ChatStore', () => {
       expect(messages[1].id).toBe('MSG-5');
     });
 
-    it('should return empty array when offset exceeds total messages', () => {
+    it('should return empty array when offset exceeds total messages', async () => {
       // Act
-      const messages = chatStore.getRecent(5, 10);
+      const messages = await chatStore.getRecent(5, 10);
 
       // Assert
       expect(messages).toHaveLength(0);
     });
 
-    it('should return copies to prevent external mutations', () => {
+    it('should return copies to prevent external mutations', async () => {
       // Act
-      const messages = chatStore.getRecent(1);
+      const messages = await chatStore.getRecent(1);
       messages[0].content = 'Modified content';
 
       // Assert
-      const originalMessages = chatStore.getAll();
+      const originalMessages = await chatStore.getAll();
       expect(originalMessages[0].content).toBe('Message 1');
     });
   });
 
   describe('markAsRead', () => {
-    beforeEach(() => {
-      chatStore.create({ ...mockMessage, id: 'MSG-1', isRead: false });
-      chatStore.create({ ...mockMessage, id: 'MSG-2', isRead: false });
-      chatStore.create({ ...mockMessage, id: 'MSG-3', isRead: true });
+    beforeEach(async () => {
+      await chatStore.create({ ...mockMessage, id: 'MSG-1', isRead: false });
+      await chatStore.create({ ...mockMessage, id: 'MSG-2', isRead: false });
+      await chatStore.create({ ...mockMessage, id: 'MSG-3', isRead: true });
     });
 
-    it('should mark specified messages as read', () => {
+    it('should mark specified messages as read', async () => {
       // Act
-      chatStore.markAsRead(['MSG-1', 'MSG-2']);
+      await chatStore.markAsRead(['MSG-1', 'MSG-2']);
 
       // Assert
-      const messages = chatStore.getAll();
+      const messages = await chatStore.getAll();
       expect(messages[0].isRead).toBe(true);
       expect(messages[1].isRead).toBe(true);
       expect(messages[2].isRead).toBe(true); // Already was true
     });
 
-    it('should not modify messages that are already read', () => {
+    it('should not modify messages that are already read', async () => {
       // Arrange
       const consoleSpy = vi.spyOn(console, 'info');
 
       // Act
-      chatStore.markAsRead(['MSG-3']);
+      await chatStore.markAsRead(['MSG-3']);
 
       // Assert
       // Should not save since no changes were made
-      const messages = chatStore.getAll();
+      const messages = await chatStore.getAll();
       expect(messages[2].isRead).toBe(true);
       // markAsRead should not be called if no changes
       expect(consoleSpy).not.toHaveBeenCalledWith(
@@ -214,9 +215,9 @@ describe('ChatStore', () => {
       );
     });
 
-    it('should save changes to localStorage', () => {
+    it('should save changes to localStorage', async () => {
       // Act
-      chatStore.markAsRead(['MSG-1']);
+      await chatStore.markAsRead(['MSG-1']);
 
       // Assert
       const stored = localStorage.getItem(`chatStore-${ticketId}`);
@@ -224,35 +225,33 @@ describe('ChatStore', () => {
       expect(parsedMessages[0].isRead).toBe(true);
     });
 
-    it('should handle non-existent message IDs gracefully', () => {
+    it('should handle non-existent message IDs gracefully', async () => {
       // Act & Assert (should not throw)
-      expect(() => {
-        chatStore.markAsRead(['MSG-999']);
-      }).not.toThrow();
+      await expect(chatStore.markAsRead(['MSG-999'])).resolves.not.toThrow();
     });
   });
 
   describe('getCount', () => {
-    it('should return 0 for empty store', () => {
-      expect(chatStore.getCount()).toBe(0);
+    it('should return 0 for empty store', async () => {
+      expect(await chatStore.getCount()).toBe(0);
     });
 
-    it('should return correct count after adding messages', () => {
-      chatStore.create(mockMessage);
-      chatStore.create({ ...mockMessage, id: 'MSG-2' });
-      chatStore.create({ ...mockMessage, id: 'MSG-3' });
+    it('should return correct count after adding messages', async () => {
+      await chatStore.create(mockMessage);
+      await chatStore.create({ ...mockMessage, id: 'MSG-2' });
+      await chatStore.create({ ...mockMessage, id: 'MSG-3' });
 
-      expect(chatStore.getCount()).toBe(3);
+      expect(await chatStore.getCount()).toBe(3);
     });
   });
 
   describe('reload', () => {
-    it('should reload messages from localStorage', () => {
+    it('should reload messages from localStorage', async () => {
       // Arrange
-      chatStore.create(mockMessage);
+      await chatStore.create(mockMessage);
 
       // Simulate another tab adding a message
-      const storedMessages = chatStore.getAll();
+      const storedMessages = await chatStore.getAll();
       const newMessage = { ...mockMessage, id: 'MSG-2', content: 'New message from another tab' };
       localStorage.setItem(
         `chatStore-${ticketId}`,
@@ -263,32 +262,32 @@ describe('ChatStore', () => {
       chatStore.reload();
 
       // Assert
-      const messages = chatStore.getAll();
+      const messages = await chatStore.getAll();
       expect(messages).toHaveLength(2);
       expect(messages[1].content).toBe('New message from another tab');
     });
   });
 
   describe('clear', () => {
-    it('should remove all messages', () => {
+    it('should remove all messages', async () => {
       // Arrange
-      chatStore.create(mockMessage);
-      chatStore.create({ ...mockMessage, id: 'MSG-2' });
+      await chatStore.create(mockMessage);
+      await chatStore.create({ ...mockMessage, id: 'MSG-2' });
 
       // Act
-      chatStore.clear();
+      await chatStore.clear();
 
       // Assert
-      expect(chatStore.getAll()).toHaveLength(0);
-      expect(chatStore.getCount()).toBe(0);
+      expect(await chatStore.getAll()).toHaveLength(0);
+      expect(await chatStore.getCount()).toBe(0);
     });
 
-    it('should clear localStorage', () => {
+    it('should clear localStorage', async () => {
       // Arrange
-      chatStore.create(mockMessage);
+      await chatStore.create(mockMessage);
 
       // Act
-      chatStore.clear();
+      await chatStore.clear();
 
       // Assert
       const stored = localStorage.getItem(`chatStore-${ticketId}`);

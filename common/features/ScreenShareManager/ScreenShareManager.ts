@@ -1,14 +1,19 @@
 import type { UserProfile, ScreenShareRequest, ScreenShareSession, WebRTCState } from '@common/types';
-import { type ScreenShareRequestStore, type ScreenShareSessionStore } from './store';
-import { createWebRTCManager, WebRTCSignalingStore, type WebRTCManager } from '@common/features/WebRTCManager';
-import { WebRTCListener } from '@common/features/WebRTCManager/events';
-import { ScreenShareEventEmitter } from './events';
+import { type ScreenShareRequestStore, type ScreenShareSessionStore, type ScreenShareRequestChanges, type ScreenShareSessionChanges } from './store';
+import { createWebRTCManager, type WebRTCSignalingStore, type WebRTCManager } from '@common/features/WebRTCManager';
+import { type WebRTCEventEmitter, WebRTCListener } from '@common/features/WebRTCManager/events';
+import { type ScreenShareEventEmitter } from './events';
+import { type WebRTCSignalingChanges } from '../WebRTCManager/store';
 
 export class ScreenShareManager {
   private readonly ticketId: string;
   private readonly requestStore: ScreenShareRequestStore;
   private readonly sessionStore: ScreenShareSessionStore;
+  private readonly requestChanges: ScreenShareRequestChanges;
+  private readonly sessionChanges: ScreenShareSessionChanges;
   private readonly signalingStore: WebRTCSignalingStore;
+  private readonly signalChanges: WebRTCSignalingChanges;
+  private readonly signalEventEmitter: WebRTCEventEmitter;
 
   // WebRTC connection state - single manager per role
   private webrtcManager: WebRTCManager | null = null;
@@ -22,18 +27,34 @@ export class ScreenShareManager {
   constructor(
     ticketId: string,
     requestStore: ScreenShareRequestStore,
-    sessionStore: ScreenShareSessionStore
+    sessionStore: ScreenShareSessionStore,
+    requestChanges: ScreenShareRequestChanges,
+    sessionChanges: ScreenShareSessionChanges,
+    eventEmitter: ScreenShareEventEmitter,
+    signalingStore: WebRTCSignalingStore,
+    signalChanges: WebRTCSignalingChanges,
+    signalEventEmitter: WebRTCEventEmitter
   ) {
     this.ticketId = ticketId;
     this.requestStore = requestStore;
     this.sessionStore = sessionStore;
-    this.signalingStore = new WebRTCSignalingStore();
-    this.eventEmitter = new ScreenShareEventEmitter();
+    this.requestChanges = requestChanges;
+    this.sessionChanges = sessionChanges;
+    this.eventEmitter = eventEmitter;
+    this.signalingStore = signalingStore;
+    this.signalChanges = signalChanges;
+    this.signalEventEmitter = signalEventEmitter;
 
     console.debug('ScreenShareManager: Constructor called for ticket', ticketId);
 
     // Listen for WebRTC events to track remote stream availability
     this.setupWebRTCEventListeners();
+
+    // Start listening for screenshare request changes
+    this.startListeningForRequestChanges();
+
+    // Start listening for screenshare session changes
+    this.startListeningForSessionChanges();
   }
 
   /**
@@ -43,13 +64,13 @@ export class ScreenShareManager {
    * @param autoAccept - Whether to auto-accept (for engineer-initiated requests)
    * @returns The created request
    */
-  requestScreenShare(
+  async requestScreenShare(
     engineer: UserProfile,
     customer: UserProfile,
     autoAccept: boolean = false
-  ): ScreenShareRequest {
+  ): Promise<ScreenShareRequest> {
     // Check if there's already an active request for this ticket
-    const existingRequest = this.requestStore.getActiveByTicketId(this.ticketId);
+    const existingRequest = await this.requestStore.getActiveByTicketId(this.ticketId);
     if (existingRequest) {
       throw new Error('There is already an active screen share request for this ticket');
     }
@@ -62,7 +83,7 @@ export class ScreenShareManager {
       throw new Error('Screen sharing can only be requested from customers');
     }
 
-    const request = this.requestStore.create({
+    const request = await this.requestStore.create({
       ticketId: this.ticketId,
       sender: engineer,
       receiver: customer,
@@ -81,11 +102,11 @@ export class ScreenShareManager {
    * @param user - The user responding (must be the customer)
    * @returns The updated request
    */
-  respondToRequest(
+  async respondToRequest(
     request: ScreenShareRequest,
     response: 'accepted' | 'rejected',
     user: UserProfile
-  ): ScreenShareRequest {
+  ): Promise<ScreenShareRequest> {
     // Validate user can respond to this request
     if (request.receiver.id !== user.id) {
       throw new Error('Only the requested customer can respond to this request');
@@ -96,7 +117,7 @@ export class ScreenShareManager {
       throw new Error(`Cannot respond to request with status: ${request.status}`);
     }
 
-    const updatedRequest = this.requestStore.updateStatus(request.id, response);
+    const updatedRequest = await this.requestStore.updateStatus(request.id, response);
     if (!updatedRequest) {
       throw new Error('Failed to update request status');
     }
@@ -116,9 +137,9 @@ export class ScreenShareManager {
    * @param engineer - The engineer who will receive the call
    * @returns The created request (auto-accepted from customer side)
    */
-  startCall(customer: UserProfile, engineer: UserProfile): ScreenShareRequest {
+  async startCall(customer: UserProfile, engineer: UserProfile): Promise<ScreenShareRequest> {
     // Check if there's already an active request for this ticket
-    const existingRequest = this.requestStore.getActiveByTicketId(this.ticketId);
+    const existingRequest = await this.requestStore.getActiveByTicketId(this.ticketId);
     if (existingRequest) {
       throw new Error('There is already an active screen share request for this ticket');
     }
@@ -132,7 +153,7 @@ export class ScreenShareManager {
     }
 
     // Customer-initiated call: customer requests from engineer, but needs engineer acceptance
-    const request = this.requestStore.create({
+    const request = await this.requestStore.create({
       ticketId: this.ticketId,
       sender: customer,
       receiver: engineer,
@@ -150,8 +171,8 @@ export class ScreenShareManager {
    * @param engineer - The engineer accepting the call
    * @returns The updated request
    */
-  acceptCall(requestId: string, engineer: UserProfile): ScreenShareRequest {
-    const request = this.requestStore.getById(requestId);
+  async acceptCall(requestId: string, engineer: UserProfile): Promise<ScreenShareRequest> {
+    const request = await this.requestStore.getById(requestId);
     if (!request) {
       throw new Error('Screen share request not found');
     }
@@ -171,7 +192,7 @@ export class ScreenShareManager {
       throw new Error(`Cannot accept call with status: ${request.status}`);
     }
 
-    const updatedRequest = this.requestStore.updateStatus(requestId, 'accepted');
+    const updatedRequest = await this.requestStore.updateStatus(requestId, 'accepted');
     if (!updatedRequest) {
       throw new Error('Failed to accept call');
     }
@@ -186,8 +207,8 @@ export class ScreenShareManager {
    * @param engineer - The engineer rejecting the call
    * @returns The updated request
    */
-  rejectCall(requestId: string, engineer: UserProfile): ScreenShareRequest {
-    const request = this.requestStore.getById(requestId);
+  async rejectCall(requestId: string, engineer: UserProfile): Promise<ScreenShareRequest> {
+    const request = await this.requestStore.getById(requestId);
     if (!request) {
       throw new Error('Screen share request not found');
     }
@@ -207,7 +228,7 @@ export class ScreenShareManager {
       throw new Error(`Cannot reject call with status: ${request.status}`);
     }
 
-    const updatedRequest = this.requestStore.updateStatus(requestId, 'rejected');
+    const updatedRequest = await this.requestStore.updateStatus(requestId, 'rejected');
     if (!updatedRequest) {
       throw new Error('Failed to reject call');
     }
@@ -228,7 +249,7 @@ export class ScreenShareManager {
     publisher: UserProfile,
     subscriber: UserProfile
   ): Promise<ScreenShareSession> {
-    const request = this.requestStore.getById(requestId);
+    const request = await this.requestStore.getById(requestId);
     if (!request) {
       throw new Error('Screen share request not found');
     }
@@ -239,7 +260,7 @@ export class ScreenShareManager {
     }
 
     // Check if there's already an active session for this ticket
-    const existingSession = this.sessionStore.getActiveByTicketId(this.ticketId);
+    const existingSession = await this.sessionStore.getActiveByTicketId(this.ticketId);
     if (existingSession) {
       throw new Error('There is already an active screen share session for this ticket');
     }
@@ -268,7 +289,7 @@ export class ScreenShareManager {
     }
 
     // Create session record first
-    const session = this.sessionStore.create({
+    const session = await this.sessionStore.create({
       ticketId: this.ticketId,
       requestId,
       publisher,
@@ -282,11 +303,14 @@ export class ScreenShareManager {
 
       // Create WebRTC manager instance for publisher
       this.webrtcManager = await createWebRTCManager(
+        this.ticketId,
         session.id,
         publisher,  // local user (publisher/customer)
         subscriber, // remote user (subscriber/engineer)
         true,       // isPublisher = true for customer
-        this.signalingStore
+        this.signalingStore,
+        this.signalChanges,
+        this.signalEventEmitter
       );
 
       this.isPublisher = true;
@@ -308,7 +332,7 @@ export class ScreenShareManager {
       const mediaStream = await this.webrtcManager.startScreenSharing();
 
       // Update session to active with stream details
-      const activeSession = this.sessionStore.update(session.id, {
+      const activeSession = await this.sessionStore.update(session.id, {
         status: 'active',
         streamId: mediaStream.id,
       });
@@ -347,7 +371,7 @@ export class ScreenShareManager {
    * @returns The session with stream details
    */
   async subscribeToStream(sessionId: string): Promise<ScreenShareSession> {
-    const session = this.sessionStore.getById(sessionId);
+    const session = await this.sessionStore.getById(sessionId);
     if (!session) {
       throw new Error('Screen share session not found');
     }
@@ -370,11 +394,14 @@ export class ScreenShareManager {
 
         // Create WebRTC manager instance for the subscriber
         this.webrtcManager = await createWebRTCManager(
+          this.ticketId,
           sessionId,
           session.subscriber,  // local user (engineer)
           session.publisher,   // remote user (customer)
           false,               // isPublisher = false for engineer (subscriber)
-          this.signalingStore
+          this.signalingStore,
+          this.signalChanges,
+          this.signalEventEmitter
         );
 
         this.isPublisher = false;
@@ -414,8 +441,8 @@ export class ScreenShareManager {
    * @param user - The user ending the session (must be publisher or subscriber)
    * @returns The ended session
    */
-  endSession(sessionId: string, user: UserProfile): ScreenShareSession {
-    const session = this.sessionStore.getById(sessionId);
+  async endSession(sessionId: string, user: UserProfile): Promise<ScreenShareSession> {
+    const session = await this.sessionStore.getById(sessionId);
     if (!session) {
       throw new Error('Screen share session not found');
     }
@@ -446,7 +473,7 @@ export class ScreenShareManager {
       this.webrtcState = 'closed';
 
       // End session record
-      const endedSession = this.sessionStore.endSession(sessionId);
+      const endedSession = await this.sessionStore.endSession(sessionId);
       if (!endedSession) {
         throw new Error('Failed to end session');
       }
@@ -457,7 +484,7 @@ export class ScreenShareManager {
       console.error('ScreenShareManager: Error ending session', sessionId, error);
 
       // Still try to end the session record even if WebRTC cleanup fails
-      const endedSession = this.sessionStore.endSession(sessionId);
+      const endedSession = await this.sessionStore.endSession(sessionId);
 
       // Cleanup WebRTC state regardless
       if (this.webrtcManager) {
@@ -481,8 +508,8 @@ export class ScreenShareManager {
    * @param user - The user canceling (must be the requester)
    * @returns True if canceled successfully
    */
-  cancelRequest(requestId: string, user: UserProfile): boolean {
-    const request = this.requestStore.getById(requestId);
+  async cancelRequest(requestId: string, user: UserProfile): Promise<boolean> {
+    const request = await this.requestStore.getById(requestId);
     if (!request) {
       throw new Error('Screen share request not found');
     }
@@ -497,7 +524,7 @@ export class ScreenShareManager {
       throw new Error('Request is already cancelled');
     }
 
-    const deleted = this.requestStore.delete(requestId);
+    const deleted = await this.requestStore.delete(requestId);
     if (!deleted) {
       throw new Error('Failed to cancel request');
     }
@@ -520,32 +547,32 @@ export class ScreenShareManager {
    * Get the active screen share request for this ticket
    * @returns The active request or undefined
    */
-  getActiveRequest(): ScreenShareRequest | undefined {
-    return this.requestStore.getActiveByTicketId(this.ticketId);
+  async getActiveRequest(): Promise<ScreenShareRequest | undefined> {
+    return await this.requestStore.getActiveByTicketId(this.ticketId);
   }
 
   /**
    * Get the active screen share session for this ticket
    * @returns The active session or undefined
    */
-  getActiveSession(): ScreenShareSession | undefined {
-    return this.sessionStore.getActiveByTicketId(this.ticketId);
+  async getActiveSession(): Promise<ScreenShareSession | undefined> {
+    return await this.sessionStore.getActiveByTicketId(this.ticketId);
   }
 
   /**
    * Get all requests for this ticket
    * @returns Array of requests
    */
-  getAllRequests(): ScreenShareRequest[] {
-    return this.requestStore.getByTicketId(this.ticketId);
+  async getAllRequests(): Promise<ScreenShareRequest[]> {
+    return await this.requestStore.getByTicketId(this.ticketId);
   }
 
   /**
    * Get all sessions for this ticket
    * @returns Array of sessions
    */
-  getAllSessions(): ScreenShareSession[] {
-    return this.sessionStore.getByTicketId(this.ticketId);
+  async getAllSessions(): Promise<ScreenShareSession[]> {
+    return await this.sessionStore.getByTicketId(this.ticketId);
   }
 
   // ===== WebRTC Utility Methods =====
@@ -566,50 +593,56 @@ export class ScreenShareManager {
    * @private
    */
   private syncSessionWithWebRTCState(webrtcState: WebRTCState): void {
-    const activeSession = this.getActiveSession();
-    if (!activeSession) {
-      return;
-    }
+    // Fire-and-forget pattern for session sync
+    this.getActiveSession().then(activeSession => {
+      if (!activeSession) {
+        return;
+      }
 
-    let newSessionStatus: 'initializing' | 'active' | 'error' | 'disconnected' | undefined;
+      let newSessionStatus: 'initializing' | 'active' | 'error' | 'disconnected' | undefined;
 
-    switch (webrtcState) {
-      case 'connecting':
-        // Keep session in initializing state during connection
-        newSessionStatus = 'initializing';
-        break;
-      case 'connected':
-        // Session becomes active when WebRTC is connected
-        newSessionStatus = 'active';
-        break;
-      case 'streaming':
-        // Session is active and streaming when WebRTC is streaming
-        newSessionStatus = 'active';
-        break;
-      case 'failed':
-        // Session goes to error state when WebRTC fails
-        newSessionStatus = 'error';
-        break;
-      case 'disconnected':
-        // Session becomes disconnected when WebRTC disconnects
-        newSessionStatus = 'disconnected';
-        break;
-      case 'closed':
-        // Session ends when WebRTC is closed
-        // Don't update here - endSession handles this
-        break;
-    }
+      switch (webrtcState) {
+        case 'connecting':
+          // Keep session in initializing state during connection
+          newSessionStatus = 'initializing';
+          break;
+        case 'connected':
+          // Session becomes active when WebRTC is connected
+          newSessionStatus = 'active';
+          break;
+        case 'streaming':
+          // Session is active and streaming when WebRTC is streaming
+          newSessionStatus = 'active';
+          break;
+        case 'failed':
+          // Session goes to error state when WebRTC fails
+          newSessionStatus = 'error';
+          break;
+        case 'disconnected':
+          // Session becomes disconnected when WebRTC disconnects
+          newSessionStatus = 'disconnected';
+          break;
+        case 'closed':
+          // Session ends when WebRTC is closed
+          // Don't update here - endSession handles this
+          break;
+      }
 
-    if (newSessionStatus && activeSession.status !== newSessionStatus) {
-      console.debug('ScreenShareManager: Syncing session status with WebRTC state', {
-        sessionId: activeSession.id,
-        webrtcState,
-        oldStatus: activeSession.status,
-        newStatus: newSessionStatus,
-      });
+      if (newSessionStatus && activeSession.status !== newSessionStatus) {
+        console.debug('ScreenShareManager: Syncing session status with WebRTC state', {
+          sessionId: activeSession.id,
+          webrtcState,
+          oldStatus: activeSession.status,
+          newStatus: newSessionStatus,
+        });
 
-      this.sessionStore.update(activeSession.id, { status: newSessionStatus });
-    }
+        this.sessionStore.update(activeSession.id, { status: newSessionStatus }).catch(error => {
+          console.error('ScreenShareManager: Failed to sync session status with WebRTC state:', error);
+        });
+      }
+    }).catch(error => {
+      console.error('ScreenShareManager: Failed to get active session for sync:', error);
+    });
   }
 
 
@@ -716,11 +749,35 @@ export class ScreenShareManager {
   }
 
   /**
+   * Start listening for screenshare request changes
+   * Fire-and-forget pattern - errors will be logged but won't block construction
+   * @private
+   */
+  private startListeningForRequestChanges(): void {
+    console.debug('ScreenShareManager: Starting screenshare request changes listener');
+    this.requestChanges.start().catch(error => {
+      console.error('ScreenShareManager: Failed to start request changes listener:', error);
+    });
+  }
+
+  /**
+   * Start listening for screenshare session changes
+   * Fire-and-forget pattern - errors will be logged but won't block construction
+   * @private
+   */
+  private startListeningForSessionChanges(): void {
+    console.debug('ScreenShareManager: Starting screenshare session changes listener');
+    this.sessionChanges.start().catch(error => {
+      console.error('ScreenShareManager: Failed to start session changes listener:', error);
+    });
+  }
+
+  /**
    * Reset manager state without destroying listeners (for reuse)
    */
-  reset(): void {
+  async reset(): Promise<void> {
     this.stopScreenSharing();
-    this.signalingStore.clear();
+    await this.signalingStore.clear();
     this.currentSessionId = null;
     this.webrtcState = 'initializing';
   }
@@ -728,12 +785,14 @@ export class ScreenShareManager {
   /**
    * Cleanup WebRTC resources when manager is destroyed
    */
-  dispose(): void {
+  async dispose(): Promise<void> {
     this.stopScreenSharing();
-    this.signalingStore.clear();
+    await this.signalingStore.clear();
     this.currentSessionId = null;
     if (this.webrtcListener) {
       this.webrtcListener.stopListening();
     }
+    this.requestChanges.stop();
+    this.sessionChanges.stop();
   }
 }

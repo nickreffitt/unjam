@@ -1,6 +1,7 @@
 import type { UserProfile, WebRTCState } from '@common/types';
-import type { WebRTCSignalingStore } from '@common/features/WebRTCManager/store';
+import type { WebRTCSignalingChanges, WebRTCSignalingStore } from '@common/features/WebRTCManager/store';
 import type { WebRTCService } from './WebRTCService';
+import { type WebRTCEventEmitter } from './events';
 
 export class WebRTCManager {
   private readonly sessionId: string;
@@ -14,7 +15,7 @@ export class WebRTCManager {
     localUser: UserProfile,
     remoteUser: UserProfile,
     isPublisher: boolean,
-    webrtcService: WebRTCService
+    webrtcService: WebRTCService,
   ) {
     this.sessionId = sessionId;
     this.localUser = localUser;
@@ -167,22 +168,28 @@ export class WebRTCManager {
  * Factory function to create a WebRTCManager with proper dependency injection
  */
 export async function createWebRTCManager(
+  ticketId: string,
   sessionId: string,
   localUser: UserProfile,
   remoteUser: UserProfile,
   isPublisher: boolean,
-  signalingStore: WebRTCSignalingStore
+  signalingStore: WebRTCSignalingStore,
+  signalChanges: WebRTCSignalingChanges,
+  eventEmitter: WebRTCEventEmitter
 ): Promise<WebRTCManager> {
   // Dynamically import WebRTCService to avoid circular dependencies
   const { WebRTCService } = await import('./WebRTCService');
 
   // Create WebRTC service with proper configuration
   const webrtcService = new WebRTCService({
+    ticketId,
     sessionId,
     localUser,
     remoteUser,
     isPublisher,
     signalingStore,
+    signalChanges,
+    eventEmitter
   });
 
   // Create and return WebRTCManager with injected service

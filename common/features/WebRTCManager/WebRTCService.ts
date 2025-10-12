@@ -1,17 +1,21 @@
 import type { UserProfile, WebRTCState, WebRTCError, WebRTCSignal } from '@common/types';
-import type { WebRTCSignalingStore } from './store';
+import type { WebRTCSignalingChanges, WebRTCSignalingStore } from './store';
 import { ICEServerService } from './ICEServerService';
-import { WebRTCEventEmitter, WebRTCListener } from './events';
+import { type WebRTCEventEmitter, WebRTCListener } from './events';
 
 export interface WebRTCServiceConfig {
+  ticketId: string;
   sessionId: string;
   localUser: UserProfile;
   remoteUser: UserProfile;
   isPublisher: boolean; // true for customer (publisher), false for engineer (subscriber)
   signalingStore: WebRTCSignalingStore;
+  signalChanges: WebRTCSignalingChanges;
+  eventEmitter: WebRTCEventEmitter;
 }
 
 export class WebRTCService {
+  private readonly ticketId: string;
   private readonly sessionId: string;
   private readonly localUser: UserProfile;
   private readonly remoteUser: UserProfile;
@@ -19,6 +23,7 @@ export class WebRTCService {
   private readonly signalingStore: WebRTCSignalingStore;
   private readonly eventEmitter: WebRTCEventEmitter;
   private readonly eventListener: WebRTCListener;
+  private readonly signalChanges: WebRTCSignalingChanges;
 
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
@@ -28,12 +33,14 @@ export class WebRTCService {
 
 
   constructor(config: WebRTCServiceConfig) {
+    this.ticketId = config.ticketId;
     this.sessionId = config.sessionId;
     this.localUser = config.localUser;
     this.remoteUser = config.remoteUser;
     this.isPublisher = config.isPublisher;
     this.signalingStore = config.signalingStore;
-    this.eventEmitter = new WebRTCEventEmitter();
+    this.eventEmitter = config.eventEmitter;
+    this.signalChanges = config.signalChanges;
 
     // Create WebRTC listener to sync signaling store when cross-tab events are received
     this.eventListener = new WebRTCListener({
@@ -103,6 +110,7 @@ export class WebRTCService {
 
       // Start listening for cross-tab WebRTC events
       this.eventListener.startListening();
+      await this.signalChanges.start();
 
       // Start polling for signals
       this.startSignalPolling();
@@ -335,6 +343,7 @@ export class WebRTCService {
 
     // Stop WebRTC event listener
     this.eventListener.stopListening();
+    this.signalChanges.stop();
 
     // Stop signal polling
     if (this.signalPollingInterval) {
@@ -487,6 +496,7 @@ export class WebRTCService {
    */
   private sendSignal(type: WebRTCSignal['type'], payload: any): void {
     this.signalingStore.create({
+      ticketId: this.ticketId,
       sessionId: this.sessionId,
       from: this.localUser,
       to: this.remoteUser,
@@ -511,7 +521,7 @@ export class WebRTCService {
    */
   private async processIncomingSignals(): Promise<void> {
     try {
-      const unprocessedSignals = this.signalingStore.getUnprocessedForSession(
+      const unprocessedSignals = await this.signalingStore.getUnprocessedForSession(
         this.sessionId,
         this.localUser.id
       );

@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { ChatManager } from '@common/features/ChatManager';
-import { ChatStore } from '@common/features/ChatManager/store';
+import { type ChatStore, type ChatChanges, ChatStoreSupabase, ChatChangesSupabase } from '@common/features/ChatManager/store';
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
+import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
 import { ChatEventEmitterLocal } from '@common/features/ChatManager/events';
 import { type UserProfile } from '@common/types';
 interface ChatManagerContextType {
@@ -18,14 +19,21 @@ interface ChatManagerProviderProps {
 
 export const ChatManagerProvider: React.FC<ChatManagerProviderProps> = ({ children }) => {
   const { authUser } = useAuthState();
+  const { supabaseClient } = useSupabase();
+
+  // Create shared event emitter instance
+  const chatEventEmitter = useMemo(() => {
+    return new ChatEventEmitterLocal();
+  }, []);
 
   // Create factory functions for chat manager and store instances
   const contextValue = useMemo(() => {
-
     const createChatStore = (ticketId: string) => {
-      
-      const eventEmitter = new ChatEventEmitterLocal();
-      return new ChatStore(ticketId, eventEmitter);
+      return new ChatStoreSupabase(ticketId, supabaseClient, chatEventEmitter);
+    };
+
+    const createChatChanges = (ticketId: string) => {
+      return new ChatChangesSupabase(ticketId, supabaseClient, chatEventEmitter);
     };
 
     const createChatManager = (ticketId: string, receiverProfile: any) => {
@@ -33,7 +41,8 @@ export const ChatManagerProvider: React.FC<ChatManagerProviderProps> = ({ childr
         throw new Error('No user profile available for chat manager');
       }
       const chatStore = createChatStore(ticketId);
-      return new ChatManager(ticketId, authUser.profile, receiverProfile, chatStore);
+      const chatChanges = createChatChanges(ticketId);
+      return new ChatManager(ticketId, authUser.profile, receiverProfile, chatStore, chatChanges);
     };
 
     if (!authUser.profile) {
@@ -42,7 +51,7 @@ export const ChatManagerProvider: React.FC<ChatManagerProviderProps> = ({ childr
     const userProfile = authUser.profile;
 
     return { createChatManager, createChatStore, userProfile };
-  }, [authUser]);
+  }, [authUser, supabaseClient, chatEventEmitter]);
 
   return (
     <ChatManagerContext.Provider value={contextValue}>
