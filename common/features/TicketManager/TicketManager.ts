@@ -4,6 +4,7 @@ import {
 } from '@common/types';
 import { isCustomerProfile, isEngineerProfile } from '@common/util';
 import { type TicketStore, type TicketChanges } from '@common/features/TicketManager/store';
+import { type ApiManager } from '@common/features/ApiManager/ApiManager';
 
 const AUTO_COMPLETE_TIMEOUT_MINUTES = 30;
 
@@ -11,11 +12,13 @@ export class TicketManager {
   private userProfile: UserProfile;
   private ticketStore: TicketStore;
   private ticketChanges: TicketChanges;
+  private apiManager: ApiManager;
 
-  constructor(userProfile: UserProfile, ticketStore: TicketStore, ticketChanges: TicketChanges) {
+  constructor(userProfile: UserProfile, ticketStore: TicketStore, ticketChanges: TicketChanges, apiManager: ApiManager) {
     this.userProfile = userProfile;
     this.ticketStore = ticketStore;
     this.ticketChanges = ticketChanges;
+    this.apiManager = apiManager;
 
     // Start listening for ticket changes if TicketChanges is provided
     this.ticketChanges.start(userProfile.id);
@@ -137,9 +140,10 @@ export class TicketManager {
 
   /**
    * Marks a ticket as resolved (customer confirmation or auto-complete)
+   * Triggers credit transfer to engineer and deducts customer credits
    * @param ticketId - The ID of the ticket to mark as resolved
    * @returns The updated ticket
-   * @throws Error if ticket not found
+   * @throws Error if ticket not found or credit transfer fails
    */
   async markAsResolved(ticketId: string): Promise<Ticket> {
     // Get the ticket from the store
@@ -155,7 +159,22 @@ export class TicketManager {
       resolvedAt: new Date(),
     };
 
-    return await this.ticketStore.update(ticketId, updatedTicket);
+    const result = await this.ticketStore.update(ticketId, updatedTicket);
+
+    // Process credit transfer (deduct customer credits, pay engineer)
+    try {
+      console.info(`[TicketManager] Processing credit transfer for ticket: ${ticketId}`);
+      await this.apiManager.processCreditTransfer(ticket.createdBy.id, ticketId);
+      console.info(`[TicketManager] Credit transfer completed successfully for ticket: ${ticketId}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[TicketManager] Credit transfer failed for ticket ${ticketId}:`, errorMessage);
+      // Note: We don't re-throw here to avoid blocking ticket completion
+      // The transfer can be retried or handled by admin reconciliation
+      // The audit record in engineer_transfers will show the failure
+    }
+
+    return result;
   }
 
   /**

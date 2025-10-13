@@ -297,3 +297,20 @@ export interface CreditTransferRequest {
 export interface CreditTransferResponse {
   success: boolean;
 }
+
+export type EngineerTransferStatus = 'pending' | 'completed' | 'failed';
+
+export interface EngineerTransfer {
+  id: string;
+  ticketId: string;
+  engineerId: string;
+  customerId: string;
+  stripeTransferId: string | null;
+  amount: number; // Engineer payout amount in cents
+  creditsUsed: number; // Number of credits consumed (1-2, based on hours)
+  creditValue: number; // Customer credit value in cents (creditPrice × creditsUsed)
+  platformProfit: number; // Unjam profit = creditValue - amount
+  status: EngineerTransferStatus;
+  errorMessage?: string | null;
+  createdAt: Date;
+}

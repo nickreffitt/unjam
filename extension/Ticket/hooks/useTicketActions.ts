@@ -15,7 +15,7 @@ export const useTicketActions = (
   setActiveTicket: (ticket: Ticket | null) => void,
   setIsTicketVisible?: (visible: boolean) => void
 ): UseTicketActionsReturn => {
-  const { ticketManager, ticketStore } = useTicketManager();
+  const { ticketManager } = useTicketManager();
 
   const handleCreateTicket = async (problemDescription: string): Promise<void> => {
     try {
@@ -28,18 +28,14 @@ export const useTicketActions = (
     }
   };
 
-  const handleMarkFixed = useCallback((): void => {
+  const handleMarkFixed = useCallback(async (): Promise<void> => {
     if (activeTicket) {
-      const updatedTicket = {
-        ...activeTicket,
-        status: 'completed' as const,
-      };
-      ticketStore.update(activeTicket.id, updatedTicket);
+      const updatedTicket = await ticketManager.markAsResolved(activeTicket.id);
       // Manually update context for same-tab updates (storage events only work cross-tab)
       setActiveTicket(updatedTicket);
       console.debug('Customer marked ticket as fixed');
     }
-  }, [activeTicket, ticketStore, setActiveTicket]);
+  }, [activeTicket, ticketManager, setActiveTicket]);
 
   const handleConfirmFixed = useCallback(async (): Promise<void> => {
     if (activeTicket) {

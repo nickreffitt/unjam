@@ -3,8 +3,13 @@ import { BillingCreditsHandler } from './BillingCreditsHandler.ts'
 import { createClient } from "supabase";
 import Stripe from "stripe";
 import { BillingCustomerStoreSupabase } from "@stores/BillingCustomer/index.ts";
+import { BillingEngineerStoreSupabase } from "@stores/BillingEngineer/index.ts";
+import { BillingEngineerTransferStoreSupabase } from "@stores/BillingEngineerTransfer/index.ts";
+import { TicketStoreSupabase } from "@stores/Ticket/index.ts";
 import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts";
 import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
+import { BillingMeterServiceStripe } from "@services/BillingMeter/index.ts";
+import { BillingEngineerPayoutServiceStripe } from "@services/BillingEngineerPayout/index.ts";
 import type { CreditBalanceRequest, CreditBalanceResponse, CreditTransferRequest, CreditTransferResponse } from "@types";
 
 console.debug("Billing Credits function loaded")
@@ -52,10 +57,29 @@ export const handler = async (request: Request): Promise<Response> => {
       apiVersion: '2025-09-30.clover'
     })
 
+    // Initialize stores
     const customerStore = new BillingCustomerStoreSupabase(supabase)
+    const engineerStore = new BillingEngineerStoreSupabase(supabase)
+    const transferStore = new BillingEngineerTransferStoreSupabase(supabase)
+    const ticketStore = new TicketStoreSupabase(supabase)
+
+    // Initialize services
     const creditsService = new BillingCreditsServiceStripe(stripe)
     const subscriptionService = new BillingSubscriptionServiceStripe(stripe, creditsService)
-    const billingCreditsHandler = new BillingCreditsHandler(customerStore, subscriptionService, creditsService)
+    const meterService = new BillingMeterServiceStripe(stripe)
+    const payoutService = new BillingEngineerPayoutServiceStripe(stripe)
+
+    // Initialize handler with all dependencies
+    const billingCreditsHandler = new BillingCreditsHandler(
+      customerStore,
+      engineerStore,
+      transferStore,
+      ticketStore,
+      subscriptionService,
+      creditsService,
+      meterService,
+      payoutService
+    )
 
     // Handle GET request - fetch credit balance
     if (request.method === 'GET') {
@@ -79,8 +103,23 @@ export const handler = async (request: Request): Promise<Response> => {
       )
     }
 
-    // Handle POST request - process credit transfer
+    // Handle POST request - process credit transfer or retry failed transfers
     if (request.method === 'POST') {
+      const url = new URL(request.url)
+      const action = url.searchParams.get('action')
+
+      // Cron job: Retry all failed transfers
+      if (action === 'retry_failed') {
+        console.info('[billing-credits] Running cron job to retry failed transfers')
+        const response = await billingCreditsHandler.retryAllFailedTransfers()
+
+        return new Response(
+          JSON.stringify(response),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+
+      // Default: Process credit transfer
       const body = await request.text()
       console.info('About to handle request body: ', body)
 

@@ -1,5 +1,5 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
-import type { EngineerProfile, CreditBalanceResponse } from '@common/types';
+import type { EngineerProfile, CreditBalanceResponse, CreditTransferResponse } from '@common/types';
 
 /**
  * ApiManager handles communication with the backend API
@@ -117,6 +117,37 @@ export class ApiManager {
     } catch (err) {
       const error = err as Error;
       console.error('[ApiManager] Error fetching credit balance:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Processes a credit transfer for a completed ticket
+   * Deducts credits from customer and pays engineer via Stripe Connect
+   * @param profileId - The customer profile ID
+   * @param ticketId - The ticket ID
+   * @returns True if transfer was successful
+   * @throws Error if the request fails or transfer cannot be processed
+   */
+  async processCreditTransfer(profileId: string, ticketId: string): Promise<boolean> {
+    console.info(`[ApiManager] Processing credit transfer for ticket: ${ticketId}, profile: ${profileId}`);
+
+    try {
+      const { success } = await this.makeAuthenticatedRequest<CreditTransferResponse>(
+        'billing_credits',
+        {
+          profile_id: profileId,
+          ticket_id: ticketId
+        },
+        'Failed to process credit transfer'
+      );
+
+      console.info(`[ApiManager] Successfully processed credit transfer: ${success}`);
+      return success;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error processing credit transfer:', error.message);
       throw error;
     }
   }
