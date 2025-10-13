@@ -7,6 +7,7 @@ export interface UseTicketStateReturn {
   ticket: Ticket | null;
   elapsedTime: number;
   timeoutRemaining: number;
+  isLoading: boolean;
   setTicket: React.Dispatch<React.SetStateAction<Ticket | null>>;
   setElapsedTime: React.Dispatch<React.SetStateAction<number>>;
   setTimeoutRemaining: React.Dispatch<React.SetStateAction<number>>;
@@ -16,6 +17,7 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [timeoutRemaining, setTimeoutRemaining] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const { ticketManager } = useTicketManager();
 
   // Use ref to store ticket status to avoid recreating callbacks
@@ -32,23 +34,33 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
     }
 
     const loadTicket = async () => {
-      const foundTicket = await ticketManager.getTicket(ticketId);
-      if (foundTicket) {
-        // If the ticket is waiting and we're in active context, claim it using TicketManager
-        if (foundTicket.status === 'waiting' && window.location.pathname.includes('/active/') && ticketManager) {
-          ticketManager.claimTicket(ticketId).then(claimedTicket => {
-            setTicket(claimedTicket);
-            setElapsedTime(0);
-          }).catch(error => {
-            console.error('Failed to claim ticket in useTicketState:', error);
-            // Fall back to the original ticket
+      try {
+        const foundTicket = await ticketManager.getTicket(ticketId);
+        if (foundTicket) {
+          // If the ticket is waiting and we're in active context, claim it using TicketManager
+          if (foundTicket.status === 'waiting' && window.location.pathname.includes('/active/') && ticketManager) {
+            ticketManager.claimTicket(ticketId).then(claimedTicket => {
+              setTicket(claimedTicket);
+              setElapsedTime(0);
+              setIsLoading(false);
+            }).catch(error => {
+              console.error('Failed to claim ticket in useTicketState:', error);
+              // Fall back to the original ticket
+              setTicket(foundTicket);
+              setElapsedTime(foundTicket.elapsedTime);
+              setIsLoading(false);
+            });
+          } else {
             setTicket(foundTicket);
             setElapsedTime(foundTicket.elapsedTime);
-          });
+            setIsLoading(false);
+          }
         } else {
-          setTicket(foundTicket);
-          setElapsedTime(foundTicket.elapsedTime);
+          setIsLoading(false);
         }
+      } catch (error) {
+        console.error('Error loading ticket:', error);
+        setIsLoading(false);
       }
     };
 
@@ -124,6 +136,7 @@ export const useTicketState = (ticketId: string | undefined): UseTicketStateRetu
     ticket,
     elapsedTime,
     timeoutRemaining,
+    isLoading,
     setTicket,
     setElapsedTime,
     setTimeoutRemaining

@@ -10,7 +10,7 @@ import { useChatManager } from '@dashboard/engineer/ChatBox/contexts/ChatManager
 
 const ActiveTicket: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
-  const { ticket, elapsedTime, timeoutRemaining, setTicket, setTimeoutRemaining } = useTicketState(ticketId);
+  const { ticket, elapsedTime, timeoutRemaining, isLoading, setTicket, setTimeoutRemaining } = useTicketState(ticketId);
   const { handleMarkAsFixed, handleAbandonTask, simulateCustomerConfirmation, simulateAutoCompleteTimer } = useTicketActions();
   const [, setCurrentTime] = useState(new Date());
   const chatBoxRef = useRef<ChatBoxRef>(null);
@@ -166,7 +166,7 @@ const ActiveTicket: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="unjam-h-screen unjam-overflow-y-auto">
       {/* Debug Controls */}
       {(process.env.NODE_ENV === 'development') && ticket && (
         <div className="unjam-fixed unjam-bottom-4 unjam-right-4 unjam-z-50 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-p-3 unjam-border unjam-border-gray-200 unjam-space-y-2">
@@ -215,6 +215,7 @@ const ActiveTicket: React.FC = () => {
 
       <TicketDetailView
         ticket={ticket}
+        isLoading={isLoading}
         headerConfig={{
           statusDisplay: getStatusDisplay(),
           actions: getActionButtons()
@@ -223,8 +224,7 @@ const ActiveTicket: React.FC = () => {
           title: "Ticket Not Found",
           message: "The ticket you're looking for doesn't exist or has been removed.",
           redirectPath: "/new",
-          redirectLabel: "View New Tickets",
-          emoji: "🎫"
+          redirectLabel: "View New Tickets"
         }}
         showAssignedTo
         showEstimatedTime
@@ -232,7 +232,7 @@ const ActiveTicket: React.FC = () => {
         chatBoxRef={chatBoxRef}
         screenShareActive
       />
-    </>
+    </div>
   );
 };
 

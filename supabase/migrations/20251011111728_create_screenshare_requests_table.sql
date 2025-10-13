@@ -3,7 +3,7 @@ CREATE TYPE screenshare_status AS ENUM (
   'pending',
   'accepted',
   'rejected',
-  'cancelled',
+  'expired',
   'active',
   'ended'
 );
@@ -30,7 +30,7 @@ CREATE INDEX screenshare_requests_created_at_idx ON screenshare_requests (create
 CREATE INDEX screenshare_requests_expires_at_idx ON screenshare_requests (expires_at);
 
 -- Create composite index for active request queries (ticket_id + status + expires_at)
-CREATE INDEX screenshare_requests_ticket_status_expires_idx ON screenshare_requests (ticket_id, status, expires_at) WHERE status IN ('pending', 'accepted', 'active');
+CREATE INDEX screenshare_requests_ticket_status_expires_idx ON screenshare_requests (ticket_id, status, expires_at) WHERE status IN ('pending', 'accepted', 'active', 'expired');
 
 -- Create updated_at trigger
 CREATE TRIGGER update_screenshare_requests_updated_at BEFORE UPDATE ON screenshare_requests

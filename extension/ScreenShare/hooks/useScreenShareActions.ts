@@ -169,13 +169,13 @@ export const useScreenShareActions = (
     }
   }, []); // Empty dependency array - stable callback
 
-  const handleEndCall = useCallback((session: ScreenShareSession) => {
+  const handleEndCall = useCallback(async (session: ScreenShareSession) => {
     console.debug('Ending screenshare session:', session.id);
     try {
       const screenShareManager = createScreenShareManagerRef.current(ticketIdRef.current);
 
       // End the session - use customer profile since they are the ones ending it
-      screenShareManager.endSession(session.id, customerProfileRef.current);
+      await screenShareManager.endSession(session.id, customerProfileRef.current);
       console.debug('Screenshare session ended');
 
       // Reload the ScreenShareManager to sync with the updated session

@@ -85,7 +85,7 @@ export interface ChatMessage {
   isRead?: boolean;
 }
 
-export type ScreenShareStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'active' | 'ended';
+export type ScreenShareStatus = 'pending' | 'accepted' | 'rejected' | 'expired' | 'active' | 'ended';
 
 export interface ScreenShareRequest {
   id: string;

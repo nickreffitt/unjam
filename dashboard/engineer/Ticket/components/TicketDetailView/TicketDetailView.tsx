@@ -13,7 +13,6 @@ interface NotFoundConfig {
   message?: string;
   redirectPath: string;
   redirectLabel: string;
-  emoji?: string;
 }
 
 interface HeaderConfig {
@@ -30,7 +29,7 @@ interface StatusBannerConfig {
 
 interface TicketDetailViewProps {
   ticket: Ticket | null;
-  loading?: boolean;
+  isLoading?: boolean;
   headerConfig: HeaderConfig;
   notFoundConfig: NotFoundConfig;
   statusBanner?: StatusBannerConfig;
@@ -43,6 +42,7 @@ interface TicketDetailViewProps {
 
 const TicketDetailView: React.FC<TicketDetailViewProps> = ({
   ticket,
+  isLoading = false,
   headerConfig,
   notFoundConfig,
   statusBanner,
@@ -52,6 +52,19 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
   chatBoxRef,
   screenShareActive = false
 }) => {
+  if (isLoading) {
+    return (
+      <div className="unjam-p-8 unjam-max-w-6xl unjam-mx-auto">
+        <div className="unjam-flex unjam-items-center unjam-justify-center unjam-h-64">
+          <div className="unjam-text-center">
+            <div className="unjam-inline-block unjam-animate-spin unjam-rounded-full unjam-h-8 unjam-w-8 unjam-border-b-2 unjam-border-gray-900"></div>
+            <p className="unjam-mt-4 unjam-text-gray-600">Loading ticket...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!ticket) {
     return (
       <TicketNotFound
@@ -59,7 +72,6 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
         message={notFoundConfig.message}
         redirectPath={notFoundConfig.redirectPath}
         redirectLabel={notFoundConfig.redirectLabel}
-        emoji={notFoundConfig.emoji}
       />
     );
   }

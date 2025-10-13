@@ -519,11 +519,6 @@ export class ScreenShareManager {
       throw new Error('Only the requester can cancel the request');
     }
 
-    // Validate request can be canceled
-    if (request.status === 'cancelled') {
-      throw new Error('Request is already cancelled');
-    }
-
     const deleted = await this.requestStore.delete(requestId);
     if (!deleted) {
       throw new Error('Failed to cancel request');
@@ -531,6 +526,29 @@ export class ScreenShareManager {
 
     console.debug('ScreenShareManager: Cancelled request', requestId);
     return true;
+  }
+
+  /**
+   * Mark a screen share request as expired
+   * @param requestId - The request ID to expire
+   * @returns The updated request
+   */
+  async expireRequest(requestId: string): Promise<ScreenShareRequest | undefined> {
+    const request = await this.requestStore.getById(requestId);
+    if (!request) {
+      console.warn('ScreenShareManager: Cannot expire request - not found:', requestId);
+      return undefined;
+    }
+
+    // Only expire pending requests
+    if (request.status !== 'pending') {
+      console.debug('ScreenShareManager: Request is not pending, skipping expiration:', requestId, 'status:', request.status);
+      return request;
+    }
+
+    const updatedRequest = await this.requestStore.updateStatus(requestId, 'expired');
+    console.debug('ScreenShareManager: Expired request', requestId);
+    return updatedRequest;
   }
 
   /**

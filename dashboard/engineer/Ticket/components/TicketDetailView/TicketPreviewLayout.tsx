@@ -9,7 +9,6 @@ interface NotFoundConfig {
   message?: string;
   redirectPath: string;
   redirectLabel: string;
-  emoji?: string;
 }
 
 interface HeaderConfig {
@@ -35,7 +34,6 @@ const TicketPreviewLayout: React.FC<TicketPreviewLayoutProps> = ({
         message={notFoundConfig.message}
         redirectPath={notFoundConfig.redirectPath}
         redirectLabel={notFoundConfig.redirectLabel}
-        emoji={notFoundConfig.emoji}
       />
     );
   }

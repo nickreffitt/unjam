@@ -58,20 +58,31 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
     if (timeUntilExpiry > 0) {
       console.debug('Setting expiration timer for request', request.id, 'expires in', timeUntilExpiry, 'ms');
 
-      expirationTimerRef.current = setTimeout(() => {
-        console.debug('Request expired', request.id);
-        // Clear the request and return to idle state
-        setCurrentRequest(null);
-        setUIState('idle');
+      expirationTimerRef.current = setTimeout(async () => {
+        console.debug('Request expired, updating status to expired', request.id);
+        try {
+          await screenShareManager.expireRequest(request.id);
+          // Clear the request and return to idle state
+          setCurrentRequest(null);
+          setUIState('idle');
+        } catch (error) {
+          console.error('Failed to expire request:', error);
+          // Still clear UI even if update fails
+          setCurrentRequest(null);
+          setUIState('idle');
+        }
         expirationTimerRef.current = null;
       }, timeUntilExpiry);
     } else {
       // Request already expired
       console.debug('Request already expired', request.id);
+      screenShareManager.expireRequest(request.id).catch(error => {
+        console.error('Failed to expire already-expired request:', error);
+      });
       setCurrentRequest(null);
       setUIState('idle');
     }
-  }, [clearExpirationTimer]);
+  }, [clearExpirationTimer, screenShareManager]);
 
   // Derive UI state from request and session data
   const deriveUIState = useCallback((request: ScreenShareRequest | null, session: ScreenShareSession | null): ScreenShareUIState => {
@@ -103,7 +114,7 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
   // Load initial state
   const loadState = useCallback(async () => {
     const activeRequest = await screenShareManager.getActiveRequest();
-    const activeSession = screenShareManager.getActiveSession();
+    const activeSession = await screenShareManager.getActiveSession();
 
     setCurrentRequest(activeRequest || null);
     setCurrentSession(activeSession || null);
@@ -182,8 +193,8 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
           setRemoteStream(null); // Clear stream immediately
 
           // Reset the manager after a short delay to allow UI to show error state
-          setTimeout(() => {
-            screenShareManager.reset();
+          setTimeout(async () => {
+            await screenShareManager.reset();
             screenShareManager.reload();
 
             // Clear all state and return to idle
@@ -209,10 +220,10 @@ export const useScreenShareState = (ticketId: string): UseScreenShareStateReturn
       }
     }, [screenShareManager, ticketId, deriveUIState, currentRequest, clearExpirationTimer]),
 
-    onScreenShareSessionEnded: useCallback((session: ScreenShareSession) => {
+    onScreenShareSessionEnded: useCallback(async (session: ScreenShareSession) => {
       if (session.ticketId === ticketId) {
         console.debug('Screen share session ended', session.id);
-        screenShareManager.reset();
+        await screenShareManager.reset();
         screenShareManager.reload();
 
         // Clear the current session and return to idle state
