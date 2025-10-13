@@ -88,6 +88,12 @@ jobs:
           VITE_STRIPE_TABLE_ID: ${{ env.STRIPE_TABLE_ID }}
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ env.STRIPE_PUBLISHABLE_KEY }}
         run: |
+          # Create .env.production file for the build
+          echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" > .env.production
+          echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env.production
+          echo "VITE_STRIPE_TABLE_ID=$VITE_STRIPE_TABLE_ID" >> .env.production
+          echo "VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY" >> .env.production
+
           # Build the extension
           npm run build:ext
           npm run zip:ext
