@@ -4,6 +4,7 @@ import { type TicketStore, type TicketChanges, TicketChangesSupabase, TicketStor
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
 import { TicketEventEmitterLocal } from '@common/features/TicketManager/events';
+import { ApiManager } from '@common/features/ApiManager/ApiManager';
 
 interface TicketManagerContextType {
   ticketManager: TicketManager;
@@ -19,7 +20,7 @@ interface TicketManagerProviderProps {
 
 export const TicketManagerProvider: React.FC<TicketManagerProviderProps> = ({ children }) => {
   const { authUser } = useAuthState();
-  const { supabaseClient } = useSupabase();
+  const { supabaseClient, supabaseUrl } = useSupabase();
 
   const ticketEventEmitter = useMemo(() => {
       return new TicketEventEmitterLocal();
@@ -49,11 +50,13 @@ export const TicketManagerProvider: React.FC<TicketManagerProviderProps> = ({ ch
       throw new Error('User has no profile');
     }
 
+    const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
+    const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
     console.debug('Instantiating TicketManager')
-    const manager = new TicketManager(authUser.profile, ticketStore, ticketChanges);
+    const manager = new TicketManager(authUser.profile, ticketStore, ticketChanges, apiManager);
     ticketManagerRef.current = manager;
     return manager;
-  }, [authUser, ticketStore, ticketChanges]);
+  }, [authUser, ticketStore, ticketChanges, supabaseClient, supabaseUrl]);
 
   return (
     <TicketManagerContext.Provider value={{ ticketManager, ticketStore, ticketChanges }}>
