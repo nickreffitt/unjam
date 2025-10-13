@@ -82,6 +82,11 @@ jobs:
 #          if-no-files-found: ignore
 
       - name: Build and upload extension to Supabase
+        env:
+          VITE_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }}
+          VITE_STRIPE_TABLE_ID: ${{ env.STRIPE_TABLE_ID }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ env.STRIPE_PUBLISHABLE_KEY }}
         run: |
           # Build the extension
           npm run build:ext
