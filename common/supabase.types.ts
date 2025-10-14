@@ -172,6 +172,7 @@ export type Database = {
           current_period_end: string | null
           current_period_start: string | null
           id: string
+          plan_amount: number
           plan_name: string
           status: Database["public"]["Enums"]["subscription_status"]
           stripe_customer_id: string
@@ -185,6 +186,7 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          plan_amount: number
           plan_name: string
           status: Database["public"]["Enums"]["subscription_status"]
           stripe_customer_id: string
@@ -198,6 +200,7 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          plan_amount?: number
           plan_name?: string
           status?: Database["public"]["Enums"]["subscription_status"]
           stripe_customer_id?: string

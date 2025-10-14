@@ -17,6 +17,7 @@ CREATE TABLE billing_subscriptions (
   stripe_customer_id TEXT NOT NULL,
   status subscription_status NOT NULL,
   plan_name TEXT NOT NULL,
+  plan_amount INTEGER NOT NULL,
   credit_price INTEGER NOT NULL,
   cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
   current_period_start TIMESTAMP WITH TIME ZONE,

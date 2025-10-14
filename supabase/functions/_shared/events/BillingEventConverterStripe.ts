@@ -168,11 +168,12 @@ export class BillingEventConverterStripe implements BillingEventConverter {
 
     const product = price.product as Stripe.Product
     const planName = product.name
+    const planAmount = price.unit_amount || 0
     const creditPrice = parseInt(product.metadata.credit_price || '0', 10)
 
-    // Get current_period_end from subscription or fall back to first item's period
-    const currentPeriodEnd = stripeSubscription.current_period_end
-      || firstItem.current_period_end
+    // Get current_period_start and current_period_end from subscription
+    const currentPeriodStart = firstItem.current_period_start
+    const currentPeriodEnd = firstItem.current_period_end
 
     if (!currentPeriodEnd) {
       throw new Error(`Subscription ${stripeSubscription.id} has no current_period_end`)
@@ -185,9 +186,13 @@ export class BillingEventConverterStripe implements BillingEventConverter {
         : stripeSubscription.customer.id,
       status: stripeSubscription.status,
       planName,
+      planAmount,
       creditPrice,
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end || false,
-      currentPeriodEnd: new Date(currentPeriodEnd * 1000)
+      currentPeriod: {
+        start: currentPeriodStart ? new Date(currentPeriodStart * 1000) : null,
+        end: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
+      }
     }
   }
 

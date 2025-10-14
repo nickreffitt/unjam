@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from 'supabase'
+import { type SupabaseClient } from 'supabase'
 import type { BillingSubscriptionStore } from './BillingSubscriptionStore.ts'
 import type { Subscription } from '@types'
 
@@ -27,6 +27,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
         stripe_customer_id: subscription.customerId,
         status: subscription.status,
         plan_name: subscription.planName,
+        plan_amount: subscription.planAmount,
         credit_price: subscription.creditPrice,
         cancel_at_period_end: subscription.cancelAtPeriodEnd,
         current_period_start: subscription.currentPeriod.start?.toISOString(),
@@ -53,6 +54,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
       .update({
         status: subscription.status,
         plan_name: subscription.planName,
+        plan_amount: subscription.planAmount,
         credit_price: subscription.creditPrice,
         cancel_at_period_end: subscription.cancelAtPeriodEnd,
         current_period_start: subscription.currentPeriod.start?.toISOString(),
@@ -98,7 +100,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
 
     const { data, error } = await this.supabase
       .from('billing_subscriptions')
-      .select('stripe_subscription_id, stripe_customer_id, status, plan_name, credit_price, cancel_at_period_end, current_period_end')
+      .select('*')
       .eq('stripe_subscription_id', subscriptionId)
       .single()
 
@@ -118,6 +120,7 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
       customerId: data.stripe_customer_id,
       status: data.status,
       planName: data.plan_name,
+      planAmount: data.plan_amount,
       creditPrice: data.credit_price,
       cancelAtPeriodEnd: data.cancel_at_period_end,
       currentPeriod: {
