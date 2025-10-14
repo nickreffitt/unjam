@@ -19,4 +19,11 @@ export interface BillingLinksService {
    * @returns The account link URL
    */
   createEngineerAccountLink(engineerAccount: EngineerAccount, host: string | null): Promise<string>
+
+  /**
+   * Creates a login link for an engineer to access the Express Dashboard
+   * @param engineerAccount - The engineer account to create login link for
+   * @returns The login link URL
+   */
+  createEngineerLoginLink(engineerAccount: EngineerAccount): Promise<string>
 }

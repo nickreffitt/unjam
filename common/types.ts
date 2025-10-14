@@ -179,9 +179,13 @@ export interface Subscription {
   customerId: string;
   status: SubscriptionStatus;
   planName: string;
+  planAmount: number;
   creditPrice: number;
   cancelAtPeriodEnd: boolean;
-  currentPeriodEnd: Date | null;
+  currentPeriod: {
+    start: Date | null;
+    end: Date | null;
+  },
 }
 
 export type SubscriptionState = 'created' | 'updated' | 'deleted';

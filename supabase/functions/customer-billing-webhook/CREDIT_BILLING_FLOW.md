@@ -1,6 +1,6 @@
 # Credit-Based Billing Flow for Unjam
 
-This document describes the complete implementation of credit-based billing using Stripe's Credit Grants and Meter Events APIs.
+This document describes the complete implementation of credit-based billing using Stripe's Meter Events API for usage-based billing.
 
 ## Naming Conventions
 
@@ -34,11 +34,11 @@ This project follows a consistent naming pattern for billing-related code:
 
 **Unjam operates as a marketplace connecting customers with engineers for technical support.**
 
-**Customer Billing (Credit-Based):**
-- ✅ **No Overage Charges**: Customers cannot use more credits than allocated
-- ✅ **No Rollover**: Credits expire at the end of each billing period
-- ✅ **Fresh Start**: Each billing cycle starts with a fresh allocation of credits
-- ✅ **Automatic Replenishment**: Old credits are voided and new credits granted when invoice is paid
+**Customer Billing (Usage-Based with Credit Limits):**
+- ✅ **No Overage Charges**: Customers cannot use more credits than allocated (enforced by UI)
+- ✅ **No Rollover**: Each billing period starts with fresh credit allocation
+- ✅ **Meter-Based Tracking**: Usage tracked via Stripe Meters, automatically billed at period end
+- ✅ **Simple Model**: Subscribe → Use credits → Billed for usage at month end
 
 **Engineer Payouts (Marketplace Model):**
 - ✅ **Stripe Connect Express**: Engineers onboard via Express Connect accounts for quick setup
@@ -72,25 +72,18 @@ This project follows a consistent naming pattern for billing-related code:
 ├─────────────────────────────────────────────────────────────────┤
 │ 1. Customer subscribes to plan                                  │
 │    - Subscription created with metered price                    │
-│    - Example: $100/month for 10 credits                         │
+│    - Example: $100/month base + metered usage                   │
+│    - Plan metadata stores credit allocation (e.g., 10 credits)  │
 │                                                                  │
 │ 2. Invoice is paid                                              │
 │    ├─ Webhook: invoice.payment_succeeded                        │
-│    ├─ BillingEventConverterStripe extracts invoice details:     │
-│    │   • period from line item (not invoice level)              │
-│    │   • periodStart & periodEnd as Date objects                │
-│    ├─ BillingInvoiceStoreSupabase persists invoice with periods │
-│    ├─ BillingEventHandler processes paid invoice                │
-│    ├─ Fetches subscription from Stripe (for planName & price)   │
-│    ├─ VOIDS all existing credit grants (no rollover)            │
-│    └─ BillingCreditsServiceStripe creates NEW Credit Grant      │
-│        • Amount: $100 (invoice amount)                          │
-│        • Category: "paid"                                       │
-│        • Applicability: metered prices only                     │
-│        • Expires: invoice.periodEnd ⏰                          │
-│        • Metadata: invoice_id, subscription_id, credits_count   │
+│    ├─ BillingEventConverterStripe extracts invoice details      │
+│    ├─ BillingInvoiceStoreSupabase persists invoice             │
+│    └─ No credit grants created (using meters instead)           │
 │                                                                  │
-│ 3. Customer now has fresh prepaid credits in Stripe ✅          │
+│ 3. Customer can now create tickets within credit limit ✅       │
+│    - Credit balance calculated: plan allocation - meter usage   │
+│    - UI enforces limit by checking available credits            │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -137,27 +130,26 @@ This project follows a consistent naming pattern for billing-related code:
 │    - Example: Customer completed 8 tickets                      │
 │    - Total usage: 8 tickets × $10 = $80                         │
 │                                                                  │
-│ 2. Stripe applies Credit Grants automatically                   │
-│    - Available credits: $100                                    │
-│    - Usage cost: $80                                            │
-│    - Remaining credits: $20 (will expire)                       │
+│ 2. Invoice generated                                            │
+│    ├─ Subscription line item: $100 (base fee for 10 credits)   │
+│    ├─ Metered usage line item: $80 (8 tickets completed)       │
+│    └─ Total due: $180 (base + usage)                           │
 │                                                                  │
-│ 3. Invoice generated                                            │
-│    ├─ Subscription line item: $100 (prepaid credits)           │
-│    ├─ Metered usage line item: $80 (tickets completed)         │
-│    ├─ Credit applied: -$80                                      │
-│    └─ Total due: $100 (just the subscription renewal)          │
-│                                                                  │
-│ 4. Customer pays invoice                                        │
+│ 3. Customer pays invoice                                        │
 │    ├─ Webhook: invoice.payment_succeeded                        │
-│    ├─ Old credit grant VOIDED ($20 unused credits lost)        │
-│    ├─ NEW credit grant created ($100 fresh credits)            │
-│    └─ New expiration: next billing cycle end                   │
+│    ├─ BillingInvoiceStoreSupabase persists invoice             │
+│    └─ New billing period starts with fresh 10 credits          │
 │                                                                  │
-│ 5. ⚠️ What if customer exhausts credits?                       │
+│ 4. ⚠️ What if customer exhausts credits?                       │
 │    - UI prevents ticket creation when credits = 0              │
 │    - Customer must wait for next billing cycle                 │
-│    - No overage charges possible                               │
+│    - No overage charges possible (UI enforced)                 │
+│                                                                  │
+│ NOTE: In this model, customers pay for both:                    │
+│  • Base subscription ($100 for credit allocation)               │
+│  • Actual usage ($80 for 8 tickets used)                        │
+│ This differs from prepaid credit grants where usage is          │
+│ automatically deducted from prepaid balance.                     │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -172,22 +164,23 @@ This project follows a consistent naming pattern for billing-related code:
 │                                                                  │
 │ 2. Stripe immediately switches plan                             │
 │    ├─ Webhook: customer.subscription.updated                    │
-│    ├─ BillingEventHandler detects upgrade                       │
+│    ├─ BillingEventHandler updates subscription in database      │
 │    │   • Old creditPrice: 500 ($5 per credit)                  │
 │    │   • New creditPrice: 1000 ($10 per credit)                │
 │    │   • Old planName: "Starter"                               │
 │    │   • New planName: "Popular"                               │
-│    └─ VOIDS existing $50 credit grant ❌                       │
+│    └─ No credit grant operations needed ✅                     │
 │                                                                  │
 │ 3. Stripe creates prorated invoice                              │
 │    - Prorated refund for unused Starter time: -$25             │
 │    - Full charge for Popular plan: +$100                       │
-│    - Total due: ~$75                                            │
+│    - Metered usage up to upgrade: charged at Starter rate      │
+│    - Total due: ~$75 + usage                                    │
 │                                                                  │
 │ 4. Invoice paid                                                 │
 │    ├─ Webhook: invoice.payment_succeeded                        │
-│    └─ Creates NEW $100 credit grant (10 credits) ✅            │
-│        • Expires at new current_period_end                      │
+│    └─ Customer now has 10 credits available (Popular plan)     │
+│        • Credit allocation updated via subscription metadata    │
 │                                                                  │
 │ DOWNGRADE (End of Period)                                       │
 │ ─────────────────────────────────────────────────────────────   │
@@ -200,17 +193,16 @@ This project follows a consistent naming pattern for billing-related code:
 │ 2. Subscription updated with future change                      │
 │    ├─ Webhook: customer.subscription.updated                    │
 │    ├─ BillingEventHandler updates database                      │
-│    └─ NO credit changes (not an upgrade) ⏸️                    │
+│    └─ NO immediate changes ⏸️                                  │
 │                                                                  │
 │ 3. Customer continues on Popular plan                           │
-│    - Still has 10 credits available                             │
-│    - Credits expire at Oct 10th (unchanged)                     │
+│    - Still has 10 credits available in current period           │
+│    - Can use all 10 credits until Oct 10th                      │
 │                                                                  │
 │ 4. On Oct 10th (period end)                                     │
-│    ├─ Popular credits expire naturally ⏰                       │
-│    ├─ Invoice generated for Starter plan ($50)                 │
+│    ├─ Invoice generated for Starter plan ($50 + usage)         │
 │    ├─ Invoice paid → invoice.payment_succeeded                  │
-│    └─ Creates NEW $50 credit grant (5 credits) ✅              │
+│    └─ Next period: Customer has 5 credits (Starter allocation) │
 │                                                                  │
 │ CANCELLATION (End of Period)                                    │
 │ ─────────────────────────────────────────────────────────────   │
@@ -275,54 +267,49 @@ ADD COLUMN cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
 ADD COLUMN current_period_end TIMESTAMP WITH TIME ZONE;
 ```
 
-### 2. Credit Grant Creation with Expiration (✅ Implemented)
+### 2. Credit Balance Calculation (✅ Implemented)
 
-**Files**: `_shared/services/BillingSubscription/BillingSubscriptionServiceStripe.ts`, `_shared/services/BillingCredits/BillingCreditsServiceStripe.ts`
+**Files**: `_shared/services/BillingCredits/BillingCreditsServiceStripe.ts`
 
-**When**: Invoice payment succeeds
-**What**:
-1. Voids all existing credit grants (no rollover)
-2. Creates new credit grant with expiration date
-3. Expiration set to `invoice.periodEnd` (from line item period)
-
+**When**: Customer checks credit balance
+**What**: Calculates available credits from subscription allocation minus meter usage
 **How**:
 ```typescript
-// BillingSubscriptionServiceStripe.ts
-async createCreditGrantForInvoice(invoice: Invoice): Promise<void> {
-  // Void old credits (no rollover)
-  await this.voidExistingCreditGrants(invoice.customerId)
+// BillingCreditsServiceStripe.ts
+async fetchCreditBalance(subscription: Subscription, customerId: string): Promise<CreditBalance> {
+  // 1. Get subscription period boundaries
+  const stripeSubscription = await this.stripe.subscriptions.retrieve(subscription.id)
 
-  // Use invoice's period end for credit expiration (from line item)
-  const expiresAt = Math.floor(invoice.periodEnd.getTime() / 1000)
+  // 2. Find the meter
+  const meters = await this.stripe.billing.meters.list({ limit: 100 })
+  const meter = meters.data.find(m => m.event_name === 'ticket_completed')
 
-  // Create new credit grant with expiration
-  await this.creditsService.create({
-    customerId: invoice.customerId,
-    name: `Credits for ${subscription.planName} - Invoice ${invoice.id}`,
-    amount: {
-      type: 'monetary',
-      monetary: {
-        value: invoice.amount,
-        currency: 'usd'
-      }
-    },
-    category: 'paid',
-    applicability_config: {
-      scope: {
-        price_type: 'metered'
-      }
-    },
-    expires_at: expiresAt, // ⏰ Expires at end of billing period (no rollover)
-    metadata: {
-      invoice_id: invoice.id,
-      subscription_id: invoice.subscriptionId,
-      credits_count: numberOfCredits.toString()
+  // 3. Get meter usage for current billing period
+  const eventSummaries = await this.stripe.billing.meters.listEventSummaries(
+    meter.id,
+    {
+      customer: customerId,
+      start_time: stripeSubscription.current_period_start,
+      end_time: stripeSubscription.current_period_end
     }
-  })
+  )
+
+  // 4. Calculate usage
+  const usedCredits = eventSummaries.data.reduce((sum, summary) => {
+    return sum + (summary.aggregated_value || 0)
+  }, 0)
+
+  // 5. Calculate allocation from subscription
+  const firstItem = stripeSubscription.items.data[0]
+  const recurringAmount = firstItem?.price.unit_amount || 0
+  const totalCredits = Math.floor(recurringAmount / subscription.creditPrice)
+  const availableCredits = Math.max(0, totalCredits - usedCredits)
+
+  return { availableCredits, usedCredits, totalCredits, creditPrice }
 }
 ```
 
-### 2. Invoice Period Tracking (✅ Implemented)
+### 3. Invoice Period Tracking (✅ Implemented)
 
 **Files**: `_shared/types.ts`, `_shared/events/BillingEventConverterStripe.ts`, `_shared/stores/BillingInvoice/BillingInvoiceStoreSupabase.ts`
 
@@ -352,7 +339,7 @@ const expiresAt = Math.floor(invoice.periodEnd.getTime() / 1000)
 await creditsService.create({ ..., expires_at: expiresAt })
 ```
 
-### 3. Usage Recording (✅ Implemented)
+### 4. Usage Recording (✅ Implemented)
 
 **Files**: `_shared/services/BillingMeter/BillingMeterService.ts`, `_shared/services/BillingMeter/BillingMeterServiceStripe.ts`
 
@@ -367,7 +354,7 @@ await meterService.recordTicketCompletion({
 })
 ```
 
-### 4. Engineer Payout via Stripe Connect (TODO)
+### 5. Engineer Payout via Stripe Connect (✅ Implemented)
 
 **Files**: `_shared/services/EngineerPayout/EngineerPayoutService.ts`, `_shared/services/EngineerPayout/EngineerPayoutServiceStripe.ts` (to be created)
 
@@ -472,96 +459,96 @@ async markAsComplete(ticketId: string): Promise<void> {
 }
 ```
 
-## How Credits Work (No Overage/No Rollover Model)
+## How Credits Work (Usage-Based Model with Credit Limits)
 
-### Automatic Application & Expiration
+### Usage Tracking & Billing
 
-1. **During billing period**: Meter events accumulate, credits automatically apply
-2. **At period end**: Stripe calculates total usage cost and applies available credits
-3. **On next invoice payment**: Old credits voided, new credits granted with new expiration
-4. **Unused credits**: Lost - no rollover to next cycle
+1. **During billing period**: Meter events accumulate, tracking actual usage
+2. **Credit enforcement**: UI checks available balance (allocation - usage) before allowing ticket creation
+3. **At period end**: Stripe generates invoice with base subscription + metered usage charges
+4. **Next billing period**: Fresh credit allocation starts (based on subscription plan)
 
 ### Example Scenarios
 
-#### Scenario 1: Usage Within Credits (Marketplace Economics)
+#### Scenario 1: Usage Within Limit (Marketplace Economics)
 ```
 Month 1:
-- Subscription: $100/month for 10 credits ($10/credit)
-- Usage: 8 tickets completed ($80 credit value)
-- Credits available: $100
-- Credits expire: End of Month 1
+- Subscription: $100/month for 10 credit allocation ($10/credit value)
+- Usage: 8 tickets completed
+- Available credits: 10 - 8 = 2 remaining
 
 Engineer Payouts (Immediate via Stripe Connect):
 - 8 tickets × $3.50 = $28 transferred to engineers
 - Paid from Unjam's Stripe balance
 
-Platform Revenue Breakdown:
-- Customer pays: $100 (subscription)
-- Credit value used: 8 × $10 = $80
-- Engineer costs: 8 × $3.50 = $28
-- Unjam profit: $80 - $28 = $52 💰
-
 Invoice at Month End:
-- Subscription renewal: $100
-- Metered usage: $80
-- Credits applied: -$80
-- Unused credits: $20 (will be voided)
-- Total customer pays: $100
+- Subscription base: $100 (for 10 credit allocation)
+- Metered usage: 8 tickets × $10 = $80
+- Total customer pays: $180
+
+Platform Revenue Breakdown:
+- Customer paid: $180 total
+- Engineer costs: $28
+- Unjam profit: $180 - $28 = $152 💰
 
 Month 2 Start:
-- Old $20 credits: VOIDED ❌
-- New $100 credits: GRANTED ✅ (expires end of Month 2)
+- Fresh 10 credit allocation
+- Meter resets (new billing period)
 ```
 
-#### Scenario 2: Credits Exhausted (No Overage)
+#### Scenario 2: Credit Limit Reached (No Overage)
 ```
 Month 1:
-- Subscription: $100/month for 10 credits ($10/credit)
-- Usage: 10 tickets completed ($100 credit value)
-- Credits available: $100
+- Subscription: $100/month for 10 credit allocation
+- Usage: 10 tickets completed
+- Available credits: 10 - 10 = 0 remaining
 
 Engineer Payouts:
 - 10 tickets × $3.50 = $35 transferred to engineers
-- Unjam profit: $100 - $35 = $65 💰
 
 Invoice at Month End:
-- Subscription renewal: $100
-- Metered usage: $100
-- Credits applied: -$100
-- Remaining credits: $0
-- Total customer pays: $100
+- Subscription base: $100
+- Metered usage: 10 tickets × $10 = $100
+- Total customer pays: $200
+
+Platform Revenue Breakdown:
+- Customer paid: $200 total
+- Engineer costs: $35
+- Unjam profit: $200 - $35 = $165 💰
 
 What if customer tries ticket #11?
-- UI prevents ticket creation when credits = 0
-- Customer must wait for Month 2 credits
-- No backend validation needed - UI enforces limit
+- UI prevents ticket creation when availableCredits = 0
+- Customer must wait for Month 2
+- No overage charges possible (UI enforced)
 ```
 
 #### Scenario 3: Minimal Usage
 ```
 Month 1:
-- Subscription: $100/month for 10 credits ($10/credit)
-- Usage: 2 tickets completed ($20 credit value)
-- Credits available: $100
+- Subscription: $100/month for 10 credit allocation
+- Usage: 2 tickets completed
+- Available credits: 10 - 2 = 8 unused
 
 Engineer Payouts:
 - 2 tickets × $3.50 = $7 transferred to engineers
-- Unjam profit: $20 - $7 = $13 💰
-- Note: Customer paid $100, but only used $20 of value
 
 Invoice at Month End:
-- Subscription renewal: $100
-- Metered usage: $20
-- Credits applied: -$20
-- Unused credits: $80 ❌ LOST (no rollover)
-- Total customer pays: $100
+- Subscription base: $100
+- Metered usage: 2 tickets × $10 = $20
+- Total customer pays: $120
+
+Platform Revenue Breakdown:
+- Customer paid: $120 total
+- Engineer costs: $7
+- Unjam profit: $120 - $7 = $113 💰
 
 Month 2 Start:
-- Fresh $100 credits (not $180!)
+- Fresh 10 credit allocation (unused credits from Month 1 don't carry over)
 
 Platform Economics:
-- This scenario shows high profit margin when customers underutilize credits
-- Customer loses unused credits (use it or lose it model)
+- Customer pays for base subscription regardless of usage
+- Actual usage charged separately via metered pricing
+- Lower usage = lower total cost for customer compared to credit grant model
 ```
 
 ## Subscription Change Scenarios
@@ -680,24 +667,25 @@ Result:
 ## Key Benefits of This Model
 
 **Customer Benefits:**
-1. ✅ **Predictable Costs**: No overage charges - customers always pay fixed subscription amount
-2. ✅ **Simple Pricing**: Easy to understand credit-based model
-3. ✅ **Fresh Start**: Each billing cycle starts with full credit allocation
+1. ✅ **Pay for What You Use**: Only charged for actual usage + base subscription
+2. ✅ **No Prepayment Waste**: Lower usage = lower total cost (unlike prepaid credits)
+3. ✅ **Simple Pricing**: Clear base fee + usage-based charges
+4. ✅ **Protected from Overages**: UI enforces credit limits - can't go over allocation
 
 **Platform Benefits:**
-1. ✅ **Marketplace Revenue**: Unjam earns difference between credit value and engineer payout
-2. ✅ **Encourages Usage**: "Use it or lose it" motivates customers to maximize value
+1. ✅ **Marketplace Revenue**: Unjam earns from both subscription and usage charges, minus engineer payouts
+2. ✅ **Simpler Implementation**: No credit grant management - just record meter events
 3. ✅ **Flexible Margins**: Engineer payouts are configurable per account
-4. ✅ **Stripe-Native**: Leverages Stripe's credit grants, metering, and Connect features
+4. ✅ **Stripe-Native**: Leverages Stripe's metering and Connect features
 5. ✅ **Immediate Payouts**: Engineers paid instantly via Stripe transfers when tickets complete
+6. ✅ **Better for Customers**: They don't lose money on unused credits
 
 **Example Profit Margins:**
-- Starter Plan: $35/month, 5 credits at $7 each
-  - Full usage: 5 tickets × ($7 - $3.50) = $17.50 profit
-  - Profit margin: 50% of credit value used
-- Enterprise Plan: $245/month, 35 credits at $7 each
-  - Full usage: 35 tickets × ($7 - $3.50) = $122.50 profit
-  - Profit margin: 50% of credit value used
+- Starter Plan: $35/month base, 5 credit allocation at $7 each
+  - Full usage (5 tickets): $35 + $35 = $70 revenue, $17.50 engineer cost = $52.50 profit
+  - Low usage (2 tickets): $35 + $14 = $49 revenue, $7 engineer cost = $42 profit
+- Enterprise Plan: $245/month base, 35 credit allocation at $7 each
+  - Full usage (35 tickets): $245 + $245 = $490 revenue, $122.50 engineer cost = $367.50 profit
 
 ## Database Schema Requirements
 

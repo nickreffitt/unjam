@@ -20,19 +20,6 @@ export interface BillingSubscriptionService {
   fetchActiveByCustomerId(customerId: string): Promise<Subscription | null>
 
   /**
-   * Creates a credit grant for a paid invoice
-   * Calculates credits based on invoice amount and subscription credit price
-   *
-   * Key behaviors:
-   * - Voids all existing credit grants for the customer (no rollover)
-   * - Sets expiration to subscription's current_period_end (credits expire at cycle end)
-   * - No overage charges - credits are replenished each billing cycle
-   *
-   * @param invoice - The paid invoice to create credits for
-   */
-  createCreditGrantForInvoice(invoice: Invoice): Promise<void>
-
-  /**
    * Determines if a subscription change is an upgrade
    * Upgrade = immediate plan change with higher credit price
    *
@@ -41,12 +28,4 @@ export interface BillingSubscriptionService {
    * @returns True if this is an upgrade, false otherwise
    */
   isUpgrade(oldSubscription: Subscription, newSubscription: Subscription): boolean
-
-  /**
-   * Voids all existing credit grants for a customer
-   * Used during upgrades to clear old plan credits
-   *
-   * @param customerId - The customer ID
-   */
-  voidExistingCreditGrants(customerId: string): Promise<void>
 }

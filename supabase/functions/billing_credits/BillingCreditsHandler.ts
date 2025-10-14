@@ -58,13 +58,13 @@ export class BillingCreditsHandler {
       throw new Error('No active subscription found')
     }
 
-    // 3. Fetch credit balance from Stripe
-    const creditBalanceData = await this.creditsService.fetchCreditBalance(subscription)
+    // 3. Fetch credit balance from Stripe (subscription allocation - meter usage)
+    const creditBalanceData = await this.creditsService.fetchCreditBalance(subscription, customerId)
 
-    console.info(`✅ [BillingCreditsHandler] Credit balance fetched: ${creditBalanceData.creditCount} credits`)
+    console.info(`✅ [BillingCreditsHandler] Credit balance fetched: ${creditBalanceData.availableCredits} available (${creditBalanceData.totalCredits} total - ${creditBalanceData.usedCredits} used)`)
 
     return {
-      creditBalance: creditBalanceData.creditCount
+      creditBalance: creditBalanceData.availableCredits
     }
   }
 

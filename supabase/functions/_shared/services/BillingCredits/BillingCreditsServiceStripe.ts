@@ -1,157 +1,80 @@
 import type Stripe from 'stripe'
-import type { BillingCreditsService, CreateCreditGrantParams, CreditBalance } from './BillingCreditsService.ts'
-import type { CreditGrant, Subscription } from '@types'
+import type { BillingCreditsService, CreditBalance } from './BillingCreditsService.ts'
+import type { Subscription } from '@types'
 
 /**
- * Stripe implementation of BillingCreditsService using Stripe Credit Grants API
+ * Stripe implementation of BillingCreditsService using Stripe Meters
+ * Calculates credit balance from subscription allocation minus meter usage
  */
 export class BillingCreditsServiceStripe implements BillingCreditsService {
   private stripe: Stripe
+  private meterEventName: string
 
-  constructor(stripe: Stripe) {
+  constructor(stripe: Stripe, meterEventName: string = 'ticket_completed') {
     this.stripe = stripe
+    this.meterEventName = meterEventName
   }
 
   /**
-   * Creates a new credit grant for a customer using Stripe Credit Grants API
+   * Fetches the current credit balance for a customer
+   * Balance = Subscription allocated credits - Meter events in current billing period
    */
-  async create(params: CreateCreditGrantParams): Promise<CreditGrant> {
-    console.info(`[BillingCreditsServiceStripe] Creating credit grant for customer: ${params.customerId}`)
+  async fetchCreditBalance(subscription: Subscription, customerId: string): Promise<CreditBalance> {
+    console.info(`[BillingCreditsServiceStripe] Fetching credit balance for customer: ${customerId}`)
 
     try {
-      const stripeCreditGrant = await this.stripe.billing.creditGrants.create({
-        customer: params.customerId,
-        name: params.name,
-        amount: {
-          type: params.amount.type,
-          monetary: {
-            value: params.amount.monetary.value,
-            currency: params.amount.monetary.currency
-          }
-        },
-        category: params.category,
-        applicability_config: {
-          scope: {
-            price_type: params.applicability_config.scope.price_type
-          }
-        },
-        effective_at: params.effective_at,
-        expires_at: params.expires_at,
-        metadata: params.metadata
-      })
+      // Get the meter to query usage
+      const meters = await this.stripe.billing.meters.list({ limit: 100 })
+      const meter = meters.data.find(m => m.event_name === this.meterEventName)
 
-      const creditGrant = this.mapStripeCreditGrantToCreditGrant(stripeCreditGrant)
-      console.info(`✅ [BillingCreditsServiceStripe] Credit grant created: ${creditGrant.id}`)
-      return creditGrant
-    } catch (err) {
-      const error = err as Error
-      console.error('[BillingCreditsServiceStripe] Failed to create credit grant:', error.message)
-      throw new Error(`Failed to create credit grant: ${error.message}`)
-    }
-  }
+      if (!meter) {
+        throw new Error(`Meter with event name "${this.meterEventName}" not found`)
+      }
+      if (!subscription.currentPeriod.start || 
+        !subscription.currentPeriod.end
+      ) {
+        throw new Error('Subscription current period is not set')
+      }
 
-  /**
-   * Lists all credit grants for a customer
-   */
-  async listByCustomer(customerId: string): Promise<CreditGrant[]> {
-    console.info(`[BillingCreditsServiceStripe] Listing credit grants for customer: ${customerId}`)
+      // Get meter event summaries for current billing period
+      const currentPeriodStart = Math.ceil(subscription.currentPeriod.start.getTime() / 1000)
+      const currentPeriodEnd = Math.ceil(subscription.currentPeriod.end.getTime() / 1000)
 
-    try {
-      const stripeCreditGrants = await this.stripe.billing.creditGrants.list({
-        customer: customerId,
-        limit: 100
-      })
-
-      const creditGrants = stripeCreditGrants.data.map(scg =>
-        this.mapStripeCreditGrantToCreditGrant(scg)
+      const eventSummaries = await this.stripe.billing.meters.listEventSummaries(
+        meter.id,
+        {
+          customer: customerId,
+          start_time: currentPeriodStart,
+          end_time: currentPeriodEnd
+        }
       )
 
-      console.info(`✅ [BillingCreditsServiceStripe] Found ${creditGrants.length} credit grants`)
-      return creditGrants
-    } catch (err) {
-      const error = err as Error
-      console.error('[BillingCreditsServiceStripe] Failed to list credit grants:', error.message)
-      throw new Error(`Failed to list credit grants: ${error.message}`)
-    }
-  }
+      // Sum up the aggregated values from all event summaries
+      const usedCredits = eventSummaries.data.reduce((sum, summary) => {
+        return sum + (summary.aggregated_value || 0)
+      }, 0)
 
-  /**
-   * Voids a credit grant (cancels unused credits)
-   */
-  async void(creditGrantId: string): Promise<void> {
-    console.info(`[BillingCreditsServiceStripe] Voiding credit grant: ${creditGrantId}`)
-
-    try {
-      await this.stripe.billing.creditGrants.voidGrant(creditGrantId)
-      console.info(`✅ [BillingCreditsServiceStripe] Credit grant voided: ${creditGrantId}`)
-    } catch (err) {
-      const error = err as Error
-      console.error('[BillingCreditsServiceStripe] Failed to void credit grant:', error.message)
-      throw new Error(`Failed to void credit grant: ${error.message}`)
-    }
-  }
-
-  /**
-   * Fetches the current credit balance for a customer from Stripe
-   */
-  async fetchCreditBalance(subscription: Subscription): Promise<CreditBalance> {
-    console.info(`[BillingCreditsServiceStripe] Fetching credit balance for customer: ${subscription.customerId}`)
-
-    try {
-      const summary = await this.stripe.billing.creditBalanceSummary.retrieve({
-        customer: subscription.customerId,
-        filter: {
-          type: 'applicability_scope',
-          applicability_scope: {
-            price_type: 'metered'
-          }
-        }
-      })
-
-      // Get the first balance entry (assumes single currency - USD)
-      const balance = summary.balances[0]
-      const availableBalanceCents = balance?.available_balance?.monetary?.value || 0
+      // Calculate total credits from subscription (invoice amount / credit price)
       const creditPrice = subscription.creditPrice
-      const creditCount = availableBalanceCents / creditPrice
 
-      console.info(`✅ [BillingCreditsServiceStripe] Credit balance: ${creditCount} credits (${availableBalanceCents} cents at ${creditPrice} cents per credit)`)
+      // Get subscription item to find the recurring price amount
+      const recurringAmount = subscription.planAmount
+
+      const totalCredits = creditPrice > 0 ? Math.floor(recurringAmount / creditPrice) : 0
+      const availableCredits = Math.max(0, totalCredits - usedCredits)
+
+      console.info(`✅ [BillingCreditsServiceStripe] Credit balance: ${availableCredits} available (${totalCredits} total - ${usedCredits} used)`)
 
       return {
-        availableBalanceCents,
-        creditCount,
+        availableCredits,
+        usedCredits,
+        totalCredits,
         creditPrice
       }
     } catch (err) {
       const error = err as Error
       console.error('[BillingCreditsServiceStripe] Failed to fetch credit balance:', error.message)
       throw new Error(`Failed to fetch credit balance: ${error.message}`)
-    }
-  }
-
-  /**
-   * Maps Stripe credit grant to domain CreditGrant
-   */
-  private mapStripeCreditGrantToCreditGrant(stripeCreditGrant: Stripe.Billing.CreditGrant): CreditGrant {
-    return {
-      id: stripeCreditGrant.id,
-      customerId: stripeCreditGrant.customer,
-      name: stripeCreditGrant.name,
-      amount: {
-        type: 'monetary',
-        monetary: {
-          value: stripeCreditGrant.amount.monetary?.value || 0,
-          currency: stripeCreditGrant.amount.monetary?.currency || 'usd'
-        }
-      },
-      category: stripeCreditGrant.category as 'paid' | 'promotional',
-      applicability_config: {
-        scope: {
-          price_type: 'metered'
-        }
-      },
-      effective_at: stripeCreditGrant.effective_at || undefined,
-      expires_at: stripeCreditGrant.expires_at || undefined,
-      metadata: stripeCreditGrant.metadata || undefined
     }
   }
 }

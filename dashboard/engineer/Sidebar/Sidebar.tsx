@@ -1,32 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Clock, CheckCircle, Ticket, LogOut, Settings } from 'lucide-react';
+import { Clock, CheckCircle, Ticket, LogOut, Settings, CreditCard, Loader2 } from 'lucide-react';
+import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
+import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
+import { ApiManager } from '@common/features/ApiManager';
+import type { EngineerProfile } from '@common/types';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const { supabaseClient, supabaseUrl } = useSupabase();
+  const { authUser } = useAuthState();
+  const [isLoadingPayments, setIsLoadingPayments] = useState(false);
 
-  const navItems = [
+  const ticketItems = [
     {
       path: '/new',
-      label: 'New Tickets',
+      label: 'New',
       icon: Ticket
     },
     {
       path: '/active',
-      label: 'Active Tickets',
+      label: 'Active',
       icon: Clock
     },
     {
       path: '/completed',
-      label: 'Completed Tickets',
+      label: 'Completed',
       icon: CheckCircle
-    },
-    {
-      path: '/settings',
-      label: 'Settings',
-      icon: Settings
     }
   ];
+
+  const settingsItem = {
+    path: '/settings',
+    label: 'Settings',
+    icon: Settings
+  };
 
   const logoutItem = {
     path: '/auth/logout',
@@ -38,6 +46,35 @@ const Sidebar: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
+  const handlePaymentsClick = async () => {
+    if (authUser.status !== 'signed-in' || !authUser.profile) {
+      console.error('[Sidebar] No authenticated user profile available');
+      return;
+    }
+
+    if (authUser.profile.type !== 'engineer') {
+      console.error('[Sidebar] User is not an engineer');
+      return;
+    }
+
+    setIsLoadingPayments(true);
+    try {
+      const engineerProfile = authUser.profile as EngineerProfile;
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
+      const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
+
+      const loginUrl = await apiManager.createEngineerLoginLink(engineerProfile.id);
+
+      // Open the Stripe Express Dashboard in a new tab
+      window.open(loginUrl, '_blank');
+    } catch (error) {
+      console.error('[Sidebar] Error creating engineer login link:', error);
+      alert('Failed to open payments dashboard. Please try again.');
+    } finally {
+      setIsLoadingPayments(false);
+    }
+  };
+
   return (
     <div className="unjam-w-64 unjam-bg-white unjam-shadow-lg unjam-border-r unjam-border-gray-200 unjam-flex unjam-flex-col">
       <div className="unjam-p-6">
@@ -46,24 +83,68 @@ const Sidebar: React.FC = () => {
           <h1 className="unjam-text-xl unjam-font-semibold unjam-text-gray-900">Unjam</h1>
         </div>
       </div>
-      
+
       <nav className="unjam-flex-1 unjam-p-4 unjam-flex unjam-flex-col">
+        {/* Tickets section */}
+        <div className="unjam-mb-6 unjam-pb-6 unjam-border-b unjam-border-gray-200">
+          <h2 className="unjam-px-2 unjam-mb-2 unjam-text-xs unjam-font-semibold unjam-text-gray-500 unjam-uppercase unjam-tracking-wider">
+            Tickets
+          </h2>
+          <ul className="unjam-space-y-2 unjam-pl-2">
+            {ticketItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={`unjam-flex unjam-items-center unjam-space-x-3 unjam-px-4 unjam-py-3 unjam-rounded-lg unjam-transition-colors unjam-text-sm ${
+                    isActivePath(item.path)
+                      ? 'unjam-bg-blue-50 unjam-text-blue-700 unjam-border unjam-border-blue-200'
+                      : 'unjam-text-gray-700 hover:unjam-bg-gray-50 hover:unjam-text-gray-900'
+                  }`}
+                >
+                  <item.icon size={18} />
+                  <span className="unjam-font-medium">{item.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Other navigation items */}
         <ul className="unjam-space-y-2">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className={`unjam-flex unjam-items-center unjam-space-x-3 unjam-px-4 unjam-py-3 unjam-rounded-lg unjam-transition-colors unjam-text-sm ${
-                  isActivePath(item.path)
-                    ? 'unjam-bg-blue-50 unjam-text-blue-700 unjam-border unjam-border-blue-200'
-                    : 'unjam-text-gray-700 hover:unjam-bg-gray-50 hover:unjam-text-gray-900'
-                }`}
-              >
-                <item.icon size={18} />
-                <span className="unjam-font-medium">{item.label}</span>
-              </Link>
-            </li>
-          ))}
+          {/* Payments button */}
+          <li>
+            <button
+              onClick={handlePaymentsClick}
+              disabled={isLoadingPayments}
+              className={`unjam-w-full unjam-flex unjam-items-center unjam-space-x-3 unjam-px-4 unjam-py-3 unjam-rounded-lg unjam-transition-colors unjam-text-sm ${
+                isLoadingPayments
+                  ? 'unjam-bg-gray-100 unjam-text-gray-400 unjam-cursor-not-allowed'
+                  : 'unjam-text-gray-700 hover:unjam-bg-gray-50 hover:unjam-text-gray-900'
+              }`}
+            >
+              {isLoadingPayments ? (
+                <Loader2 size={18} className="unjam-animate-spin" />
+              ) : (
+                <CreditCard size={18} />
+              )}
+              <span className="unjam-font-medium">Payments</span>
+            </button>
+          </li>
+
+          {/* Settings link */}
+          <li>
+            <Link
+              to={settingsItem.path}
+              className={`unjam-flex unjam-items-center unjam-space-x-3 unjam-px-4 unjam-py-3 unjam-rounded-lg unjam-transition-colors unjam-text-sm ${
+                isActivePath(settingsItem.path)
+                  ? 'unjam-bg-blue-50 unjam-text-blue-700 unjam-border unjam-border-blue-200'
+                  : 'unjam-text-gray-700 hover:unjam-bg-gray-50 hover:unjam-text-gray-900'
+              }`}
+            >
+              <settingsItem.icon size={18} />
+              <span className="unjam-font-medium">{settingsItem.label}</span>
+            </Link>
+          </li>
         </ul>
 
         {/* Logout at bottom */}

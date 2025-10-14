@@ -102,11 +102,22 @@ const getAlertStyles = (type: AlertType) => {
 };
 
 const BillingVerificationAlert: React.FC = () => {
-  const { engineerAccount } = useBillingAccountState();
+  const { engineerAccount, isLoading } = useBillingAccountState();
 
-  // Show error if no engineer account exists
+  // Wait for loading to complete before showing alert
+  if (isLoading) {
+    return null;
+  }
+
+  // Show alert for no account or based on verification status
   const alertConfig = !engineerAccount
-    ? null
+    ? {
+        type: 'warning' as AlertType,
+        icon: AlertTriangle,
+        title: 'Billing Account Required',
+        message: 'You need to set up your billing account to receive payments for tickets you complete.',
+        showLink: true
+      }
     : getAlertConfig(engineerAccount.verificationStatus);
 
   if (!alertConfig) {
@@ -115,7 +126,6 @@ const BillingVerificationAlert: React.FC = () => {
 
   const styles = getAlertStyles(alertConfig.type);
   const Icon = alertConfig.icon;
-  const isLoading = engineerAccount?.verificationStatus === 'pending_verification';
 
   return (
     <div className={`unjam-mb-6 unjam-border unjam-rounded-lg unjam-p-4 ${styles.container}`}>

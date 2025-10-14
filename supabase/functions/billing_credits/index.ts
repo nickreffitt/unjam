@@ -64,9 +64,9 @@ export const handler = async (request: Request): Promise<Response> => {
     const ticketStore = new TicketStoreSupabase(supabase)
 
     // Initialize services
-    const creditsService = new BillingCreditsServiceStripe(stripe)
-    const subscriptionService = new BillingSubscriptionServiceStripe(stripe, creditsService)
-    const meterService = new BillingMeterServiceStripe(stripe)
+    const creditsService = new BillingCreditsServiceStripe(stripe) // Uses 'ticket_completed' meter by default
+    const subscriptionService = new BillingSubscriptionServiceStripe(stripe)
+    const meterService = new BillingMeterServiceStripe(stripe) // Uses 'ticket_completed' meter by default
     const payoutService = new BillingEngineerPayoutServiceStripe(stripe)
 
     // Initialize handler with all dependencies

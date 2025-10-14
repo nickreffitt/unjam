@@ -88,27 +88,14 @@ export class BillingEventHandler {
     switch (event.state) {
       case 'created': {
         await this.subscriptionStore.create(event.subscription)
-        // No credit handling - credits granted when invoice paid
         break
       }
       case 'updated': {
-        // Fetch the old subscription to detect plan changes
-        const oldSubscription = await this.subscriptionStore.fetch(event.subscription.id)
-
-        // Update database with new subscription data
         await this.subscriptionStore.update(event.subscription)
-
-        // Detect upgrade: plan changed AND credit price increased
-        if (oldSubscription && this.subscriptionService.isUpgrade(oldSubscription, event.subscription)) {
-          await this.subscriptionService.voidExistingCreditGrants(event.subscription.customerId)
-        }
-        // Downgrades and cancellations don't require immediate action
-        // Credits will naturally expire at period end
         break
       }
       case 'deleted': {
         await this.subscriptionStore.delete(event.subscription.id)
-        // Subscription ended - credits should already be expired or voided
         break
       }
       default:
@@ -134,9 +121,6 @@ export class BillingEventHandler {
         } else {
           await this.invoiceStore.create(event.invoice)
         }
-
-        // Create credit grant for paid invoice
-        await this.subscriptionService.createCreditGrantForInvoice(event.invoice)
         break
       case 'failed':
         if (existingInvoice) {

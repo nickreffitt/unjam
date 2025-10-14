@@ -6,6 +6,7 @@ import { Clock, Check, Eye, type LucideIcon } from 'lucide-react';
 import EmptyState from '@dashboard/engineer/TicketList/components/EmptyState/EmptyState';
 import BillingVerificationAlert from '@dashboard/engineer/BillingAccount/components/BillingVerificationAlert/BillingVerificationAlert';
 import { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount/contexts/BillingAccountManagerContext';
+import { useBillingAccountState } from '@dashboard/engineer/BillingAccount/hooks/useBillingAccountState';
 
 interface EmptyStateConfig {
   icon: LucideIcon;
@@ -29,7 +30,7 @@ interface TicketsTableProps {
   timeSource?: 'createdAt' | 'claimedAt' | 'elapsedTime'; // Which field to use for time calculation
 }
 
-const TicketsTable: React.FC<TicketsTableProps> = ({
+const TicketsTableContent: React.FC<TicketsTableProps> = ({
   tickets,
   title,
   description,
@@ -40,6 +41,9 @@ const TicketsTable: React.FC<TicketsTableProps> = ({
   timeSource = 'elapsedTime'
 }) => {
   const [, setCurrentTime] = useState(new Date());
+  const { engineerAccount } = useBillingAccountState();
+
+  const canPerformActions = engineerAccount?.verificationStatus === 'active' || engineerAccount?.verificationStatus === 'eventually_due';
 
   // Update current time every second for live time calculations
   useEffect(() => {
@@ -69,14 +73,13 @@ const TicketsTable: React.FC<TicketsTableProps> = ({
   };
 
   return (
-    <BillingAccountManagerProvider>
-      <div className="unjam-p-8 unjam-max-w-6xl unjam-mx-auto">
-        <div className="unjam-mb-8">
-          <h1 className="unjam-text-3xl unjam-font-bold unjam-text-gray-900 unjam-mb-2">{title}</h1>
-          <p className="unjam-text-gray-600">{description}</p>
-        </div>
+    <div className="unjam-p-8 unjam-max-w-6xl unjam-mx-auto">
+      <div className="unjam-mb-8">
+        <h1 className="unjam-text-3xl unjam-font-bold unjam-text-gray-900 unjam-mb-2">{title}</h1>
+        <p className="unjam-text-gray-600">{description}</p>
+      </div>
 
-        <BillingVerificationAlert />
+      <BillingVerificationAlert />
 
         <div className="unjam-bg-white unjam-rounded-lg unjam-shadow-sm unjam-border unjam-border-gray-200">
 
@@ -131,7 +134,11 @@ const TicketsTable: React.FC<TicketsTableProps> = ({
                         >
                           <Eye size={16} />
                         </Link>
-                        {actions && actions(ticket)}
+                        {actions && (
+                          <div className={canPerformActions ? '' : 'unjam-pointer-events-none unjam-opacity-50'} title={canPerformActions ? '' : 'Billing account verification required'}>
+                            {actions(ticket)}
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -151,6 +158,13 @@ const TicketsTable: React.FC<TicketsTableProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+const TicketsTable: React.FC<TicketsTableProps> = (props) => {
+  return (
+    <BillingAccountManagerProvider>
+      <TicketsTableContent {...props} />
     </BillingAccountManagerProvider>
   );
 };

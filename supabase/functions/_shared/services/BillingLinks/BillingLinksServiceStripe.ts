@@ -1,5 +1,5 @@
 import type Stripe from 'stripe'
-import type { EngineerAccount } from '@types.ts'
+import type { EngineerAccount } from '@types'
 import type { BillingLinksService } from './BillingLinksService.ts'
 
 /**
@@ -56,6 +56,24 @@ export class BillingLinksServiceStripe implements BillingLinksService {
       const error = err as Error
       console.error(`[BillingLinksServiceStripe] Failed to create account link: ${error.message}`)
       throw new Error(`Failed to create engineer account link: ${error.message}`)
+    }
+  }
+
+  /**
+   * Creates a login link for an engineer to access the Express Dashboard
+   * This allows engineers to manage their Stripe Connect account settings
+   */
+  async createEngineerLoginLink(engineerAccount: EngineerAccount): Promise<string> {
+    console.info(`[BillingLinksServiceStripe] Creating login link for engineer: ${engineerAccount.engineerId}`)
+    try {
+      const loginLink = await this.stripe.accounts.createLoginLink(engineerAccount.id)
+
+      console.info(`[BillingLinksServiceStripe] Successfully created login link for account: ${engineerAccount.id}`)
+      return loginLink.url
+    } catch (err) {
+      const error = err as Error
+      console.error(`[BillingLinksServiceStripe] Failed to create login link: ${error.message}`)
+      throw new Error(`Failed to create engineer login link: ${error.message}`)
     }
   }
 }

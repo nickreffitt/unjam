@@ -96,6 +96,41 @@ export class ApiManager {
   }
 
   /**
+   * Creates an engineer login link to access the Express Dashboard
+   * @param engineerId - The engineer profile ID
+   * @returns The Express Dashboard login URL
+   * @throws Error if the request fails or no engineer account exists
+   */
+  async createEngineerLoginLink(engineerId: string): Promise<string> {
+    console.info(`[ApiManager] Creating engineer login link for profile: ${engineerId}`);
+
+    try {
+      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+        'billing-links',
+        {
+          link_type: 'create_engineer_login',
+          payload: {
+            engineer_id: engineerId
+          }
+        },
+        'Failed to create engineer login link'
+      );
+
+      if (!url) {
+        throw new Error('No URL returned from engineer login service');
+      }
+
+      console.info(`[ApiManager] Successfully created engineer login link`);
+      return url;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error creating engineer login link:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Fetches the credit balance for a given profile
    * @param profileId - The user profile ID
    * @returns The credit balance amount

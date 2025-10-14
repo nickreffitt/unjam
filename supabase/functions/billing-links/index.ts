@@ -82,6 +82,9 @@ export const handler = async (request: Request): Promise<Response> => {
       case 'create_engineer_account':
         url = await billingLinksHandler.createEngineerAccountLink(payload, origin)
         break
+      case 'create_engineer_login':
+        url = await billingLinksHandler.createEngineerLoginLink(payload)
+        break
       default:
         console.error(`[billing-links] Unknown link_type: ${link_type}`)
         return new Response(

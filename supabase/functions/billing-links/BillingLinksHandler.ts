@@ -83,4 +83,29 @@ export class BillingLinksHandler {
     console.info(`[BillingLinksHandler] Successfully created account link for engineer: ${engineer_id}`)
     return accountUrl
   }
+
+  /**
+   * Creates a login link for an engineer to access the Express Dashboard
+   * @param payload - Object containing engineer_id
+   * @returns The Express Dashboard login URL
+   * @throws Error if engineer account not found or link creation fails
+   */
+  async createEngineerLoginLink(payload: { engineer_id: string }): Promise<string> {
+    const { engineer_id } = payload
+    console.info(`[BillingLinksHandler] Creating engineer login link for engineer: ${engineer_id}`)
+
+    // Fetch the engineer account by profile ID
+    const engineerAccount = await this.engineerStore.getByProfileId(engineer_id)
+
+    if (!engineerAccount) {
+      console.error(`[BillingLinksHandler] No engineer account found for engineer: ${engineer_id}`)
+      throw new Error('No engineer account found for this profile')
+    }
+
+    // Generate login link
+    const loginUrl = await this.linksService.createEngineerLoginLink(engineerAccount)
+
+    console.info(`[BillingLinksHandler] Successfully created login link for engineer: ${engineer_id}`)
+    return loginUrl
+  }
 }
