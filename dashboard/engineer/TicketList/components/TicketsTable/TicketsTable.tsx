@@ -5,7 +5,6 @@ import { formatElapsedTime, formatLiveElapsedTime, getStatusDisplay } from '@das
 import { Clock, Check, Eye, type LucideIcon } from 'lucide-react';
 import EmptyState from '@dashboard/engineer/TicketList/components/EmptyState/EmptyState';
 import BillingVerificationAlert from '@dashboard/engineer/BillingAccount/components/BillingVerificationAlert/BillingVerificationAlert';
-import { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount/contexts/BillingAccountManagerContext';
 import { useBillingAccountState } from '@dashboard/engineer/BillingAccount/hooks/useBillingAccountState';
 
 interface EmptyStateConfig {
@@ -163,9 +162,7 @@ const TicketsTableContent: React.FC<TicketsTableProps> = ({
 
 const TicketsTable: React.FC<TicketsTableProps> = (props) => {
   return (
-    <BillingAccountManagerProvider>
       <TicketsTableContent {...props} />
-    </BillingAccountManagerProvider>
   );
 };
 

@@ -7,7 +7,6 @@ import TicketPreviewLayout from '@dashboard/engineer/Ticket/components/TicketDet
 import { X } from 'lucide-react';
 import { type ErrorDisplay } from '@common/types';
 import { useBillingAccountState } from '@dashboard/engineer/BillingAccount/hooks/useBillingAccountState';
-import { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount/contexts/BillingAccountManagerContext';
 
 const TicketPreviewContent: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -98,9 +97,7 @@ const TicketPreviewContent: React.FC = () => {
 
 const TicketPreview: React.FC = () => {
   return (
-    <BillingAccountManagerProvider>
-      <TicketPreviewContent />
-    </BillingAccountManagerProvider>
+    <TicketPreviewContent />
   );
 };
 

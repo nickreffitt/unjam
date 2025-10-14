@@ -1,6 +1,5 @@
 import React from 'react';
 import BillingAccount from '@dashboard/engineer/BillingAccount';
-import { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount/contexts/BillingAccountManagerContext';
 
 const Settings: React.FC = () => {
   return (
@@ -9,9 +8,7 @@ const Settings: React.FC = () => {
         <h1 className="unjam-text-2xl unjam-font-bold unjam-text-gray-900">Settings</h1>
       </div>
       <div className="unjam-flex-1 unjam-overflow-hidden">
-        <BillingAccountManagerProvider>
-          <BillingAccount />
-        </BillingAccountManagerProvider>
+        <BillingAccount />
       </div>
     </div>
   );

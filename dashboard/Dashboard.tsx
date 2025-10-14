@@ -23,34 +23,37 @@ import BuyCredits from '@dashboard/pages/customer/BuyCredits';
 import CustomerSidebar from '@dashboard/customer/Sidebar/Sidebar';
 import { SubscriptionManagerProvider } from '@dashboard/customer/Subscription';
 import CreditSuccess from '@dashboard/pages/customer/CreditSuccess';
+import { BillingAccountManagerProvider } from './engineer/BillingAccount';
 
 
 const ProtectedEngineerDashboard: React.FC = () => {
   return (
-    <TicketManagerProvider>
-      <TicketListManagerProvider>
-        <ChatManagerProvider>
-          <ScreenShareManagerProvider>
-            <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
-              <Sidebar />
-              <div className="unjam-flex-1 unjam-overflow-hidden">
-                <Routes>
-                  <Route path="new" element={<NewTicketsList />} />
-                  <Route path="new/:ticketId" element={<TicketPreview />} />
-                  <Route path="active" element={<ActiveTicketsList />} />
-                  <Route path="active/:ticketId" element={<ActiveTicket />} />
-                  <Route path="completed" element={<CompletedTicketsList />} />
-                  <Route path="completed/:ticketId" element={<CompletedTicket />} />
-                  <Route path="settings" element={<Settings />} />
-                  <Route path="auth/logout" element={<Logout />} />
-                  <Route path="*" element={<NewTicketsList />} />
-                </Routes>
+    <BillingAccountManagerProvider>
+      <TicketManagerProvider>
+        <TicketListManagerProvider>
+          <ChatManagerProvider>
+            <ScreenShareManagerProvider>
+              <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
+                <Sidebar />
+                <div className="unjam-flex-1 unjam-overflow-hidden">
+                  <Routes>
+                    <Route path="new" element={<NewTicketsList />} />
+                    <Route path="new/:ticketId" element={<TicketPreview />} />
+                    <Route path="active" element={<ActiveTicketsList />} />
+                    <Route path="active/:ticketId" element={<ActiveTicket />} />
+                    <Route path="completed" element={<CompletedTicketsList />} />
+                    <Route path="completed/:ticketId" element={<CompletedTicket />} />
+                    <Route path="settings" element={<Settings />} />
+                    <Route path="auth/logout" element={<Logout />} />
+                    <Route path="*" element={<NewTicketsList />} />
+                  </Routes>
+                </div>
               </div>
-            </div>
-          </ScreenShareManagerProvider>
-        </ChatManagerProvider>
-      </TicketListManagerProvider>
-    </TicketManagerProvider>
+            </ScreenShareManagerProvider>
+          </ChatManagerProvider>
+        </TicketListManagerProvider>
+      </TicketManagerProvider>
+    </BillingAccountManagerProvider>
   );
 };
 
