@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Clock, CheckCircle, Ticket, LogOut, Settings, CreditCard, Loader2 } from 'lucide-react';
-import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
-import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
-import { ApiManager } from '@common/features/ApiManager';
-import type { EngineerProfile } from '@common/types';
+import { useBillingAccountManager } from '@dashboard/engineer/BillingAccount/contexts/BillingAccountManagerContext';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { supabaseClient, supabaseUrl } = useSupabase();
-  const { authUser } = useAuthState();
+  const { billingAccountManager } = useBillingAccountManager();
   const [isLoadingPayments, setIsLoadingPayments] = useState(false);
 
   const ticketItems = [
@@ -47,23 +43,9 @@ const Sidebar: React.FC = () => {
   };
 
   const handlePaymentsClick = async () => {
-    if (authUser.status !== 'signed-in' || !authUser.profile) {
-      console.error('[Sidebar] No authenticated user profile available');
-      return;
-    }
-
-    if (authUser.profile.type !== 'engineer') {
-      console.error('[Sidebar] User is not an engineer');
-      return;
-    }
-
     setIsLoadingPayments(true);
     try {
-      const engineerProfile = authUser.profile as EngineerProfile;
-      const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
-      const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
-
-      const loginUrl = await apiManager.createEngineerLoginLink(engineerProfile.id);
+      const loginUrl = await billingAccountManager.createLoginLink();
 
       // Open the Stripe Express Dashboard in a new tab
       window.open(loginUrl, '_blank');

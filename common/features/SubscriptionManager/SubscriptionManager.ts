@@ -29,4 +29,14 @@ export class SubscriptionManager {
   async getCreditBalanceForProfile(profileId: string): Promise<number> {
     return await this.apiManager.fetchCreditBalance(profileId);
   }
+
+  /**
+   * Creates a billing portal link for the given profile ID
+   * @param profileId - The profile ID to create the billing portal link for
+   * @returns The billing portal URL where the user can manage their subscription
+   * @throws Error if the request fails or no billing customer exists
+   */
+  async createBillingPortalLink(profileId: string): Promise<string> {
+    return await this.apiManager.createBillingPortalLink(profileId);
+  }
 }

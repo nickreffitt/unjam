@@ -1,22 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useSubscriptionManager } from '../../contexts/SubscriptionManagerContext';
 import type { Subscription } from '@common/types';
 
 interface ManageSubscriptionProps {
   subscription: Subscription;
-  portalUrl: string | null;
   creditBalance: number | null;
-  isLoading: boolean;
 }
 
 const ManageSubscription: React.FC<ManageSubscriptionProps> = ({
   subscription,
-  portalUrl,
   creditBalance,
-  isLoading,
 }) => {
-  const handleManageSubscription = () => {
-    if (portalUrl) {
+  const { subscriptionManager, userProfile } = useSubscriptionManager();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleManageSubscription = async () => {
+    setIsLoading(true);
+    try {
+      const portalUrl = await subscriptionManager.createBillingPortalLink(userProfile.id);
       window.open(portalUrl, '_blank');
+    } catch (error) {
+      console.error('[ManageSubscription] Error creating billing portal link:', error);
+      alert('Failed to open billing portal. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -67,7 +74,7 @@ const ManageSubscription: React.FC<ManageSubscriptionProps> = ({
 
         <button
           onClick={handleManageSubscription}
-          disabled={!portalUrl || isLoading}
+          disabled={isLoading}
           className="unjam-w-full unjam-px-6 unjam-py-3 unjam-bg-blue-600 unjam-text-white unjam-rounded-md hover:unjam-bg-blue-700 disabled:unjam-bg-gray-400 disabled:unjam-cursor-not-allowed unjam-transition-colors unjam-font-medium"
         >
           {isLoading ? 'Loading...' : 'Manage Subscription'}

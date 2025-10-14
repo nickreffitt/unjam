@@ -19,6 +19,7 @@ CREATE TABLE billing_subscriptions (
   plan_name TEXT NOT NULL,
   credit_price INTEGER NOT NULL,
   cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+  current_period_start TIMESTAMP WITH TIME ZONE,
   current_period_end TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

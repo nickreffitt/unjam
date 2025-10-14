@@ -8,6 +8,7 @@ import styleText from '@extension/styles.css?inline';
 import { ScreenShareManagerProvider } from '@extension/ScreenShare/contexts/ScreenShareManagerContext';
 import { SupabaseProvider } from '@extension/shared/contexts/SupabaseContext';
 import { ExtensionAuthManagerProvider, useExtensionAuthManager } from '@extension/shared/contexts/ExtensionAuthManagerContext';
+import { SubscriptionManagerProvider } from '@extension/shared/contexts/SubscriptionManagerContext';
 import { type CustomerProfile } from '@common/types';
 
 let uiMounted = false;
@@ -49,13 +50,15 @@ const ContentApp = () => {
   return (
     <SupabaseProvider>
       <UserProfileProvider customerProfile={customerProfile}>
-        <TicketManagerProvider>
-          <ChatManagerProvider>
-            <ScreenShareManagerProvider>
-              <ExtensionContainer />
-            </ScreenShareManagerProvider>
-          </ChatManagerProvider>
-        </TicketManagerProvider>
+        <SubscriptionManagerProvider>
+          <TicketManagerProvider>
+            <ChatManagerProvider>
+              <ScreenShareManagerProvider>
+                <ExtensionContainer />
+              </ScreenShareManagerProvider>
+            </ChatManagerProvider>
+          </TicketManagerProvider>
+        </SubscriptionManagerProvider>
       </UserProfileProvider>
     </SupabaseProvider>
   );

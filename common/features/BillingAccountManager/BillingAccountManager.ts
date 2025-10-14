@@ -47,4 +47,13 @@ export class BillingAccountManager {
   async createAccountLink(engineerProfile: EngineerProfile): Promise<string> {
     return await this.apiManager.createEngineerAccountLink(engineerProfile);
   }
+
+  /**
+   * Creates a Stripe Express Dashboard login link for an engineer
+   * @returns The login URL where the engineer can access their Stripe dashboard
+   * @throws Error if the request fails or no engineer account exists
+   */
+  async createLoginLink(): Promise<string> {
+    return await this.apiManager.createEngineerLoginLink(this.engineerProfile.id);
+  }
 }

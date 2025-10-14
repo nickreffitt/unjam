@@ -29,7 +29,8 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
         plan_name: subscription.planName,
         credit_price: subscription.creditPrice,
         cancel_at_period_end: subscription.cancelAtPeriodEnd,
-        current_period_end: subscription.currentPeriodEnd.toISOString(),
+        current_period_start: subscription.currentPeriod.start?.toISOString(),
+        current_period_end: subscription.currentPeriod.end?.toISOString(),
       })
 
     if (insertError) {
@@ -54,7 +55,8 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
         plan_name: subscription.planName,
         credit_price: subscription.creditPrice,
         cancel_at_period_end: subscription.cancelAtPeriodEnd,
-        current_period_end: subscription.currentPeriodEnd.toISOString(),
+        current_period_start: subscription.currentPeriod.start?.toISOString(),
+        current_period_end: subscription.currentPeriod.end?.toISOString(),
       })
       .eq('stripe_subscription_id', subscription.id)
 
@@ -118,7 +120,10 @@ export class BillingSubscriptionStoreSupabase implements BillingSubscriptionStor
       planName: data.plan_name,
       creditPrice: data.credit_price,
       cancelAtPeriodEnd: data.cancel_at_period_end,
-      currentPeriodEnd: new Date(data.current_period_end),
+      currentPeriod: {
+        start: (data.current_period_start) ? new Date(data.current_period_start) : null,
+        end: (data.current_period_end) ? new Date(data.current_period_end) : null,
+      },
     }
   }
 }
