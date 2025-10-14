@@ -174,7 +174,7 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
 
               {/* Credit Balance Display */}
               <div className="unjam-mb-4 unjam-text-sm unjam-text-gray-600">
-                Credits available: ${(creditBalance || 0).toFixed(2)}
+                Credits available: {(creditBalance || 0)}
               </div>
 
               {/* Footer */}
