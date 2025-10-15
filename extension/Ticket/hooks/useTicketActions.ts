@@ -7,7 +7,6 @@ export interface UseTicketActionsReturn {
   handleMarkFixed: () => void;
   handleConfirmFixed: () => Promise<void>;
   handleMarkStillBroken: () => Promise<void>;
-  handleSubmitRating: (rating: number, feedback?: string) => void;
 }
 
 export const useTicketActions = (
@@ -63,19 +62,10 @@ export const useTicketActions = (
     }
   }, [activeTicket, ticketManager, setActiveTicket]);
 
-  const handleSubmitRating = useCallback((rating: number, feedback?: string): void => {
-    console.debug('Rating submitted:', { rating, feedback });
-    setActiveTicket(null);
-    if (setIsTicketVisible) {
-      setIsTicketVisible(false);
-    }
-  }, [setActiveTicket, setIsTicketVisible]);
-
   return {
     handleCreateTicket,
     handleMarkFixed,
     handleConfirmFixed,
-    handleMarkStillBroken,
-    handleSubmitRating
+    handleMarkStillBroken
   };
 };

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, MessageCircle, X, Star, Copy, Check } from 'lucide-react';
+import { Clock, CheckCircle, MessageCircle, X, Copy, Check } from 'lucide-react';
 import { type Ticket } from '@common/types';
 import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
 import { useTicketActions } from '@extension/Ticket/hooks/useTicketActions';
+import Rating from '@extension/Rating/Rating';
 
 interface TicketBoxProps {
   ticket: Ticket | null;
@@ -46,8 +47,6 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   isChatVisible: chatVisibleProp,
   onToggleChat
 }) => {
-  const [rating, setRating] = useState(0);
-  const [feedback, setFeedback] = useState('');
   const [copied, setCopied] = useState(false);
 
   // Get state and actions from hooks
@@ -64,8 +63,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   const {
     handleMarkFixed,
     handleConfirmFixed,
-    handleMarkStillBroken,
-    handleSubmitRating
+    handleMarkStillBroken
   } = useTicketActions(ticket, setActiveTicket, setIsTicketVisible);
 
   if (!ticket) return null;
@@ -77,10 +75,6 @@ const TicketBox: React.FC<TicketBoxProps> = ({
     }
     // For waiting tickets or fallback, use createdAt (when ticket was created)
     return ticket.createdAt;
-  };
-
-  const handleRatingSubmit = () => {
-    handleSubmitRating(rating, feedback);
   };
 
   const handleToggleChat = () => {
@@ -116,20 +110,6 @@ const TicketBox: React.FC<TicketBoxProps> = ({
     if (!ticket) return '';
     const firstPart = ticket.id.split('-')[0];
     return firstPart;
-  };
-
-  const renderStars = () => {
-    return Array.from({ length: 5 }, (_, index) => (
-      <button
-        key={index}
-        onClick={() => setRating(index + 1)}
-        className={`unjam-transition-colors ${
-          index < rating ? 'unjam-text-yellow-400' : 'unjam-text-gray-300'
-        }`}
-      >
-        <Star size={24} fill={index < rating ? 'currentColor' : 'none'} />
-      </button>
-    ));
   };
 
   const getStatusIcon = () => {
@@ -258,28 +238,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       )}
 
       {(ticket.status === 'completed' || ticket.status === 'auto-completed') && (
-        <div>
-          <p className="unjam-text-gray-700 unjam-mb-4 unjam-font-medium">Rate your experience:</p>
-          
-          <div className="unjam-flex unjam-justify-center unjam-gap-1 unjam-mb-4">
-            {renderStars()}
-          </div>
-          
-          <textarea
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Share your feedback (optional)"
-            className="unjam-w-full unjam-bg-white unjam-text-black unjam-p-2 unjam-border unjam-border-gray-300 unjam-rounded unjam-text-sm unjam-resize-none unjam-mb-4"
-            rows={3}
-          />
-          
-          <button
-            onClick={handleRatingSubmit}
-            className="unjam-w-full unjam-bg-gray-600 unjam-text-white unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm hover:unjam-bg-gray-700"
-          >
-            Submit Rating
-          </button>
-        </div>
+        <Rating ticket={ticket} onClose={handleHide} />
       )}
     </div>
   );

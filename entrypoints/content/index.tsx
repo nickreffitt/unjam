@@ -9,6 +9,7 @@ import { ScreenShareManagerProvider } from '@extension/ScreenShare/contexts/Scre
 import { SupabaseProvider } from '@extension/shared/contexts/SupabaseContext';
 import { ExtensionAuthManagerProvider, useExtensionAuthManager } from '@extension/shared/contexts/ExtensionAuthManagerContext';
 import { SubscriptionManagerProvider } from '@extension/shared/contexts/SubscriptionManagerContext';
+import { RatingManagerProvider } from '@extension/contexts/RatingManagerContext';
 import { type CustomerProfile } from '@common/types';
 
 let uiMounted = false;
@@ -52,11 +53,13 @@ const ContentApp = () => {
       <UserProfileProvider customerProfile={customerProfile}>
         <SubscriptionManagerProvider>
           <TicketManagerProvider>
-            <ChatManagerProvider>
-              <ScreenShareManagerProvider>
-                <ExtensionContainer />
-              </ScreenShareManagerProvider>
-            </ChatManagerProvider>
+            <RatingManagerProvider>
+              <ChatManagerProvider>
+                <ScreenShareManagerProvider>
+                  <ExtensionContainer />
+                </ScreenShareManagerProvider>
+              </ChatManagerProvider>
+            </RatingManagerProvider>
           </TicketManagerProvider>
         </SubscriptionManagerProvider>
       </UserProfileProvider>

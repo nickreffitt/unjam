@@ -70,6 +70,8 @@ export type TicketEventType = 'ticketCreated' | 'ticketUpdated' | 'ticketClaimed
 
 export type ChatEventType = 'chatMessageSent' | 'chatMessagesRead' | 'chatReloaded' | 'chatSenderIsTyping';
 
+export type RatingEventType = 'ratingCreated' | 'ratingUpdated';
+
 export interface ErrorDisplay {
   title: string;
   message: string;
@@ -317,4 +319,15 @@ export interface EngineerTransfer {
   status: EngineerTransferStatus;
   errorMessage?: string | null;
   createdAt: Date;
+}
+
+export interface Rating {
+  id: string;
+  ticketId: string;
+  createdBy: UserProfile; // Customer or engineer providing the rating
+  ratingFor: UserProfile; // Customer or engineer being rated
+  rating: number; // 0-500 value (e.g., 350 = 3.5 stars)
+  notes?: string; // Optional additional feedback
+  createdAt: Date;
+  updatedAt: Date | null;
 }

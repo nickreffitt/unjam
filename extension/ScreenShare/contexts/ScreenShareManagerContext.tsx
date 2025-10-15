@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { ScreenShareManager } from '@common/features/ScreenShareManager';
 import { type ScreenShareRequestStore, type ScreenShareSessionStore, ScreenShareRequestChangesSupabase, ScreenShareRequestStoreSupabase, ScreenShareSessionChangesSupabase } from '@common/features/ScreenShareManager/store';
-import { WebRTCEventEmitter, WebRTCSignalingStoreLocal } from '@common/features/WebRTCManager';
+import { WebRTCEventEmitter } from '@common/features/WebRTCManager';
 import { ScreenShareEventEmitter } from '@common/features/ScreenShareManager/events';
 import { useSupabase } from '@extension/shared/contexts/SupabaseContext';
 import { ScreenShareSessionStoreSupabase } from '@common/features/ScreenShareManager/store/ScreenShareSessionStoreSupabase';

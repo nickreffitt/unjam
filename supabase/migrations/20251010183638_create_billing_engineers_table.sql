@@ -67,3 +67,14 @@ CREATE POLICY "Engineers can insert their own billing account" ON billing_engine
       SELECT id FROM profiles WHERE auth_id = auth.uid() AND type = 'engineer'
     )
   );
+
+-- Customers can read billing engineer accounts for engineers they have tickets with
+CREATE POLICY "Customers can read engineer billing accounts for their tickets" ON billing_engineers
+  FOR SELECT USING (
+    profile_id IN (
+      SELECT assigned_to FROM tickets
+      WHERE created_by IN (
+        SELECT id FROM profiles WHERE auth_id = auth.uid()
+      )
+    )
+  );
