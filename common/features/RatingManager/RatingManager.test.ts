@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RatingManager } from './RatingManager';
 import { type RatingStore } from './store';
+import { type RatingChanges } from './store/RatingChanges';
 import { type Rating, type CustomerProfile, type EngineerProfile } from '@common/types';
 
 describe('RatingManager', () => {
   let ratingManager: RatingManager;
   let mockRatingStore: RatingStore;
+  let mockChanges: RatingChanges;
 
   const mockCustomer: CustomerProfile = {
     id: 'customer-1',
@@ -32,17 +34,23 @@ describe('RatingManager', () => {
       clear: vi.fn(),
     };
 
-    ratingManager = new RatingManager(mockRatingStore);
+    // Create a mock RatingChanges
+    mockChanges = {
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn(),
+    };
+
+    ratingManager = new RatingManager(mockRatingStore, mockChanges);
     vi.clearAllMocks();
   });
 
   describe('constructor', () => {
     it('should initialize with a rating store', () => {
-      expect(() => new RatingManager(mockRatingStore)).not.toThrow();
+      expect(() => new RatingManager(mockRatingStore, mockChanges)).not.toThrow();
     });
 
     it('should throw error when ratingStore is null', () => {
-      expect(() => new RatingManager(null as any)).toThrow(
+      expect(() => new RatingManager(null as any, mockChanges)).toThrow(
         'RatingManager: ratingStore is required'
       );
     });
