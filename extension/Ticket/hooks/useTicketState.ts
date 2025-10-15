@@ -127,14 +127,16 @@ export const useTicketState = (): UseTicketStateReturn => {
 
   // Handle create new ticket button click
   const handleCreateNewTicketClick = useCallback(() => {
+    console.debug('useTicketState: handleCreateNewTicketClick called', { activeTicket, isModalOpen });
     // If ticket exists and is not resolved, just show the existing ticket
     if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
       setIsTicketVisible(true);
     } else {
       // Only allow creating new ticket if no ticket exists or current ticket is completed
       setIsModalOpen(true);
+      console.debug('useTicketState: Setting isModalOpen to true');
     }
-  }, [activeTicket]);
+  }, [activeTicket, isModalOpen]);
 
   // Get appropriate button text based on ticket state
   const getButtonText = useCallback(() => {

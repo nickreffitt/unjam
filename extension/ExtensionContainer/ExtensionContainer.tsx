@@ -38,7 +38,25 @@ const ExtensionContainer: React.FC = () => {
 
   return (
     <>
-      {/* Floating button fixed at bottom-left */}
+      {/* Floating button fixed at bottom-right */}
+      {!isModalOpen && !isTicketVisible && (
+        <div
+          className="unjam-fixed unjam-bottom-4 unjam-right-4 unjam-z-[9999]"
+          style={{
+            position: 'fixed',
+            bottom: '16px',
+            right: '16px',
+            zIndex: 9999
+          }}
+        >
+          <UnjamButton
+            onClick={handleCreateNewTicketClick}
+            text={getButtonText()}
+          />
+        </div>
+      )}
+
+      {/* Debug components fixed at bottom-left */}
       <div
         className="unjam-fixed unjam-bottom-4 unjam-left-4 unjam-z-[9999]"
         style={{
@@ -48,10 +66,6 @@ const ExtensionContainer: React.FC = () => {
           zIndex: 9999
         }}
       >
-        <UnjamButton
-          onClick={handleCreateNewTicketClick}
-          text={getButtonText()}
-        />
 
         {/* Debug Ticket component for testing different ticket states */}
         {process.env.NODE_ENV === 'development' && activeTicket && (
@@ -94,7 +108,7 @@ const ExtensionContainer: React.FC = () => {
           zIndex: 9999
         }}
       >
-        {isChatVisible && activeTicket && activeTicket.status === 'in-progress' && activeTicket.assignedTo && (
+        {isChatVisible && isTicketVisible && activeTicket && activeTicket.status === 'in-progress' && activeTicket.assignedTo && (
           <ChatBox
             ref={chatBoxRef}
             ticketId={activeTicket.id}
