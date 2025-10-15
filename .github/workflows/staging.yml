@@ -188,10 +188,6 @@ jobs:
             # Load Docker image from tar file
             docker load -i "/tmp/image.tar"
 
-            # Stop and remove existing container
-            docker stop "$APP_NAME" || true
-            docker rm "$APP_NAME" || true
-
             # Create .env.production file for the container
             echo "VITE_SUPABASE_URL=$SUPABASE_URL" > /tmp/.env.production
             echo "VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> /tmp/.env.production
@@ -199,10 +195,37 @@ jobs:
             echo "VITE_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY" >> /tmp/.env.production
             echo "VITE_EXTENSION_ZIP_FILENAME=$EXTENSION_ZIP_FILENAME" >> /tmp/.env.production
 
-            # Run the new container
-            docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 \
+            # Run the new container with a temporary name on port 3001
+            docker run -d --name "${APP_NAME}-new" --restart unless-stopped -p 3001:80 \
               --env-file /tmp/.env.production \
               "$APP_NAME:latest"
+
+            # Wait for new container to be healthy
+            echo "Waiting for new container to be ready..."
+            sleep 5
+
+            # Verify new container is running
+            if ! docker ps | grep -q "${APP_NAME}-new"; then
+              echo "New container failed to start"
+              docker logs "${APP_NAME}-new"
+              docker rm -f "${APP_NAME}-new" || true
+              exit 1
+            fi
+
+            # Update nginx to point to new container port
+            sed -i "s/proxy_pass http:\/\/localhost:3000;/proxy_pass http:\/\/localhost:3001;/" "/etc/nginx/sites-available/$DOMAIN"
+            nginx -t && systemctl reload nginx
+
+            # Stop and remove old container
+            docker stop "$APP_NAME" || true
+            docker rm "$APP_NAME" || true
+
+            # Rename new container to primary name
+            docker rename "${APP_NAME}-new" "$APP_NAME"
+
+            # Update nginx back to port 3000
+            sed -i "s/proxy_pass http:\/\/localhost:3001;/proxy_pass http:\/\/localhost:3000;/" "/etc/nginx/sites-available/$DOMAIN"
+            nginx -t && systemctl reload nginx
 
             # Clean up any broken nginx symlinks
             find /etc/nginx/sites-enabled -type l -exec test ! -e {} \; -delete
