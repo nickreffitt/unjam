@@ -216,12 +216,18 @@ jobs:
             sed -i "s/proxy_pass http:\/\/localhost:3000;/proxy_pass http:\/\/localhost:3001;/" "/etc/nginx/sites-available/$DOMAIN"
             nginx -t && systemctl reload nginx
 
-            # Stop and remove old container
+            # Stop and remove old container (this frees up port 3000)
             docker stop "$APP_NAME" || true
             docker rm "$APP_NAME" || true
 
-            # Rename new container to primary name
-            docker rename "${APP_NAME}-new" "$APP_NAME"
+            # Stop the new container temporarily to change its port binding
+            docker stop "${APP_NAME}-new"
+            docker rm "${APP_NAME}-new"
+
+            # Start the container on port 3000 with the final name
+            docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 \
+              --env-file /tmp/.env.production \
+              "$APP_NAME:latest"
 
             # Update nginx back to port 3000
             sed -i "s/proxy_pass http:\/\/localhost:3001;/proxy_pass http:\/\/localhost:3000;/" "/etc/nginx/sites-available/$DOMAIN"
