@@ -139,6 +139,21 @@ jobs:
           scp -i /tmp/ssh_key -o StrictHostKeyChecking=no /tmp/image.tar ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/tmp/
           rm /tmp/ssh_key
 
+      - name: Transfer deployment files to server
+        run: |
+          echo "${{ secrets.SVR_PRIVATE_KEY }}" > /tmp/ssh_key
+          chmod 600 /tmp/ssh_key
+
+          # Create deployment directory on server
+          ssh -i /tmp/ssh_key -o StrictHostKeyChecking=no ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }} "mkdir -p /opt/unjam"
+
+          # Transfer files
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/docker-compose.yml ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/nginx-reverse-proxy.conf ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/zero-downtime-deploy.sh ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
+
+          rm /tmp/ssh_key
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -165,80 +180,49 @@ jobs:
               echo "Docker already installed"
             fi
 
-            # Install Nginx if not installed
-            if ! command -v nginx &> /dev/null; then
-              echo "Installing Nginx..."
-              apt install -y nginx
-              systemctl start nginx
-              systemctl enable nginx
-              echo "Nginx installed successfully"
+            # Install Docker Compose if not installed
+            if ! command -v docker-compose &> /dev/null; then
+              echo "Installing Docker Compose..."
+              curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+              echo "Docker Compose installed successfully"
             else
-              echo "Nginx already installed"
-            fi
-
-            # Install Certbot if not installed
-            if ! command -v certbot &> /dev/null; then
-              echo "Installing Certbot..."
-              apt install -y certbot python3-certbot-nginx
-              echo "Certbot installed successfully"
-            else
-              echo "Certbot already installed"
+              echo "Docker Compose already installed"
             fi
 
             # Load Docker image from tar file
             docker load -i "/tmp/image.tar"
 
-            # Create .env.production file for the container
-            echo "VITE_SUPABASE_URL=$SUPABASE_URL" > /tmp/.env.production
-            echo "VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> /tmp/.env.production
-            echo "VITE_STRIPE_TABLE_ID=$STRIPE_TABLE_ID" >> /tmp/.env.production
-            echo "VITE_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY" >> /tmp/.env.production
-            echo "VITE_EXTENSION_ZIP_FILENAME=$EXTENSION_ZIP_FILENAME" >> /tmp/.env.production
+            # Create .env.production file
+            echo "VITE_SUPABASE_URL=$SUPABASE_URL" > /opt/unjam/.env.production
+            echo "VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> /opt/unjam/.env.production
+            echo "VITE_STRIPE_TABLE_ID=$STRIPE_TABLE_ID" >> /opt/unjam/.env.production
+            echo "VITE_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY" >> /opt/unjam/.env.production
+            echo "VITE_EXTENSION_ZIP_FILENAME=$EXTENSION_ZIP_FILENAME" >> /opt/unjam/.env.production
 
-            # Run the new container with a temporary name on port 3001
-            docker run -d --name "${APP_NAME}-new" --restart unless-stopped -p 3001:80 \
-              --env-file /tmp/.env.production \
-              "$APP_NAME:latest"
+            # Make deploy script executable
+            chmod +x /opt/unjam/zero-downtime-deploy.sh
 
-            # Wait for new container to be healthy
-            echo "Waiting for new container to be ready..."
-            sleep 5
+            cd /opt/unjam
 
-            # Verify new container is running
-            if ! docker ps | grep -q "${APP_NAME}-new"; then
-              echo "New container failed to start"
-              docker logs "${APP_NAME}-new"
-              docker rm -f "${APP_NAME}-new" || true
-              exit 1
-            fi
+            # First time setup - start services
+            if ! docker ps | grep -q "nginx"; then
+              echo "First time setup - starting services..."
+              docker-compose up -d
 
-            # Update nginx to point to new container port
-            sed -i "s/proxy_pass http:\/\/localhost:3000;/proxy_pass http:\/\/localhost:3001;/" "/etc/nginx/sites-available/$DOMAIN"
-            nginx -t && systemctl reload nginx
+              # Wait for services to be ready
+              sleep 10
 
-            # Stop and remove old container (this frees up port 3000)
-            docker stop "$APP_NAME" || true
-            docker rm "$APP_NAME" || true
+              # Install Certbot and setup SSL
+              if ! command -v certbot &> /dev/null; then
+                apt install -y certbot
+              fi
 
-            # Stop the new container temporarily to change its port binding
-            docker stop "${APP_NAME}-new"
-            docker rm "${APP_NAME}-new"
+              # Setup external nginx reverse proxy with SSL
+              if [ ! -f "/etc/nginx/sites-available/$DOMAIN" ]; then
+                apt install -y nginx
 
-            # Start the container on port 3000 with the final name
-            docker run -d --name "$APP_NAME" --restart unless-stopped -p 3000:80 \
-              --env-file /tmp/.env.production \
-              "$APP_NAME:latest"
-
-            # Update nginx back to port 3000
-            sed -i "s/proxy_pass http:\/\/localhost:3001;/proxy_pass http:\/\/localhost:3000;/" "/etc/nginx/sites-available/$DOMAIN"
-            nginx -t && systemctl reload nginx
-
-            # Clean up any broken nginx symlinks
-            find /etc/nginx/sites-enabled -type l -exec test ! -e {} \; -delete
-
-            # Set up nginx configuration if it doesn't exist
-            if [ ! -f "/etc/nginx/sites-available/$DOMAIN" ]; then
-              tee "/etc/nginx/sites-available/$DOMAIN" > /dev/null <<EOF
+                tee "/etc/nginx/sites-available/$DOMAIN" > /dev/null <<EOF
             server {
                 listen 80;
                 server_name $DOMAIN;
@@ -252,15 +236,20 @@ jobs:
                 }
             }
             EOF
+                ln -sf "/etc/nginx/sites-available/$DOMAIN" /etc/nginx/sites-enabled/
+                systemctl enable nginx
+                systemctl start nginx
+                nginx -t && systemctl reload nginx
 
-              # Enable the site
-              ln -sf "/etc/nginx/sites-available/$DOMAIN" /etc/nginx/sites-enabled/
-              nginx -t && systemctl reload nginx
-
-              # Get SSL certificate
-              certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$LETSENCRYPT_EMAIL"
+                # Get SSL certificate
+                certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$LETSENCRYPT_EMAIL"
+              fi
+            else
+              # Zero-downtime deployment
+              echo "Running zero-downtime deployment..."
+              /opt/unjam/zero-downtime-deploy.sh
             fi
 
-            # Clean up transferred tar file and old images
+            # Clean up
             rm -f "/tmp/image.tar"
             docker image prune -f
