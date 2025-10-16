@@ -84,7 +84,7 @@ export class ExtensionEventListener {
       return;
     }
 
-    console.log('ExtensionEventListener: Setting up message listener with sendResponse callback');
+    console.debug('ExtensionEventListener: Setting up message listener with sendResponse callback');
 
     // Chrome's extension messaging requires the sendResponse callback pattern for async
     const messageListener = (
@@ -92,7 +92,7 @@ export class ExtensionEventListener {
       sender: any,
       sendResponse: (response: any) => void
     ): boolean => {
-      console.log('ExtensionEventListener: Received message', message);
+      console.debug('ExtensionEventListener: Received message', message);
 
       // Create a Promise and keep reference to it
       const responsePromise = this.processMessage(message);
@@ -100,7 +100,7 @@ export class ExtensionEventListener {
       // Handle the Promise and call sendResponse
       responsePromise
         .then((result) => {
-          console.log('ExtensionEventListener: Calling sendResponse with result:', result);
+          console.debug('ExtensionEventListener: Calling sendResponse with result:', result);
           sendResponse(result);
         })
         .catch((error) => {
@@ -114,15 +114,15 @@ export class ExtensionEventListener {
 
     // Use native Chrome API for better compatibility
     if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
-      console.log('ExtensionEventListener: Using chrome.runtime API');
+      console.debug('ExtensionEventListener: Using chrome.runtime API');
       chrome.runtime.onMessage.addListener(messageListener);
     } else if (browser.runtime?.onMessage) {
-      console.log('ExtensionEventListener: Using browser.runtime API');
+      console.debug('ExtensionEventListener: Using browser.runtime API');
       browser.runtime.onMessage.addListener(messageListener as any);
     }
 
     this.isListening = true;
-    console.log('ExtensionEventListener: Started listening to extension messages');
+    console.debug('ExtensionEventListener: Started listening to extension messages');
   }
 
   /**

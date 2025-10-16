@@ -1,21 +1,21 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Clock, CheckCircle, Ticket, LogOut, CreditCard, ArrowDownToLine } from 'lucide-react';
+import { LogOut, CreditCard, ArrowDownToLine } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
 
   const navItems = [
     {
-      path: '/onboarding',
-      label: 'Getting Started',
-      icon: ArrowDownToLine
+      path: '/buy',
+      label: 'Choose Plan',
+      icon: CreditCard
     },
     {
-      path: '/buy',
-      label: 'Buy Credits',
-      icon: CreditCard
-    }
+      path: '/onboarding',
+      label: 'Get Extension',
+      icon: ArrowDownToLine
+    },
   ];
 
   const logoutItem = {

@@ -69,7 +69,7 @@ const ProtectedCustomerDashboard: React.FC = () => {
             <Route path="buy" element={<BuyCredits />} />
             <Route path="buy/success" element={<CreditSuccess />} />
             <Route path="auth/logout" element={<Logout />} />
-            <Route path="*" element={<Onboarding />} />
+            <Route path="*" element={<BuyCredits />} />
           </Routes>
         </div>
       </div>

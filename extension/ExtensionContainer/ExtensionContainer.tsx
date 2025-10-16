@@ -34,7 +34,7 @@ const ExtensionContainer: React.FC = () => {
     getButtonText
   } = useTicketState();
 
-  console.log('[ExtensionContainer] Render state:', { isModalOpen, activeTicket, customerProfile });
+  console.debug('[ExtensionContainer] Render state:', { isModalOpen, activeTicket, customerProfile });
 
   return (
     <>

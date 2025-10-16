@@ -20,7 +20,7 @@ export interface UseTicketStateReturn {
 export const useTicketState = (): UseTicketStateReturn => {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [isChatVisible, setIsChatVisible] = useState<boolean>(false);
-  const [isTicketVisible, setIsTicketVisible] = useState<boolean>(true);
+  const [isTicketVisible, setIsTicketVisible] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const { customerProfile } = useUserProfile();
   const { ticketManager } = useTicketManager();
