@@ -79,7 +79,7 @@ const ScreenShare = forwardRef<ScreenShareRef, ScreenShareProps>(({ ticketId, en
   // Show "Calling.." state if there's an outgoing pending request
   if (outgoingRequest && outgoingRequest.status === 'pending') {
     return (
-      <div data-testid="screen-share" className={`unjam-w-120 unjam-bg-white unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans unjam-px-4 ${className}`}>
+      <div data-testid="screen-share" className={`unjam-w-120 unjam-bg-white unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans ${className}`}>
         <button
           disabled
           className="unjam-w-full unjam-bg-gray-100 unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 unjam-cursor-not-allowed unjam-text-gray-500"
@@ -108,7 +108,7 @@ const ScreenShare = forwardRef<ScreenShareRef, ScreenShareProps>(({ ticketId, en
 
   // Show default screenshare button
   return (
-    <div data-testid="screen-share" className={`unjam-w-120 unjam-bg-white unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans unjam-px-4 ${className}`}>
+    <div data-testid="screen-share" className={`unjam-w-120 unjam-bg-white unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans ${className}`}>
       <button
         onClick={handleScreenShareClick}
         className="unjam-w-full unjam-bg-white unjam-text-black unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-gray-50"

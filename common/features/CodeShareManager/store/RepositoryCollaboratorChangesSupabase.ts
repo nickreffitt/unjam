@@ -1,15 +1,8 @@
 import { type SupabaseClient, type RealtimeChannel } from '@supabase/supabase-js';
 import { type RepositoryCollaborator } from '@common/types';
 import { type RepositoryCollaboratorChanges } from './RepositoryCollaboratorChanges';
+import { type CodeShareEventEmitter } from '../events';
 
-/**
- * Event emitter interface for repository collaborator events
- */
-export interface RepositoryCollaboratorEventEmitter {
-  emitRepositoryCollaboratorCreated(collaborator: RepositoryCollaborator): void;
-  emitRepositoryCollaboratorUpdated(collaborator: RepositoryCollaborator): void;
-  emitRepositoryCollaboratorDeleted(collaboratorId: string): void;
-}
 
 /**
  * Supabase implementation for listening to repository collaborator changes
@@ -17,14 +10,14 @@ export interface RepositoryCollaboratorEventEmitter {
  */
 export class RepositoryCollaboratorChangesSupabase implements RepositoryCollaboratorChanges {
   private supabaseClient: SupabaseClient;
-  private eventEmitter: RepositoryCollaboratorEventEmitter;
+  private eventEmitter: CodeShareEventEmitter;
   private customerId?: string;
   private channel: RealtimeChannel | null = null;
   private readonly tableName: string = 'repository_collaborators';
 
   constructor(
     supabaseClient: SupabaseClient,
-    eventEmitter: RepositoryCollaboratorEventEmitter,
+    eventEmitter: CodeShareEventEmitter,
   ) {
     if (!supabaseClient) {
       throw new Error('RepositoryCollaboratorChangesSupabase: supabaseClient is required');
@@ -60,50 +53,25 @@ export class RepositoryCollaboratorChangesSupabase implements RepositoryCollabor
     const session = await this.supabaseClient.auth.getSession();
     await this.supabaseClient.realtime.setAuth(session.data.session?.access_token ?? null);
 
-    // Subscribe to repository collaborator changes for this customer
+    // Subscribe to repository collaborator broadcast channel for this customer
+    // Note: filtering is done in the handler since repository_collaborators doesn't have customer_id
+    // We'll need to join through tickets to filter by customer
     this.channel = this.supabaseClient
       .channel(`repository-collaborators-${customerId}`, {
         config: { private: true },
       })
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: this.tableName,
-          filter: `customer_id=eq.${customerId}`,
-        },
-        (payload) => {
-          console.debug('RepositoryCollaboratorChangesSupabase: Collaborator created:', payload);
-          this.handleCollaboratorInsert(payload.new as Record<string, unknown>);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: this.tableName,
-          filter: `customer_id=eq.${customerId}`,
-        },
-        (payload) => {
-          console.debug('RepositoryCollaboratorChangesSupabase: Collaborator updated:', payload);
-          this.handleCollaboratorUpdate(payload.new as Record<string, unknown>);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: this.tableName,
-          filter: `customer_id=eq.${customerId}`,
-        },
-        (payload) => {
-          console.debug('RepositoryCollaboratorChangesSupabase: Collaborator deleted:', payload);
-          this.handleCollaboratorDelete(payload.old as Record<string, unknown>);
-        }
-      )
+      .on('broadcast', { event: 'INSERT' }, (payload) => {
+        console.debug('RepositoryCollaboratorChangesSupabase: Collaborator created:', payload);
+        this.handleCollaboratorInsert(payload.payload.record as Record<string, unknown>);
+      })
+      .on('broadcast', { event: 'UPDATE' }, (payload) => {
+        console.debug('RepositoryCollaboratorChangesSupabase: Collaborator updated:', payload);
+        this.handleCollaboratorUpdate(payload.payload.record as Record<string, unknown>);
+      })
+      .on('broadcast', { event: 'DELETE' }, (payload) => {
+        console.debug('RepositoryCollaboratorChangesSupabase: Collaborator deleted:', payload);
+        this.handleCollaboratorDelete(payload.payload.old_record as Record<string, unknown>);
+      })
       .subscribe((status, error) => {
         console.debug('RepositoryCollaboratorChangesSupabase: Channel status:', status, ' error:', error);
       });

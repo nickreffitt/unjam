@@ -80,6 +80,7 @@ export type CodeShareEventType =
   | 'projectRepositoryUpdated'
   | 'projectRepositoryDeleted'
   | 'repositoryCollaboratorCreated'
+  | 'repositoryCollaboratorUpdated'
   | 'repositoryCollaboratorRemoved'
   | 'repositoryCollaboratorDeleted';
 

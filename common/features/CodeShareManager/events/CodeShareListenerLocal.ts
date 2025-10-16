@@ -161,6 +161,15 @@ export class CodeShareListenerLocal implements CodeShareListener {
             }
           }
           break;
+        case 'repositoryCollaboratorUpdated':
+          if (this.callbacks.onRepositoryCollaboratorUpdated && deserializedCollaborator) {
+            try {
+              this.callbacks.onRepositoryCollaboratorUpdated(deserializedCollaborator);
+            } catch (error) {
+              console.error('CodeShareListenerLocal: Error in onRepositoryCollaboratorUpdated:', error);
+            }
+          }
+          break;
         case 'repositoryCollaboratorRemoved':
           if (this.callbacks.onRepositoryCollaboratorRemoved && deserializedCollaborator) {
             try {

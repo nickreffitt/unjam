@@ -2,6 +2,40 @@ import { type PlatformGuide } from '@common/types';
 
 export const PLATFORM_GUIDES: PlatformGuide[] = [
   {
+    platformName: 'Localhost',
+    urlPattern: /^http:\/\/localhost:5175\//,
+    extractProjectId: (url) => {
+      return 'localhost-test';
+    },
+    slides: [
+      {
+        title: 'Testing environment',
+        description: 'This is a local testing environment',
+        steps: [
+          'Enter your GitHub repository URL directly',
+          'Use any test repository for development purposes'
+        ]
+      }
+    ]
+  },
+  {
+    platformName: 'Unjam',
+    urlPattern: /^https:\/\/unjam\.nickreffitt\.com\//,
+    extractProjectId: (url) => {
+      return 'unjam-test';
+    },
+    slides: [
+      {
+        title: 'Testing environment',
+        description: 'This is a staging testing environment',
+        steps: [
+          'Enter your GitHub repository URL directly',
+          'Use any test repository for development purposes'
+        ]
+      }
+    ]
+  },
+  {
     platformName: 'Lovable',
     urlPattern: /^https:\/\/lovable\.dev\/projects\/([^\/\?]+)/,
     extractProjectId: (url) => {

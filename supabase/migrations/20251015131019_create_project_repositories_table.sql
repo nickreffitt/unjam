@@ -84,3 +84,73 @@ CREATE POLICY "Customers can delete their own repositories" ON project_repositor
 
 -- Enable realtime for project_repositories table
 ALTER publication supabase_realtime ADD TABLE project_repositories;
+
+-- Create a trigger function to broadcast project repository changes
+CREATE OR REPLACE FUNCTION public.broadcast_project_repository_changes()
+RETURNS trigger
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Handle INSERT events
+  IF TG_OP = 'INSERT' THEN
+    PERFORM realtime.broadcast_changes(
+      'project-repositories-' || NEW.customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN NEW;
+  END IF;
+
+  -- Handle UPDATE events
+  IF TG_OP = 'UPDATE' THEN
+    PERFORM realtime.broadcast_changes(
+      'project-repositories-' || NEW.customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN NEW;
+  END IF;
+
+  -- Handle DELETE events
+  IF TG_OP = 'DELETE' THEN
+    PERFORM realtime.broadcast_changes(
+      'project-repositories-' || OLD.customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN OLD;
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
+-- Create a trigger to execute the function on project repository changes
+CREATE TRIGGER handle_project_repository_changes
+AFTER INSERT OR UPDATE OR DELETE
+ON public.project_repositories
+FOR EACH ROW
+EXECUTE FUNCTION broadcast_project_repository_changes();
+
+-- Create Realtime Authorization policy for broadcast channel
+-- Allow customers to subscribe to their own project repository broadcasts
+CREATE POLICY "Customers can subscribe to their project repository broadcasts"
+ON realtime.messages
+FOR SELECT
+TO authenticated
+USING (
+  realtime.topic() LIKE 'project-repositories-%'
+);

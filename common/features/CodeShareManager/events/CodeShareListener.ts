@@ -48,6 +48,12 @@ export interface CodeShareListenerCallbacks {
   onRepositoryCollaboratorCreated?(collaborator: RepositoryCollaborator): void;
 
   /**
+   * Called when a repository collaborator is updated
+   * @param collaborator - The updated repository collaborator
+   */
+  onRepositoryCollaboratorUpdated?(collaborator: RepositoryCollaborator): void;
+
+  /**
    * Called when a repository collaborator is removed
    * @param collaborator - The removed repository collaborator
    */

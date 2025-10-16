@@ -29,7 +29,7 @@ export class RatingChangesSupabase implements RatingChanges {
 
   /**
    * Starts listening for rating changes
-   * Sets up postgres_changes subscription for INSERT and UPDATE events
+   * Uses broadcast channel for INSERT and UPDATE events
    */
   async start(): Promise<void> {
     console.debug('RatingChangesSupabase: start()');
@@ -45,34 +45,20 @@ export class RatingChangesSupabase implements RatingChanges {
     const session = await this.supabaseClient.auth.getSession();
     await this.supabaseClient.realtime.setAuth(session.data.session?.access_token ?? null);
 
-    // Subscribe to ratings table changes
+    // Subscribe to ratings broadcast channel
     const channelName = 'ratings-changes';
     this.ratingChannel = this.supabaseClient
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: this.tableName,
-        },
-        (payload) => {
-          console.debug('RatingChangesSupabase: New rating created:', payload);
-          this.handleRatingInsert(payload.new);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: this.tableName,
-        },
-        (payload) => {
-          console.debug('RatingChangesSupabase: Rating updated:', payload);
-          this.handleRatingUpdate(payload.new);
-        }
-      )
+      .channel(channelName, {
+        config: { private: true },
+      })
+      .on('broadcast', { event: 'INSERT' }, (payload) => {
+        console.debug('RatingChangesSupabase: New rating created:', payload);
+        this.handleRatingInsert(payload.payload.record);
+      })
+      .on('broadcast', { event: 'UPDATE' }, (payload) => {
+        console.debug('RatingChangesSupabase: Rating updated:', payload);
+        this.handleRatingUpdate(payload.payload.record);
+      })
       .subscribe((status, error) => {
         console.debug('RatingChangesSupabase: Rating channel status:', status, 'error:', error);
       });

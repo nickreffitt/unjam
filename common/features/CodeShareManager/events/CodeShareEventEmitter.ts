@@ -52,6 +52,12 @@ export interface CodeShareEventEmitter {
   emitRepositoryCollaboratorCreated(collaborator: RepositoryCollaborator): void;
 
   /**
+   * Emits a repository collaborator updated event
+   * @param collaborator - The updated repository collaborator
+   */
+  emitRepositoryCollaboratorUpdated(collaborator: RepositoryCollaborator): void;
+
+  /**
    * Emits a repository collaborator removed event
    * @param collaborator - The removed repository collaborator
    */

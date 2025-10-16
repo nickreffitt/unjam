@@ -15,9 +15,9 @@ export class CodeShareOAuthHandler {
 
   async handleOAuthCallback(payload: {
     code: string;
-    profile_id: string
+    customer_id: string
   }): Promise<{ success: boolean }> {
-    const { code, profile_id } = payload
+    const { code, customer_id } = payload
 
     // Exchange code for token
     const tokenData = await this.oauthService.exchangeCodeForToken(code)
@@ -27,7 +27,7 @@ export class CodeShareOAuthHandler {
 
     // Store integration
     await this.integrationStore.upsert({
-      customerId: profile_id,
+      customerId: customer_id,
       githubAccessToken: tokenData.access_token,
       githubUsername: githubUser.login,
       githubUserId: githubUser.id.toString()

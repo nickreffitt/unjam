@@ -77,7 +77,7 @@ export class CodeShareApiManager {
       const response = await this.makeAuthenticatedRequest<OAuthCallbackResponse>(
         'code-share',
         {
-          action: 'oauth_callback',
+          action_type: 'oauth_callback',
           payload: {
             code,
             customer_id: customerId
@@ -109,7 +109,7 @@ export class CodeShareApiManager {
       const response = await this.makeAuthenticatedRequest<ValidateRepositoryResponse>(
         'code-share',
         {
-          action: 'validate_repository',
+          action_type: 'validate_repository',
           payload: {
             github_repo_url: githubRepoUrl
           }
@@ -148,7 +148,7 @@ export class CodeShareApiManager {
       const response = await this.makeAuthenticatedRequest<InviteCollaboratorResponse>(
         'code-share',
         {
-          action: 'invite_collaborator',
+          action_type: 'invite_collaborator',
           payload: {
             repository_id: repositoryId,
             ticket_id: ticketId,
@@ -189,7 +189,7 @@ export class CodeShareApiManager {
       const response = await this.makeAuthenticatedRequest<RemoveCollaboratorResponse>(
         'code-share',
         {
-          action: 'remove_collaborator',
+          action_type: 'remove_collaborator',
           payload: {
             repository_id: repositoryId,
             ticket_id: ticketId,

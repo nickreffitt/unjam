@@ -28,6 +28,7 @@ export class CodeShareManager {
   private projectRepositoryChanges: ProjectRepositoryChanges;
   private repositoryCollaboratorChanges: RepositoryCollaboratorChanges;
   private codeShareApiManager: CodeShareApiManager;
+  private githubClientId: string;
 
   constructor(
     userProfile: UserProfile,
@@ -37,8 +38,13 @@ export class CodeShareManager {
     githubIntegrationChanges: GitHubIntegrationChanges,
     projectRepositoryChanges: ProjectRepositoryChanges,
     repositoryCollaboratorChanges: RepositoryCollaboratorChanges,
-    codeShareApiManager: CodeShareApiManager
+    codeShareApiManager: CodeShareApiManager,
+    githubClientId: string
   ) {
+    if (!githubClientId) {
+      throw new Error('GitHub client ID is required for CodeShareManager');
+    }
+
     this.userProfile = userProfile;
     this.githubIntegrationStore = githubIntegrationStore;
     this.projectRepositoryStore = projectRepositoryStore;
@@ -47,12 +53,24 @@ export class CodeShareManager {
     this.projectRepositoryChanges = projectRepositoryChanges;
     this.repositoryCollaboratorChanges = repositoryCollaboratorChanges;
     this.codeShareApiManager = codeShareApiManager;
+    this.githubClientId = githubClientId;
 
     // Start listening for changes
     this.githubIntegrationChanges.start(userProfile.id);
     this.projectRepositoryChanges.start(userProfile.id);
     this.repositoryCollaboratorChanges.start(userProfile.id);
     console.debug('CodeShareManager: Started listening for code share changes');
+  }
+
+  /**
+   * Gets the GitHub OAuth authorization URL
+   * @returns The full GitHub OAuth URL for authorization
+   * @throws Error if GitHub client ID is not configured
+   */
+  getAuthorizationUrl(): string {
+    const redirectUri = `${import.meta.env.VITE_APP_URL}/app/github-callback`;
+    const scope = 'repo';
+    return `https://github.com/login/oauth/authorize?client_id=${this.githubClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}`;
   }
 
   /**

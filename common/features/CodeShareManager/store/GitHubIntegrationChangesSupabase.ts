@@ -60,50 +60,32 @@ export class GitHubIntegrationChangesSupabase implements GitHubIntegrationChange
     const session = await this.supabaseClient.auth.getSession();
     await this.supabaseClient.realtime.setAuth(session.data.session?.access_token ?? null);
 
-    // Subscribe to GitHub integration changes for this customer
+    // Subscribe to GitHub integration broadcast channel for this customer
     this.channel = this.supabaseClient
       .channel(`github-integration-${customerId}`, {
         config: { private: true },
       })
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: this.tableName,
-          filter: `customer_id=eq.${customerId}`,
-        },
-        (payload) => {
-          console.debug('GitHubIntegrationChangesSupabase: Integration created:', payload);
-          this.handleIntegrationInsert(payload.new as Record<string, unknown>);
+      .on('broadcast', { event: 'INSERT' }, (payload) => {
+        console.debug('GitHubIntegrationChangesSupabase: Integration created:', payload);
+        const record = payload.payload.record as Record<string, unknown>;
+        if (record.customer_id === customerId) {
+          this.handleIntegrationInsert(record);
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: this.tableName,
-          filter: `customer_id=eq.${customerId}`,
-        },
-        (payload) => {
-          console.debug('GitHubIntegrationChangesSupabase: Integration updated:', payload);
-          this.handleIntegrationUpdate(payload.new as Record<string, unknown>);
+      })
+      .on('broadcast', { event: 'UPDATE' }, (payload) => {
+        console.debug('GitHubIntegrationChangesSupabase: Integration updated:', payload);
+        const record = payload.payload.record as Record<string, unknown>;
+        if (record.customer_id === customerId) {
+          this.handleIntegrationUpdate(record);
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: this.tableName,
-          filter: `customer_id=eq.${customerId}`,
-        },
-        (payload) => {
-          console.debug('GitHubIntegrationChangesSupabase: Integration deleted:', payload);
-          this.handleIntegrationDelete(payload.old as Record<string, unknown>);
+      })
+      .on('broadcast', { event: 'DELETE' }, (payload) => {
+        console.debug('GitHubIntegrationChangesSupabase: Integration deleted:', payload);
+        const record = payload.payload.old_record as Record<string, unknown>;
+        if (record.customer_id === customerId) {
+          this.handleIntegrationDelete(record);
         }
-      )
+      })
       .subscribe((status, error) => {
         console.debug('GitHubIntegrationChangesSupabase: Channel status:', status, ' error:', error);
       });

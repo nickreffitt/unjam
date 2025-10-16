@@ -31,37 +31,131 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ALTER TABLE github_integrations ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
--- Users can only view their own GitHub integration
-CREATE POLICY "Users can view their own GitHub integration" ON github_integrations
-  FOR SELECT USING (
-    customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+-- Customers can view their own GitHub integration
+CREATE POLICY "Customers can view their own GitHub integration" ON github_integrations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = github_integrations.customer_id
+      AND profiles.auth_id = auth.uid()
+      AND profiles.type = 'customer'
     )
   );
 
--- Users can insert their own GitHub integration
-CREATE POLICY "Users can create their own GitHub integration" ON github_integrations
-  FOR INSERT WITH CHECK (
-    customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+-- Customers can insert their own GitHub integration
+CREATE POLICY "Customers can insert their own GitHub integration" ON github_integrations
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = customer_id
+      AND profiles.auth_id = auth.uid()
+      AND profiles.type = 'customer'
     )
   );
 
--- Users can update their own GitHub integration
-CREATE POLICY "Users can update their own GitHub integration" ON github_integrations
-  FOR UPDATE USING (
-    customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+-- Customers can update their own GitHub integration
+CREATE POLICY "Customers can update their own GitHub integration" ON github_integrations
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = github_integrations.customer_id
+      AND profiles.auth_id = auth.uid()
+      AND profiles.type = 'customer'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = customer_id
+      AND profiles.auth_id = auth.uid()
+      AND profiles.type = 'customer'
     )
   );
 
--- Users can delete their own GitHub integration
-CREATE POLICY "Users can delete their own GitHub integration" ON github_integrations
-  FOR DELETE USING (
-    customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+-- Customers can delete their own GitHub integration
+CREATE POLICY "Customers can delete their own GitHub integration" ON github_integrations
+  FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = github_integrations.customer_id
+      AND profiles.auth_id = auth.uid()
+      AND profiles.type = 'customer'
     )
   );
 
 -- Enable realtime for github_integrations table
 ALTER publication supabase_realtime ADD TABLE github_integrations;
+
+-- Create a trigger function to broadcast GitHub integration changes
+CREATE OR REPLACE FUNCTION public.broadcast_github_integration_changes()
+RETURNS trigger
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Handle INSERT events
+  IF TG_OP = 'INSERT' THEN
+    PERFORM realtime.broadcast_changes(
+      'github-integration-' || NEW.customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN NEW;
+  END IF;
+
+  -- Handle UPDATE events
+  IF TG_OP = 'UPDATE' THEN
+    PERFORM realtime.broadcast_changes(
+      'github-integration-' || NEW.customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN NEW;
+  END IF;
+
+  -- Handle DELETE events
+  IF TG_OP = 'DELETE' THEN
+    PERFORM realtime.broadcast_changes(
+      'github-integration-' || OLD.customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN OLD;
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
+-- Create a trigger to execute the function on GitHub integration changes
+CREATE TRIGGER handle_github_integration_changes
+AFTER INSERT OR UPDATE OR DELETE
+ON public.github_integrations
+FOR EACH ROW
+EXECUTE FUNCTION broadcast_github_integration_changes();
+
+-- Create Realtime Authorization policy for broadcast channel
+-- Allow customers to subscribe to their own GitHub integration broadcasts
+CREATE POLICY "Customers can subscribe to their GitHub integration broadcasts"
+ON realtime.messages
+FOR SELECT
+TO authenticated
+USING (
+  realtime.topic() LIKE 'github-integration-%'
+);

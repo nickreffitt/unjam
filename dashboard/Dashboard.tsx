@@ -23,7 +23,10 @@ import BuyCredits from '@dashboard/pages/customer/BuyCredits';
 import CustomerSidebar from '@dashboard/customer/Sidebar/Sidebar';
 import { SubscriptionManagerProvider } from '@dashboard/customer/Subscription';
 import CreditSuccess from '@dashboard/pages/customer/CreditSuccess';
+import GithubConnect from '@dashboard/pages/customer/GithubConnect/GithubConnect';
+import GithubCallback from '@dashboard/pages/customer/GithubCallback/GithubCallback';
 import { BillingAccountManagerProvider } from './engineer/BillingAccount';
+import { GithubConnectManagerProvider } from './customer/GithubConnect';
 
 
 const ProtectedEngineerDashboard: React.FC = () => {
@@ -61,18 +64,22 @@ const ProtectedEngineerDashboard: React.FC = () => {
 const ProtectedCustomerDashboard: React.FC = () => {
   return (
     <SubscriptionManagerProvider>
-      <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
-        <CustomerSidebar />
-        <div className="unjam-flex-1 unjam-overflow-hidden">
-          <Routes>
-            <Route path="onboarding" element={<Onboarding />} />
-            <Route path="buy" element={<BuyCredits />} />
-            <Route path="buy/success" element={<CreditSuccess />} />
-            <Route path="auth/logout" element={<Logout />} />
-            <Route path="*" element={<BuyCredits />} />
-          </Routes>
+      <GithubConnectManagerProvider>
+        <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
+          <CustomerSidebar />
+          <div className="unjam-flex-1 unjam-overflow-hidden">
+            <Routes>
+              <Route path="onboarding" element={<Onboarding />} />
+              <Route path="buy" element={<BuyCredits />} />
+              <Route path="buy/success" element={<CreditSuccess />} />
+              <Route path="github-connect" element={<GithubConnect />} />
+              <Route path="github-callback" element={<GithubCallback />} />
+              <Route path="auth/logout" element={<Logout />} />
+              <Route path="*" element={<BuyCredits />} />
+            </Routes>
+          </div>
         </div>
-      </div>
+      </GithubConnectManagerProvider>
     </SubscriptionManagerProvider>
   );
 };

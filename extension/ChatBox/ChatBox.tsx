@@ -5,8 +5,10 @@ import ChatMessage from '@extension/ChatBox/components/ChatMessage/ChatMessage';
 import ChatInput from '@extension/ChatBox/components/ChatInput/ChatInput';
 import TypingIndicator from '@extension/ChatBox/components/TypingIndicator/TypingIndicator';
 import ScreenShare from '@extension/ScreenShare/ScreenShare';
+import GitHubShare from '@extension/GitHubShare/GitHubShare';
 import { useChatState } from '@extension/ChatBox/hooks/useChatState';
 import { useChatActions } from '@extension/ChatBox/hooks/useChatActions';
+import { useScreenShareState } from '@extension/ScreenShare/hooks';
 
 interface ChatBoxProps {
   ticketId: string;
@@ -28,6 +30,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ ticketId, engineerName, 
   // Use custom hooks for state and actions (same pattern as dashboard)
   const { messages, chatManager, refreshMessages, isTyping, typingUser, triggerTypingIndicator } = useChatState(ticketId, engineerProfile, messagesEndRef);
   const { inputValue, handleSendMessage, handleKeyPress, handleInputChange, injectEngineerMessage } = useChatActions(ticketId, chatManager, refreshMessages);
+  const { activeRequest } = useScreenShareState(ticketId);
 
   // Expose functions via ref (same pattern as dashboard)
   useImperativeHandle(ref, () => ({
@@ -65,10 +68,16 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ ticketId, engineerName, 
         <div ref={messagesEndRef} />
       </div>
 
-      <ScreenShare
+      {/* Share Buttons */}
+      <div className="unjam-px-4 unjam-flex unjam-gap-2">
+        <ScreenShare
           ticketId={ticketId}
           engineerProfile={engineerProfile}
         />
+        <GitHubShare
+          hideWhenScreenShareRequest={activeRequest?.status === 'pending' && activeRequest?.sender.type === 'engineer'}
+        />
+      </div>
 
       {/* Input Area */}
       <div className="unjam-p-4 unjam-space-y-2">

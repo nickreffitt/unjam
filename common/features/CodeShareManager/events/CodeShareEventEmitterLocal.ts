@@ -72,6 +72,14 @@ export class CodeShareEventEmitterLocal implements CodeShareEventEmitter {
   }
 
   /**
+   * Emits a repository collaborator updated event
+   * @param collaborator - The updated repository collaborator
+   */
+  emitRepositoryCollaboratorUpdated(collaborator: RepositoryCollaborator): void {
+    this.emitWindowEvent('repositoryCollaboratorUpdated', { collaborator });
+  }
+
+  /**
    * Emits a repository collaborator removed event
    * @param collaborator - The removed repository collaborator
    */

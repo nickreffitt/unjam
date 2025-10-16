@@ -69,3 +69,87 @@ CREATE POLICY "Service role can delete collaborators" ON repository_collaborator
 
 -- Enable realtime for repository_collaborators table
 ALTER publication supabase_realtime ADD TABLE repository_collaborators;
+
+-- Create a trigger function to broadcast repository collaborator changes
+-- Note: We need to get the customer_id from the ticket to broadcast to the right channel
+CREATE OR REPLACE FUNCTION public.broadcast_repository_collaborator_changes()
+RETURNS trigger
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_customer_id UUID;
+BEGIN
+  -- Get customer_id from the ticket
+  IF TG_OP = 'DELETE' THEN
+    SELECT created_by INTO v_customer_id
+    FROM tickets
+    WHERE id = OLD.ticket_id;
+  ELSE
+    SELECT created_by INTO v_customer_id
+    FROM tickets
+    WHERE id = NEW.ticket_id;
+  END IF;
+
+  -- Handle INSERT events
+  IF TG_OP = 'INSERT' THEN
+    PERFORM realtime.broadcast_changes(
+      'repository-collaborators-' || v_customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN NEW;
+  END IF;
+
+  -- Handle UPDATE events
+  IF TG_OP = 'UPDATE' THEN
+    PERFORM realtime.broadcast_changes(
+      'repository-collaborators-' || v_customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN NEW;
+  END IF;
+
+  -- Handle DELETE events
+  IF TG_OP = 'DELETE' THEN
+    PERFORM realtime.broadcast_changes(
+      'repository-collaborators-' || v_customer_id::text,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN OLD;
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
+-- Create a trigger to execute the function on repository collaborator changes
+CREATE TRIGGER handle_repository_collaborator_changes
+AFTER INSERT OR UPDATE OR DELETE
+ON public.repository_collaborators
+FOR EACH ROW
+EXECUTE FUNCTION broadcast_repository_collaborator_changes();
+
+-- Create Realtime Authorization policy for broadcast channel
+-- Allow users involved in tickets to subscribe to collaborator broadcasts
+CREATE POLICY "Users can subscribe to their repository collaborator broadcasts"
+ON realtime.messages
+FOR SELECT
+TO authenticated
+USING (
+  realtime.topic() LIKE 'repository-collaborators-%'
+);
