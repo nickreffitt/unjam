@@ -276,6 +276,44 @@ export type Database = {
           },
         ]
       }
+      github_integrations: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          github_access_token: string
+          github_user_id: string
+          github_username: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          github_access_token: string
+          github_user_id: string
+          github_username: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          github_access_token?: string
+          github_user_id?: string
+          github_username?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "github_integrations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -373,6 +411,53 @@ export type Database = {
         }
         Relationships: []
       }
+      project_repositories: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          external_platform: string
+          external_project_id: string
+          external_project_url: string
+          github_owner: string
+          github_repo: string
+          github_repo_url: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          external_platform: string
+          external_project_id: string
+          external_project_url: string
+          github_owner: string
+          github_repo: string
+          github_repo_url: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          external_platform?: string
+          external_project_id?: string
+          external_project_url?: string
+          github_owner?: string
+          github_repo?: string
+          github_repo_url?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_repositories_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ratings: {
         Row: {
           created_at: string | null
@@ -406,23 +491,75 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_created_by"
+            foreignKeyName: "fk_ticket"
+            columns: ["ticket_id"]
+            isOneToOne: true
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_rating_for"
+            foreignKeyName: "ratings_rating_for_fkey"
             columns: ["rating_for"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      repository_collaborators: {
+        Row: {
+          engineer_id: string
+          github_username: string
+          id: string
+          invited_at: string | null
+          removed_at: string | null
+          repository_id: string
+          ticket_id: string
+        }
+        Insert: {
+          engineer_id: string
+          github_username: string
+          id?: string
+          invited_at?: string | null
+          removed_at?: string | null
+          repository_id: string
+          ticket_id: string
+        }
+        Update: {
+          engineer_id?: string
+          github_username?: string
+          id?: string
+          invited_at?: string | null
+          removed_at?: string | null
+          repository_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "fk_ticket"
+            foreignKeyName: "repository_collaborators_engineer_id_fkey"
+            columns: ["engineer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repository_collaborators_repository_id_fkey"
+            columns: ["repository_id"]
+            isOneToOne: false
+            referencedRelation: "project_repositories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repository_collaborators_ticket_id_fkey"
             columns: ["ticket_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "tickets"
             referencedColumns: ["id"]
           },

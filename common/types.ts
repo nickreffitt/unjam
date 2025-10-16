@@ -72,6 +72,17 @@ export type ChatEventType = 'chatMessageSent' | 'chatMessagesRead' | 'chatReload
 
 export type RatingEventType = 'ratingCreated' | 'ratingUpdated';
 
+export type CodeShareEventType =
+  | 'gitHubIntegrationCreated'
+  | 'gitHubIntegrationUpdated'
+  | 'gitHubIntegrationDeleted'
+  | 'projectRepositoryCreated'
+  | 'projectRepositoryUpdated'
+  | 'projectRepositoryDeleted'
+  | 'repositoryCollaboratorCreated'
+  | 'repositoryCollaboratorRemoved'
+  | 'repositoryCollaboratorDeleted';
+
 export interface ErrorDisplay {
   title: string;
   message: string;
@@ -330,4 +341,52 @@ export interface Rating {
   notes?: string; // Optional additional feedback
   createdAt: Date;
   updatedAt: Date | null;
+}
+
+// GitHub Share types
+export interface GuideSlide {
+  title: string;
+  description: string;
+  steps: string[];
+  image?: string; // Optional screenshot URL
+}
+
+export interface PlatformGuide {
+  platformName: string;
+  urlPattern: RegExp;
+  extractProjectId: (url: string) => string | null;
+  slides: GuideSlide[];
+}
+
+export interface GitHubIntegration {
+  id: string;
+  customerId: string;
+  githubAccessToken: string;
+  githubUsername: string;
+  githubUserId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProjectRepository {
+  id: string;
+  customerId: string;
+  externalProjectUrl: string;
+  externalPlatform: string;
+  externalProjectId: string;
+  githubRepoUrl: string;
+  githubOwner: string;
+  githubRepo: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RepositoryCollaborator {
+  id: string;
+  ticketId: string;
+  repositoryId: string;
+  engineerId: string;
+  githubUsername: string;
+  invitedAt: Date;
+  removedAt?: Date;
 }

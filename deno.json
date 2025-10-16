@@ -6,11 +6,14 @@
   "imports": {
     "stripe": "npm:stripe@19",
     "supabase": "npm:@supabase/supabase-js@2",
+    "octokit": "npm:octokit@5",
     "server": "https://deno.land/std@0.168.0/http/server.ts",
     "@types": "./common/types.ts",
+    "@supabase-types": "./common/supabase.types.ts",
     "@events/": "./supabase/functions/_shared/events/",
     "@services/": "./supabase/functions/_shared/services/",
-    "@stores/": "./supabase/functions/_shared/stores/"
+    "@stores/": "./supabase/functions/_shared/stores/",
+    "@util/": "./supabase/functions/_shared/util/"
   },
   "nodeModulesDir": "auto"
 }
