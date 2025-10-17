@@ -25,8 +25,13 @@ export default defineConfig({
       'tabs'
     ],
     host_permissions: [
-      'http://localhost:5175/*',
-      'https://unjam.nickreffitt.com/*' // Replace with your production domain
+      'http://localhost/*',
+      'https://unjam.nickreffitt.com/*',
+      'https://lovable.dev/*',
+      'https://replit.com/*',
+      'https://app.base44.com/*',
+      'https://bolt.new/*',
+      'https://v0.app/*'
     ],
     action: {
       default_popup: 'popup.html',

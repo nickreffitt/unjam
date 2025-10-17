@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import UnjamButton from '@extension/Ticket/components/UnjamButton/UnjamButton';
 import TicketBox from '@extension/Ticket/components/TicketBox/TicketBox';
 import TicketModal from '@extension/Ticket/components/TicketModal/TicketModal';
@@ -7,6 +7,7 @@ import DebugChat, { type DebugChatRef } from '@extension/DebugChat/DebugChat';
 import DebugTicket, { type DebugTicketRef } from '@extension/DebugTicket/DebugTicket';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
 import { useTicketState } from '@extension/Ticket/hooks';
+import { type ButtonPosition, getButtonPosition, getButtonVisibility, getPositionClasses, getPositionStyles } from '@extension/shared/buttonPosition';
 import '@extension/styles.css';
 
 /**
@@ -34,20 +35,40 @@ const ExtensionContainer: React.FC = () => {
     getButtonText
   } = useTicketState();
 
+  // Button position state
+  const [buttonPosition, setButtonPosition] = useState<ButtonPosition>('bottom-right');
+  const [isButtonVisible, setIsButtonVisible] = useState<boolean>(true);
+
+  // Load button position and visibility from storage on mount
+  useEffect(() => {
+    getButtonPosition().then(setButtonPosition);
+    getButtonVisibility().then(setIsButtonVisible);
+  }, []);
+
+  // Listen for position and visibility changes from storage
+  useEffect(() => {
+    const handleStorageChange = (changes: { [key: string]: browser.storage.StorageChange }) => {
+      if (changes['unjam-button-position']) {
+        setButtonPosition(changes['unjam-button-position'].newValue as ButtonPosition);
+      }
+      if (changes['unjam-button-visible']) {
+        setIsButtonVisible(changes['unjam-button-visible'].newValue as boolean);
+      }
+    };
+
+    browser.storage.onChanged.addListener(handleStorageChange);
+    return () => browser.storage.onChanged.removeListener(handleStorageChange);
+  }, []);
+
   console.debug('[ExtensionContainer] Render state:', { isModalOpen, activeTicket, customerProfile });
 
   return (
     <>
-      {/* Floating button fixed at bottom-right */}
-      {!isModalOpen && !isTicketVisible && (
+      {/* Floating button with dynamic position */}
+      {!isModalOpen && !isTicketVisible && isButtonVisible && (
         <div
-          className="unjam-fixed unjam-bottom-4 unjam-right-4 unjam-z-[9999]"
-          style={{
-            position: 'fixed',
-            bottom: '16px',
-            right: '16px',
-            zIndex: 9999
-          }}
+          className={`unjam-fixed ${getPositionClasses(buttonPosition)} unjam-z-[9999]`}
+          style={getPositionStyles(buttonPosition)}
         >
           <UnjamButton
             onClick={handleCreateNewTicketClick}
@@ -95,17 +116,14 @@ const ExtensionContainer: React.FC = () => {
         customerProfile={customerProfile}
       />
 
-      {/* Stacked container for ChatBox and TicketBox at bottom-right */}
+      {/* Stacked container for ChatBox and TicketBox with dynamic position */}
       <div
-        className="unjam-fixed unjam-bottom-4 unjam-right-4 unjam-flex unjam-flex-col unjam-gap-4 unjam-z-[9999]"
+        className={`unjam-fixed ${getPositionClasses(buttonPosition)} unjam-flex unjam-flex-col unjam-gap-4 unjam-z-[9999]`}
         style={{
-          position: 'fixed',
-          bottom: '16px',
-          right: '16px',
+          ...getPositionStyles(buttonPosition),
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
-          zIndex: 9999
+          gap: '16px'
         }}
       >
         {isChatVisible && isTicketVisible && activeTicket && activeTicket.status === 'in-progress' && activeTicket.assignedTo && (

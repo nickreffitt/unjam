@@ -27,6 +27,11 @@ export interface ExtensionEventListenerCallbacks {
   onGetCurrentUser?(): UserProfile | null | Promise<UserProfile | null>;
 
   /**
+   * Called when user requests to sign out
+   */
+  onSignOut?(): void | Promise<void>;
+
+  /**
    * Called when sign-in with OTP succeeds (background → popup)
    */
   onSignInWithOtpSuccess?(): void;
@@ -172,6 +177,18 @@ export class ExtensionEventListener {
               return { success: true, user };
             } catch (error) {
               console.error('ExtensionEventListener: Error in onGetCurrentUser:', error);
+              return { success: false, error: String(error) };
+            }
+          }
+          break;
+
+        case 'signOut':
+          if (this.callbacks.onSignOut) {
+            try {
+              await this.callbacks.onSignOut();
+              return { success: true };
+            } catch (error) {
+              console.error('ExtensionEventListener: Error in onSignOut:', error);
               return { success: false, error: String(error) };
             }
           }

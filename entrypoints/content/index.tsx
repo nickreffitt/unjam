@@ -15,6 +15,21 @@ import { type CustomerProfile } from '@common/types';
 let uiMounted = false;
 let rootInstance: ReactDOM.Root | null = null;
 
+// URL patterns that should trigger injection
+const URL_PATTERNS = [
+  /^http:\/\/localhost:5175\//,
+  /^https:\/\/unjam\.nickreffitt\.com\//,
+  /^https:\/\/lovable\.dev\/projects\/.+/,
+  /^https:\/\/replit\.com\/@.+\/.+/,
+  /^https:\/\/app\.base44\.com\/apps\/.+/,
+  /^https:\/\/bolt\.new\/~\/sb1-.+/,
+  /^https:\/\/v0\.app\/chat\/.+/
+];
+
+function shouldInjectUI(url: string): boolean {
+  return URL_PATTERNS.some(pattern => pattern.test(url));
+}
+
 // Component that checks auth state and conditionally renders the extension UI
 const ContentApp = () => {
   const { authUser, isLoading } = useExtensionAuthManager();
@@ -103,21 +118,68 @@ async function injectUI() {
   console.info('[ContentScript] Extension injected with auth management');
 }
 
+function handleUrlChange() {
+  const currentUrl = window.location.href;
+  console.debug('[ContentScript] URL changed to:', currentUrl);
+
+  if (shouldInjectUI(currentUrl)) {
+    console.debug('[ContentScript] URL matches pattern, ensuring UI is injected');
+    injectUI();
+  } else {
+    console.debug('[ContentScript] URL does not match patterns, skipping injection');
+  }
+}
+
 export default {
   matches: [
-    'http://localhost:5175/',
-    'https://unjam.nickreffitt.com/',
-    'https://lovable.dev/projects/*',
-    'https://replit.com/@*/*',
-    'https://app.base44.com/apps/*',
-    'https://bolt.new/~/sb1-*',
-    'https://v0.app/chat/*'
+    'http://localhost:5175/*',
+    'https://unjam.nickreffitt.com/*',
+    'https://lovable.dev/*',
+    'https://replit.com/*',
+    'https://app.base44.com/*',
+    'https://bolt.new/*',
+    'https://v0.app/*'
   ],
   cssInjectionMode: 'manual' as const,
 
   main: async () => {
-    // Inject UI immediately - ExtensionAuthManagerProvider will handle auth checks
-    console.debug('[ContentScript] Injecting UI with auth management');
-    await injectUI();
+    // Inject UI immediately if current URL matches
+    console.debug('[ContentScript] Initial load, checking URL:', window.location.href);
+    handleUrlChange();
+
+    // Listen for URL changes (for SPA navigation)
+    let lastUrl = window.location.href;
+    const observer = new MutationObserver(() => {
+      const currentUrl = window.location.href;
+      if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        handleUrlChange();
+      }
+    });
+
+    // Observe the entire document for changes that might indicate navigation
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Also listen to popstate for back/forward navigation
+    window.addEventListener('popstate', handleUrlChange);
+
+    // Listen to pushState and replaceState
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+
+    history.pushState = function(...args) {
+      originalPushState.apply(this, args);
+      handleUrlChange();
+    };
+
+    history.replaceState = function(...args) {
+      originalReplaceState.apply(this, args);
+      handleUrlChange();
+    };
+
+    console.debug('[ContentScript] Navigation listeners set up');
   },
 };

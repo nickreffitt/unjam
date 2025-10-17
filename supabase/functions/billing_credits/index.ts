@@ -10,14 +10,14 @@ import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/
 import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
 import { BillingMeterServiceStripe } from "@services/BillingMeter/index.ts";
 import { BillingEngineerPayoutServiceStripe } from "@services/BillingEngineerPayout/index.ts";
-import type { CreditBalanceRequest, CreditBalanceResponse, CreditTransferRequest, CreditTransferResponse } from "@types";
+import type { CreditBalanceRequest, CreditTransferRequest } from "@types";
+import { getExtensionCorsOrigin } from "../_shared/config/cors.ts";
 
 console.debug("Billing Credits function loaded")
 
 export const handler = async (request: Request): Promise<Response> => {
-  const allowedOrigins = ['https://unjam.nickreffitt.com', 'http://localhost:5175']
-  const origin = request.headers.get('Origin') || ''
-  const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://unjam.nickreffitt.com'
+  const origin = request.headers.get('Origin')
+  const corsOrigin = getExtensionCorsOrigin(origin)
 
   // Handle CORS preflight requests
   if (request.method === 'OPTIONS') {

@@ -6,13 +6,13 @@ import { BillingEngineerAccountServiceStripe } from '@services/BillingEngineerAc
 import { BillingLinksHandler } from './BillingLinksHandler.ts'
 import { createClient } from "supabase";
 import Stripe from "stripe";
+import { getDashboardCorsOrigin } from "../_shared/config/cors.ts";
 
 console.debug("Billing Links function loaded")
 
 export const handler = async (request: Request): Promise<Response> => {
-  const allowedOrigins = ['https://unjam.nickreffitt.com', 'http://localhost:5175']
-  const origin = request.headers.get('Origin') || ''
-  const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://unjam.nickreffitt.com'
+  const origin = request.headers.get('Origin')
+  const corsOrigin = getDashboardCorsOrigin(origin)
 
   // Handle CORS preflight requests
   if (request.method === 'OPTIONS') {

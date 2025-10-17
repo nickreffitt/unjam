@@ -125,6 +125,19 @@ export default defineBackground(() => {
       const currentUser = authManager.getCurrentUser();
       console.debug('Background script: Returning current user:', currentUser);
       return currentUser;
+    },
+    onSignOut: async () => {
+      console.log('=== SIGN OUT REQUEST ===');
+      console.debug('Background script: Signing out user');
+
+      try {
+        await authManager.signOut();
+        console.log('=== SIGN OUT SUCCESS ===');
+        console.debug('Background script: User signed out successfully');
+      } catch (error) {
+        console.error('Background script: Failed to sign out:', error);
+        throw error;
+      }
     }
   });
 

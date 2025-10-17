@@ -1,13 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { ExtensionAuthManagerProvider, useExtensionAuthManager } from '@extension/shared/contexts/ExtensionAuthManagerContext';
+import { SupabaseProvider } from '@extension/shared/contexts/SupabaseContext';
 import SignIn from '@extension/SignIn/SignIn';
-import SignInSuccess from '@extension/SignIn/components/SignInSuccess/SignInSuccess';
 import RequiresProfile from '@extension/SignIn/components/RequiresProfile/RequiresProfile';
+import ExtensionMenu from '@extension/ExtensionMenu/ExtensionMenu';
+import { getButtonPosition, setButtonPosition, getNextPosition, getButtonVisibility, setButtonVisibility } from '@extension/shared/buttonPosition';
+import { type CustomerProfile } from '@common/types';
 import '@extension/styles.css';
 
 const PopupContent = () => {
   const { authUser, isLoading } = useExtensionAuthManager();
+  const [isButtonVisible, setIsButtonVisible] = useState<boolean>(true);
+
+  // Load button visibility from storage
+  useEffect(() => {
+    getButtonVisibility().then(setIsButtonVisible);
+  }, []);
+
+  // Listen for visibility changes from storage
+  useEffect(() => {
+    const handleStorageChange = (changes: { [key: string]: browser.storage.StorageChange }) => {
+      if (changes['unjam-button-visible']) {
+        setIsButtonVisible(changes['unjam-button-visible'].newValue as boolean);
+      }
+    };
+
+    browser.storage.onChanged.addListener(handleStorageChange);
+    return () => browser.storage.onChanged.removeListener(handleStorageChange);
+  }, []);
 
   // Show loading state
   if (isLoading || authUser.status === 'loading') {
@@ -23,17 +44,34 @@ const PopupContent = () => {
 
   // User is fully signed in with profile
   if (authUser.status === 'signed-in') {
+    // TypeScript guard: ensure profile exists
+    if (!authUser.profile) {
+      console.error('[PopupContent] User signed in but no profile found');
+      return null;
+    }
+
+    const customerProfile = authUser.profile as CustomerProfile;
+
+    const handleChangePosition = async () => {
+      const currentPosition = await getButtonPosition();
+      const nextPosition = getNextPosition(currentPosition);
+      await setButtonPosition(nextPosition);
+    };
+
+    const handleToggleVisibility = async () => {
+      const newVisibility = !isButtonVisible;
+      await setButtonVisibility(newVisibility);
+      setIsButtonVisible(newVisibility);
+    };
     return (
-      <div className="unjam-min-h-screen unjam-w-[350px] unjam-bg-gray-50 unjam-flex unjam-flex-col unjam-justify-center unjam-py-12 unjam-px-4">
-        <div className="unjam-sm:mx-auto unjam-sm:w-full unjam-sm:max-w-md">
-          <h2 className="unjam-text-center unjam-text-3xl unjam-font-bold unjam-text-gray-900 unjam-mb-8">
-            Extension
-          </h2>
-          <div className="unjam-bg-white unjam-py-8 unjam-px-6 unjam-shadow unjam-rounded-lg">
-            <SignInSuccess />
-          </div>
-        </div>
-      </div>
+      <SupabaseProvider>
+        <ExtensionMenu
+          onChangePosition={handleChangePosition}
+          onToggleVisibility={handleToggleVisibility}
+          isButtonVisible={isButtonVisible}
+          customerProfile={customerProfile}
+        />
+      </SupabaseProvider>
     );
   }
 

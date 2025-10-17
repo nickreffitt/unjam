@@ -11,6 +11,7 @@ interface ExtensionAuthManagerContextType {
   email: string;
   signInWithOtp: (email: string) => Promise<void>;
   verifyOtp: (token: string) => Promise<void>;
+  signOut: () => Promise<void>;
   resetOtpSent: () => void;
   setOtpSent: (value: boolean) => void;
   setEmail: (email: string) => void;
@@ -62,6 +63,24 @@ export const ExtensionAuthManagerProvider: React.FC<ExtensionAuthManagerProvider
     console.debug('[ExtensionAuthManagerContext] OTP verification request sent, waiting for response event');
     // Don't setIsLoading(false) here - wait for onVerifyOtpSuccess/Failure or auth events
   }, [email]);
+
+  // Sign out
+  const signOut = useCallback(async (): Promise<void> => {
+    console.debug('[ExtensionAuthManagerContext] signOut called');
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Send the request to background script
+      await eventEmitter.current.emitSignOut();
+      console.debug('[ExtensionAuthManagerContext] Sign-out request sent');
+      // Auth state change will come via AuthListenerExtension
+    } catch (error) {
+      console.error('[ExtensionAuthManagerContext] Sign-out failed:', error);
+      setError({ title: 'Sign Out Failed', message: error instanceof Error ? error.message : 'Failed to sign out' });
+      setIsLoading(false);
+    }
+  }, []);
 
   // Reset OTP sent state (for going back to email entry)
   const resetOtpSent = useCallback((): void => {
@@ -184,6 +203,7 @@ export const ExtensionAuthManagerProvider: React.FC<ExtensionAuthManagerProvider
     email,
     signInWithOtp,
     verifyOtp,
+    signOut,
     resetOtpSent,
     setOtpSent,
     setEmail,

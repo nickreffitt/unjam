@@ -95,6 +95,16 @@ export class ExtensionEventEmitter {
   }
 
   /**
+   * Emits a sign-out request to the background script
+   */
+  async emitSignOut(): Promise<void> {
+    await this.sendMessage({
+      type: 'signOut',
+      timestamp: Date.now()
+    });
+  }
+
+  /**
    * Emits a Supabase session event (background → content/popup)
    * @param session - The Supabase session object
    */
@@ -130,6 +140,12 @@ export class ExtensionEventEmitter {
       console.debug('ExtensionEventEmitter: Message sent successfully:', message.type, 'Response:', response);
       return response;
     } catch (error) {
+      // Silently ignore "receiving end does not exist" errors - this happens when no listeners are ready
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Receiving end does not exist')) {
+        console.debug('ExtensionEventEmitter: No listeners ready for message:', message.type);
+        return null;
+      }
       console.error('ExtensionEventEmitter: Error sending message:', error);
       throw error;
     }
