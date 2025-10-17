@@ -222,7 +222,7 @@ jobs:
               if [ ! -f "/etc/nginx/sites-available/$DOMAIN" ]; then
                 apt install -y nginx
 
-                tee "/etc/nginx/sites-available/$DOMAIN" > /dev/null <<EOF
+                cat > "/etc/nginx/sites-available/$DOMAIN" <<EOF
             server {
                 listen 80;
                 server_name $DOMAIN;
