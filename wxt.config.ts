@@ -26,7 +26,7 @@ export default defineConfig({
     ],
     host_permissions: [
       'http://localhost/*',
-      'https://unjam.nickreffitt.com/*',
+      'https://app.unj.am/*',
       'https://lovable.dev/*',
       'https://replit.com/*',
       'https://app.base44.com/*',

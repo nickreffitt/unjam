@@ -3,7 +3,7 @@
  * These origins should match the host_permissions in wxt.config.ts for extension-accessible endpoints
  */
 export const EXTENSION_ALLOWED_ORIGINS = [
-  'https://unjam.nickreffitt.com',
+  'https://app.unj.am',
   'http://localhost:5175',
   'https://lovable.dev',
   'https://replit.com',
@@ -39,7 +39,7 @@ export function getExtensionCorsOrigin(requestOrigin: string | null): string {
  * Dashboard-only CORS origins (no extension support needed)
  */
 export const DASHBOARD_ALLOWED_ORIGINS = [
-  'https://unjam.nickreffitt.com',
+  'https://app.unj.am',
   'http://localhost:5175',
 ] as const;
 

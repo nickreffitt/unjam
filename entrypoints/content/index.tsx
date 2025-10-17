@@ -133,7 +133,7 @@ function handleUrlChange() {
 export default {
   matches: [
     'http://localhost:5175/*',
-    'https://unjam.nickreffitt.com/*',
+    'https://app.unj.am/*',
     'https://lovable.dev/*',
     'https://replit.com/*',
     'https://app.base44.com/*',
