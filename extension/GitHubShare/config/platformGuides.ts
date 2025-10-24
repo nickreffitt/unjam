@@ -14,6 +14,15 @@ export const PLATFORM_GUIDES: PlatformGuide[] = [
         steps: [
           'Enter your GitHub repository URL directly',
           'Use any test repository for development purposes'
+        ],
+        image: '/platform-guides/local-guide-1.png'
+      },
+      {
+        title: 'Testing environment',
+        description: 'This is a local testing environment',
+        steps: [
+          'Enter your GitHub repository URL directly',
+          'Use any test repository for development purposes'
         ]
       }
     ]

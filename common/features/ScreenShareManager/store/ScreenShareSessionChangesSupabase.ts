@@ -29,7 +29,7 @@ export class ScreenShareSessionChangesSupabase implements ScreenShareSessionChan
     if (!eventEmitter) {
       throw new Error('ScreenShareSessionChangesSupabase: eventEmitter is required');
     }
-    this.ticketId = ticketId;
+    this.ticketId = ticketId || undefined;
     this.supabaseClient = supabaseClient;
     this.eventEmitter = eventEmitter;
   }
@@ -40,6 +40,11 @@ export class ScreenShareSessionChangesSupabase implements ScreenShareSessionChan
    */
   async start(): Promise<void> {
     console.debug(`ScreenShareSessionChangesSupabase: start()`);
+
+    if (!this.ticketId) {
+      console.debug('ScreenShareSessionChangesSupabase: No ticketId provided, skipping subscription');
+      return;
+    }
 
     if (this.screenshareChannel) {
       console.debug('ScreenShareSessionChangesSupabase: Already listening for changes');

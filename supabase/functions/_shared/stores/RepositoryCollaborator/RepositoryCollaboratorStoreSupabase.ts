@@ -42,25 +42,27 @@ export class RepositoryCollaboratorStoreSupabase implements RepositoryCollaborat
   }
 
   /**
-   * Gets all collaborators for a ticket
-   * @param ticketId - The ticket ID
-   * @returns Array of repository collaborators
+   * Gets a collaborator by repository ID and engineer ID
+   * @param repositoryId - The repository ID
+   * @param engineerId - The engineer ID
+   * @returns The repository collaborator if found, null otherwise
    */
-  async getAllByTicketId(ticketId: string): Promise<RepositoryCollaborator[]> {
-    console.debug('RepositoryCollaboratorStoreSupabase: Getting all collaborators for ticket:', ticketId);
+  async getByRepositoryAndEngineer(repositoryId: string, engineerId: string): Promise<RepositoryCollaborator | null> {
+    console.debug('RepositoryCollaboratorStoreSupabase: Getting collaborator for repository:', repositoryId, 'engineer:', engineerId);
 
     const { data, error } = await this.supabaseClient
       .from(this.tableName)
       .select('*')
-      .eq('ticket_id', ticketId)
-      .order('invited_at', { ascending: false });
+      .eq('repository_id', repositoryId)
+      .eq('engineer_id', engineerId)
+      .maybeSingle();
 
     if (error) {
-      console.error('RepositoryCollaboratorStoreSupabase: Get all by ticket ID failed:', error);
-      throw new Error(`Failed to get collaborators: ${error.message}`);
+      console.error('RepositoryCollaboratorStoreSupabase: Get by repository and engineer failed:', error);
+      throw new Error(`Failed to get repository collaborator: ${error.message}`);
     }
 
-    return data.map(row => GitHubSupabaseRowMapper.mapRowToRepositoryCollaborator(row));
+    return data ? GitHubSupabaseRowMapper.mapRowToRepositoryCollaborator(data) : null;
   }
 
   /**
@@ -92,10 +94,9 @@ export class RepositoryCollaboratorStoreSupabase implements RepositoryCollaborat
    * @returns The created repository collaborator
    */
   async create(collaborator: Omit<RepositoryCollaborator, 'id' | 'invitedAt' | 'removedAt'>): Promise<RepositoryCollaborator> {
-    console.debug('RepositoryCollaboratorStoreSupabase: Creating collaborator for ticket:', collaborator.ticketId);
+    console.debug('RepositoryCollaboratorStoreSupabase: Creating collaborator for repository:', collaborator.repositoryId);
 
     const insertData: TablesInsert<'repository_collaborators'> = {
-      ticket_id: collaborator.ticketId,
       repository_id: collaborator.repositoryId,
       engineer_id: collaborator.engineerId,
       github_username: collaborator.githubUsername,
@@ -119,15 +120,18 @@ export class RepositoryCollaboratorStoreSupabase implements RepositoryCollaborat
 
   /**
    * Marks a collaborator as removed
-   * @param id - The collaborator ID
+   * @param repositoryId - The repository ID
+   * @param engineerId - The engineer ID
    */
-  async markRemoved(id: string): Promise<void> {
-    console.debug('RepositoryCollaboratorStoreSupabase: Marking collaborator as removed:', id);
+  async markRemoved(repositoryId: string, engineerId: string): Promise<void> {
+    console.debug('RepositoryCollaboratorStoreSupabase: Marking collaborator as removed:', { repositoryId, engineerId });
 
     const { error } = await this.supabaseClient
       .from(this.tableName)
       .update({ removed_at: new Date().toISOString() })
-      .eq('id', id);
+      .eq('repository_id', repositoryId)
+      .eq('engineer_id', engineerId)
+      .is('removed_at', null);
 
     if (error) {
       console.error('RepositoryCollaboratorStoreSupabase: Mark removed failed:', error);
@@ -155,5 +159,27 @@ export class RepositoryCollaboratorStoreSupabase implements RepositoryCollaborat
     }
 
     console.debug('RepositoryCollaboratorStoreSupabase: Deleted collaborator successfully');
+  }
+
+  /**
+   * Deletes a repository collaborator by repository and engineer
+   * @param repositoryId - The repository ID
+   * @param engineerId - The engineer ID
+   */
+  async deleteByRepositoryAndEngineer(repositoryId: string, engineerId: string): Promise<void> {
+    console.debug('RepositoryCollaboratorStoreSupabase: Deleting collaborator by repository and engineer:', { repositoryId, engineerId });
+
+    const { error } = await this.supabaseClient
+      .from(this.tableName)
+      .delete()
+      .eq('repository_id', repositoryId)
+      .eq('engineer_id', engineerId);
+
+    if (error) {
+      console.error('RepositoryCollaboratorStoreSupabase: Delete by repository and engineer failed:', error);
+      throw new Error(`Failed to delete repository collaborator: ${error.message}`);
+    }
+
+    console.debug('RepositoryCollaboratorStoreSupabase: Deleted collaborator by repository and engineer successfully');
   }
 }

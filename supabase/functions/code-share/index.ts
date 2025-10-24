@@ -69,6 +69,7 @@ export const handler = async (request: Request): Promise<Response> => {
 
       result = await oauthHandler.handleOAuthCallback(payload)
     } else {
+      console.debug(`Payload = ${JSON.stringify(payload)}`)
       // These actions require an existing GitHub integration
       const integration = await integrationStore.getByCustomerId(payload.customer_id)
 
@@ -81,7 +82,18 @@ export const handler = async (request: Request): Promise<Response> => {
 
       const octokit = new Octokit({ auth: integration.githubAccessToken })
       const codeShareService = new CodeShareServiceGitHub(octokit)
-      const handler = new CodeShareHandler(repositoryStore, collaboratorStore, codeShareService)
+
+      // Construct webhook URL and get secret
+      const webhookUrl = `${supabaseUrl}/functions/v1/code-share-webhook`
+      const webhookSecret = Deno.env.get('GITHUB_WEBHOOK_SIGNING_SECRET') as string
+
+      const handler = new CodeShareHandler(
+        repositoryStore,
+        collaboratorStore,
+        codeShareService,
+        webhookUrl,
+        webhookSecret
+      )
 
       switch (action_type) {
         case 'validate_repository':

@@ -43,49 +43,29 @@ export class RepositoryCollaboratorStoreSupabase implements RepositoryCollaborat
   }
 
   /**
-   * Gets a collaborator by ticket ID and repository ID
-   * @param ticketId - The ticket ID
+   * Gets a collaborator by repository ID and engineer ID
    * @param repositoryId - The repository ID
+   * @param engineerId - The engineer ID
    * @returns The repository collaborator if found, null otherwise
    */
-  async getByTicket(ticketId: string, repositoryId: string): Promise<RepositoryCollaborator | null> {
-    console.debug('RepositoryCollaboratorStoreSupabase: Getting collaborator for ticket:', ticketId, 'repository:', repositoryId);
+  async getByRepositoryAndEngineer(repositoryId: string, engineerId: string): Promise<RepositoryCollaborator | null> {
+    console.debug('RepositoryCollaboratorStoreSupabase: Getting collaborator for repository:', repositoryId, 'engineer:', engineerId);
 
     const { data, error } = await this.supabaseClient
       .from(this.tableName)
       .select('*')
-      .eq('ticket_id', ticketId)
       .eq('repository_id', repositoryId)
+      .eq('engineer_id', engineerId)
       .maybeSingle();
 
     if (error) {
-      console.error('RepositoryCollaboratorStoreSupabase: Get by ticket failed:', error);
-      throw new Error(`Failed to get repository collaborator by ticket: ${error.message}`);
+      console.error('RepositoryCollaboratorStoreSupabase: Get by repository and engineer failed:', error);
+      throw new Error(`Failed to get repository collaborator: ${error.message}`);
     }
+
+    console.debug('RepositoryCollaboratorStoreSupabase: ', data)
 
     return data ? GitHubSupabaseRowMapper.mapRowToRepositoryCollaborator(data) : null;
-  }
-
-  /**
-   * Gets all collaborators for a ticket
-   * @param ticketId - The ticket ID
-   * @returns Array of repository collaborators
-   */
-  async getAllByTicketId(ticketId: string): Promise<RepositoryCollaborator[]> {
-    console.debug('RepositoryCollaboratorStoreSupabase: Getting all collaborators for ticket:', ticketId);
-
-    const { data, error } = await this.supabaseClient
-      .from(this.tableName)
-      .select('*')
-      .eq('ticket_id', ticketId)
-      .order('invited_at', { ascending: false });
-
-    if (error) {
-      console.error('RepositoryCollaboratorStoreSupabase: Get all by ticket ID failed:', error);
-      throw new Error(`Failed to get repository collaborators by ticket ID: ${error.message}`);
-    }
-
-    return data.map(row => GitHubSupabaseRowMapper.mapRowToRepositoryCollaborator(row));
   }
 
   /**

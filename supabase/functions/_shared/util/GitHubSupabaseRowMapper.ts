@@ -48,7 +48,6 @@ export class GitHubSupabaseRowMapper {
   static mapRowToRepositoryCollaborator(row: Tables<'repository_collaborators'>): RepositoryCollaborator {
     return {
       id: row.id,
-      ticketId: row.ticket_id,
       repositoryId: row.repository_id,
       engineerId: row.engineer_id,
       githubUsername: row.github_username,

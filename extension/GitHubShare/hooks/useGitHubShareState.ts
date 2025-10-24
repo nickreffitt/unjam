@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { type Ticket, type GitHubIntegration, type GuideSlide } from '@common/types';
+import { type Ticket, type GitHubIntegration, type GuideSlide, type RepositoryCollaborator, type CodeShareRequest } from '@common/types';
 import { useGitHubShareManager } from '@extension/GitHubShare/contexts/GitHubShareManagerContext';
 import { useCodeShareListener } from '@common/features/CodeShareManager/hooks';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
@@ -24,8 +24,20 @@ export interface UseGitHubShareStateReturn {
   // Loading states
   isLinkingRepo: boolean;
   setIsLinkingRepo: (loading: boolean) => void;
+  isSharingCode: boolean;
+  setIsSharingCode: (loading: boolean) => void;
+  isStoppingShare: boolean;
+  setIsStoppingShare: (loading: boolean) => void;
 
   activeTicket: Ticket | null;
+
+  // Active collaborator state
+  activeCollaborator: RepositoryCollaborator | null;
+  refreshCollaborator: () => Promise<void>;
+
+  // Code share request state
+  activeRequest: CodeShareRequest | null;
+  setActiveRequest: (request: CodeShareRequest | null) => void;
 }
 
 export const useGitHubShareState = (): UseGitHubShareStateReturn => {
@@ -36,6 +48,10 @@ export const useGitHubShareState = (): UseGitHubShareStateReturn => {
   const [platformName, setPlatformName] = useState<string | null>(null);
   const [guideSlides, setGuideSlides] = useState<GuideSlide[]>([]);
   const [isLinkingRepo, setIsLinkingRepo] = useState<boolean>(false);
+  const [isSharingCode, setIsSharingCode] = useState<boolean>(false);
+  const [isStoppingShare, setIsStoppingShare] = useState<boolean>(false);
+  const [activeCollaborator, setActiveCollaborator] = useState<RepositoryCollaborator | null>(null);
+  const [activeRequest, setActiveRequest] = useState<CodeShareRequest | null>(null);
 
   const { customerProfile } = useUserProfile();
   const { codeShareManager } = useGitHubShareManager();
@@ -59,6 +75,43 @@ export const useGitHubShareState = (): UseGitHubShareStateReturn => {
 
     loadIntegration();
   }, [codeShareManager]);
+
+  // Load active collaborator when ticket or URL changes
+  const refreshCollaborator = useCallback(async () => {
+    if (!activeTicket?.assignedTo) {
+      setActiveCollaborator(null);
+      return;
+    }
+
+    try {
+      // Get all repositories for this customer
+      const repositories = await codeShareManager.getAllRepositories();
+
+      // Check each repository to see if the engineer has access
+      for (const repo of repositories) {
+        const collaborator = await codeShareManager.getCollaboratorByRepositoryAndEngineer(
+          repo.id,
+          activeTicket.assignedTo.id
+        );
+
+        if (collaborator && !collaborator.removedAt) {
+          setActiveCollaborator(collaborator);
+          console.debug('useGitHubShareState: Loaded active collaborator', collaborator.id);
+          return;
+        }
+      }
+
+      // No active collaborator found
+      setActiveCollaborator(null);
+    } catch (error) {
+      console.error('useGitHubShareState: Error loading collaborators:', error);
+      setActiveCollaborator(null);
+    }
+  }, [activeTicket, codeShareManager]);
+
+  useEffect(() => {
+    refreshCollaborator();
+  }, [refreshCollaborator]);
 
   // Set platform data for repo link modal
   const setPlatformData = useCallback((name: string, slides: GuideSlide[]) => {
@@ -88,12 +141,60 @@ export const useGitHubShareState = (): UseGitHubShareStateReturn => {
     }
   }, [customerProfile.id]);
 
+  // Listen for collaborator changes
+  const handleRepositoryCollaboratorCreated = useCallback((collaborator: RepositoryCollaborator) => {
+    if (activeTicket?.assignedTo && collaborator.engineerId === activeTicket.assignedTo.id && !collaborator.removedAt) {
+      console.debug('useGitHubShareState: Repository collaborator created:', collaborator.id);
+      setActiveCollaborator(collaborator);
+    }
+  }, [activeTicket]);
+
+  const handleRepositoryCollaboratorDeleted = useCallback((collaboratorId: string, engineerId: string) => {
+    console.debug(`useGithubShareState: handleRepositoryCollaboratorDeleted(collaboratorId:${collaboratorId}, engineerId:${engineerId}) called`)
+    if (activeTicket?.assignedTo && engineerId === activeTicket.assignedTo.id) {
+      console.debug('useGitHubShareState: Repository collaborator deleted for assigned engineer:', collaboratorId);
+      setActiveCollaborator(null);
+    }
+  }, [activeTicket]);
+
+  // Listen for code share request changes
+  const handleCodeShareRequestCreated = useCallback((request: CodeShareRequest) => {
+    if (request.receiver.id === customerProfile.id && request.status === 'pending') {
+      console.debug('useGitHubShareState: Code share request created:', request.id);
+      setActiveRequest(request);
+    }
+  }, [customerProfile.id]);
+
+  const handleCodeShareRequestUpdated = useCallback((request: CodeShareRequest) => {
+    if (request.receiver.id === customerProfile.id) {
+      console.debug('useGitHubShareState: Code share request updated:', request.id);
+      if (request.status === 'pending') {
+        setActiveRequest(request);
+      } else {
+        // Clear the request if it's no longer pending (accepted/rejected)
+        setActiveRequest(null);
+      }
+    }
+  }, [customerProfile.id]);
+
   // Memoize the callbacks object to prevent recreating the listener
   const codeShareListenerCallbacks = useMemo(() => ({
     onGitHubIntegrationCreated: handleGitHubIntegrationCreated,
     onGitHubIntegrationUpdated: handleGitHubIntegrationUpdated,
-    onGitHubIntegrationDeleted: handleGitHubIntegrationDeleted
-  }), [handleGitHubIntegrationCreated, handleGitHubIntegrationUpdated, handleGitHubIntegrationDeleted]);
+    onGitHubIntegrationDeleted: handleGitHubIntegrationDeleted,
+    onRepositoryCollaboratorCreated: handleRepositoryCollaboratorCreated,
+    onRepositoryCollaboratorDeleted: handleRepositoryCollaboratorDeleted,
+    onCodeShareRequestCreated: handleCodeShareRequestCreated,
+    onCodeShareRequestUpdated: handleCodeShareRequestUpdated
+  }), [
+    handleGitHubIntegrationCreated,
+    handleGitHubIntegrationUpdated,
+    handleGitHubIntegrationDeleted,
+    handleRepositoryCollaboratorCreated,
+    handleRepositoryCollaboratorDeleted,
+    handleCodeShareRequestCreated,
+    handleCodeShareRequestUpdated
+  ]);
 
   // Listen for cross-tab GitHub integration events to keep context in sync
   useCodeShareListener(codeShareListenerCallbacks);
@@ -110,6 +211,14 @@ export const useGitHubShareState = (): UseGitHubShareStateReturn => {
     setPlatformData,
     isLinkingRepo,
     setIsLinkingRepo,
-    activeTicket
+    isSharingCode,
+    setIsSharingCode,
+    isStoppingShare,
+    setIsStoppingShare,
+    activeTicket,
+    activeCollaborator,
+    refreshCollaborator,
+    activeRequest,
+    setActiveRequest
   };
 };

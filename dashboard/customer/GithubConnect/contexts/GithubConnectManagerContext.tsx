@@ -8,11 +8,13 @@ import {
   GitHubIntegrationStoreSupabase,
   ProjectRepositoryStoreSupabase,
   RepositoryCollaboratorStoreSupabase,
+  CodeShareRequestStoreSupabase,
   GitHubIntegrationChangesSupabase,
   ProjectRepositoryChangesSupabase,
   RepositoryCollaboratorChangesSupabase
 } from '@common/features/CodeShareManager/store';
 import type { CustomerProfile } from '@common/types';
+import { CodeShareRequestChangesSupabase } from '@common/features/CodeShareManager/store/CodeShareRequestChangesSupabase';
 
 interface GithubConnectManagerContextType {
   userProfile: CustomerProfile;
@@ -54,9 +56,11 @@ export const GithubConnectManagerProvider: React.FC<GithubConnectManagerProvider
     const githubIntegrationStore = new GitHubIntegrationStoreSupabase(supabaseClient);
     const projectRepositoryStore = new ProjectRepositoryStoreSupabase(supabaseClient);
     const repositoryCollaboratorStore = new RepositoryCollaboratorStoreSupabase(supabaseClient);
+    const codeShareRequestStore = new CodeShareRequestStoreSupabase(supabaseClient, eventEmitter);
 
     // Initialize changes listeners with event emitter
     const githubIntegrationChanges = new GitHubIntegrationChangesSupabase(supabaseClient, eventEmitter);
+    const codeShareRequestChanges = new CodeShareRequestChangesSupabase(supabaseClient, eventEmitter);
     const projectRepositoryChanges = new ProjectRepositoryChangesSupabase(supabaseClient, eventEmitter);
     const repositoryCollaboratorChanges = new RepositoryCollaboratorChangesSupabase(supabaseClient, eventEmitter);
 
@@ -64,19 +68,21 @@ export const GithubConnectManagerProvider: React.FC<GithubConnectManagerProvider
     const codeShareApiManager = new CodeShareApiManager(supabaseClient, edgeFunctionUrl);
 
     // Create CodeShareManager
-    console.debug('Instantiating CodeShareManager in dashboard');
+    console.debug('Instantiating CodeShareManager in customer dashboard');
     return new CodeShareManager(
       userProfile,
       githubIntegrationStore,
+      codeShareRequestStore,
       projectRepositoryStore,
       repositoryCollaboratorStore,
       githubIntegrationChanges,
+      codeShareRequestChanges,
       projectRepositoryChanges,
       repositoryCollaboratorChanges,
       codeShareApiManager,
       githubClientId
     );
-  }, [supabaseClient, supabaseUrl, userProfile.id, githubClientId]);
+  }, [supabaseUrl, supabaseClient, userProfile, githubClientId]);
 
   const contextValue: GithubConnectManagerContextType = useMemo(() => ({
     userProfile,

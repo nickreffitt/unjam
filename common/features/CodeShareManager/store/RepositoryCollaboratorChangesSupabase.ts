@@ -11,7 +11,7 @@ import { type CodeShareEventEmitter } from '../events';
 export class RepositoryCollaboratorChangesSupabase implements RepositoryCollaboratorChanges {
   private supabaseClient: SupabaseClient;
   private eventEmitter: CodeShareEventEmitter;
-  private customerId?: string;
+  private profileId?: string;
   private channel: RealtimeChannel | null = null;
   private readonly tableName: string = 'repository_collaborators';
 
@@ -32,32 +32,31 @@ export class RepositoryCollaboratorChangesSupabase implements RepositoryCollabor
 
   /**
    * Starts listening for repository collaborator changes
-   * Sets up a realtime subscription for the customer's collaborators
-   * @param customerId - The customer ID to filter updates for
+   * Sets up a realtime subscription for the profile's collaborators
+   * @param profileId - The profile ID (customer or engineer) to filter updates for
    */
-  async start(customerId: string): Promise<void> {
-    console.debug(`RepositoryCollaboratorChangesSupabase: start(${customerId})`);
-    if (!customerId) {
-      throw new Error('RepositoryCollaboratorChangesSupabase: customerId is required');
+  async start(profileId: string): Promise<void> {
+    console.debug(`RepositoryCollaboratorChangesSupabase: start(${profileId})`);
+    if (!profileId) {
+      throw new Error('RepositoryCollaboratorChangesSupabase: profileId is required');
     }
-    this.customerId = customerId;
+    this.profileId = profileId;
 
     if (this.channel) {
       console.debug('RepositoryCollaboratorChangesSupabase: Already listening for changes');
       return;
     }
 
-    console.debug(`RepositoryCollaboratorChangesSupabase: Starting listener for customer ${this.customerId}`);
+    console.debug(`RepositoryCollaboratorChangesSupabase: Starting listener for profile ${this.profileId}`);
 
     // Set auth for realtime authorization
     const session = await this.supabaseClient.auth.getSession();
     await this.supabaseClient.realtime.setAuth(session.data.session?.access_token ?? null);
 
-    // Subscribe to repository collaborator broadcast channel for this customer
-    // Note: filtering is done in the handler since repository_collaborators doesn't have customer_id
-    // We'll need to join through tickets to filter by customer
+    // Subscribe to repository collaborator broadcast channel for this profile
+    // The trigger broadcasts to both customer and engineer channels
     this.channel = this.supabaseClient
-      .channel(`repository-collaborators-${customerId}`, {
+      .channel(`repository-collaborators-${profileId}`, {
         config: { private: true },
       })
       .on('broadcast', { event: 'INSERT' }, (payload) => {
@@ -118,15 +117,21 @@ export class RepositoryCollaboratorChangesSupabase implements RepositoryCollabor
 
   /**
    * Handles collaborator delete events
-   * Emits the appropriate event with the collaborator ID
+   * Emits the appropriate event with the collaborator ID and engineer ID
    */
   private handleCollaboratorDelete(row: Record<string, unknown>): void {
     try {
+      console.debug('RepositoryCollaboratorChangesSupabase: handleCollaboratorDelete row:', row);
       const collaboratorId = row.id as string;
+      const engineerId = row.engineer_id as string;
+      console.debug('RepositoryCollaboratorChangesSupabase: Extracted collaboratorId:', collaboratorId, 'engineerId:', engineerId);
       if (!collaboratorId) {
         throw new Error('Collaborator ID is required for delete event');
       }
-      this.eventEmitter.emitRepositoryCollaboratorDeleted(collaboratorId);
+      if (!engineerId) {
+        throw new Error('Engineer ID is required for delete event');
+      }
+      this.eventEmitter.emitRepositoryCollaboratorDeleted(collaboratorId, engineerId);
     } catch (error) {
       console.error('RepositoryCollaboratorChangesSupabase: Error handling collaborator delete:', error);
     }

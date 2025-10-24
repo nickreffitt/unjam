@@ -13,19 +13,12 @@ export interface RepositoryCollaboratorStore {
   getById(id: string): Promise<RepositoryCollaborator | null>;
 
   /**
-   * Gets a collaborator by ticket ID and repository ID
-   * @param ticketId - The ticket ID
+   * Gets a collaborator by repository ID and engineer ID
    * @param repositoryId - The repository ID
+   * @param engineerId - The engineer ID
    * @returns The repository collaborator if found, null otherwise
    */
-  getByTicket(ticketId: string, repositoryId: string): Promise<RepositoryCollaborator | null>;
-
-  /**
-   * Gets all collaborators for a ticket
-   * @param ticketId - The ticket ID
-   * @returns Array of repository collaborators
-   */
-  getAllByTicketId(ticketId: string): Promise<RepositoryCollaborator[]>;
+  getByRepositoryAndEngineer(repositoryId: string, engineerId: string): Promise<RepositoryCollaborator | null>;
 
   /**
    * Gets all active (not removed) collaborators for a repository

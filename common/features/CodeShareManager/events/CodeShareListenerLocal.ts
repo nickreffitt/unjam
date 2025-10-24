@@ -67,7 +67,7 @@ export class CodeShareListenerLocal implements CodeShareListener {
         return;
       }
 
-      const { type, integration, customerId, repository, repositoryId, collaborator, collaboratorId } = eventData;
+      const { type, integration, customerId, repository, repositoryId, collaborator, collaboratorId, engineerId } = eventData;
 
       // Deserialize Date objects if present
       let deserializedIntegration = integration;
@@ -170,21 +170,30 @@ export class CodeShareListenerLocal implements CodeShareListener {
             }
           }
           break;
-        case 'repositoryCollaboratorRemoved':
-          if (this.callbacks.onRepositoryCollaboratorRemoved && deserializedCollaborator) {
+        case 'repositoryCollaboratorDeleted':
+          if (this.callbacks.onRepositoryCollaboratorDeleted && collaboratorId && engineerId) {
             try {
-              this.callbacks.onRepositoryCollaboratorRemoved(deserializedCollaborator);
+              this.callbacks.onRepositoryCollaboratorDeleted(collaboratorId, engineerId);
             } catch (error) {
-              console.error('CodeShareListenerLocal: Error in onRepositoryCollaboratorRemoved:', error);
+              console.error('CodeShareListenerLocal: Error in onRepositoryCollaboratorDeleted:', error);
             }
           }
           break;
-        case 'repositoryCollaboratorDeleted':
-          if (this.callbacks.onRepositoryCollaboratorDeleted && collaboratorId) {
+        case 'codeShareRequestCreated':
+          if (this.callbacks.onCodeShareRequestCreated && eventData.request) {
             try {
-              this.callbacks.onRepositoryCollaboratorDeleted(collaboratorId);
+              this.callbacks.onCodeShareRequestCreated(eventData.request);
             } catch (error) {
-              console.error('CodeShareListenerLocal: Error in onRepositoryCollaboratorDeleted:', error);
+              console.error('CodeShareListenerLocal: Error in onCodeShareRequestCreated:', error);
+            }
+          }
+          break;
+        case 'codeShareRequestUpdated':
+          if (this.callbacks.onCodeShareRequestUpdated && eventData.request) {
+            try {
+              this.callbacks.onCodeShareRequestUpdated(eventData.request);
+            } catch (error) {
+              console.error('CodeShareListenerLocal: Error in onCodeShareRequestUpdated:', error);
             }
           }
           break;

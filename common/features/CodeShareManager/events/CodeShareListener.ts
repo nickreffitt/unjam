@@ -1,4 +1,4 @@
-import { type GitHubIntegration, type ProjectRepository, type RepositoryCollaborator } from '@common/types';
+import { type GitHubIntegration, type ProjectRepository, type RepositoryCollaborator, type CodeShareRequest } from '@common/types';
 
 /**
  * Interface for objects that listen to code share store events
@@ -52,18 +52,25 @@ export interface CodeShareListenerCallbacks {
    * @param collaborator - The updated repository collaborator
    */
   onRepositoryCollaboratorUpdated?(collaborator: RepositoryCollaborator): void;
-
-  /**
-   * Called when a repository collaborator is removed
-   * @param collaborator - The removed repository collaborator
-   */
-  onRepositoryCollaboratorRemoved?(collaborator: RepositoryCollaborator): void;
-
+  
   /**
    * Called when a repository collaborator is deleted
    * @param collaboratorId - The ID of the deleted collaborator
+   * @param engineerId - The engineer ID from the deleted collaborator
    */
-  onRepositoryCollaboratorDeleted?(collaboratorId: string): void;
+  onRepositoryCollaboratorDeleted?(collaboratorId: string, engineerId: string): void;
+
+  /**
+   * Called when a code share request is created
+   * @param request - The newly created code share request
+   */
+  onCodeShareRequestCreated?(request: CodeShareRequest): void;
+
+  /**
+   * Called when a code share request is updated
+   * @param request - The updated code share request
+   */
+  onCodeShareRequestUpdated?(request: CodeShareRequest): void;
 }
 
 /**

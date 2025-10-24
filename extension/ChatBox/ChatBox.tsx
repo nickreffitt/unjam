@@ -9,6 +9,7 @@ import GitHubShare from '@extension/GitHubShare/GitHubShare';
 import { useChatState } from '@extension/ChatBox/hooks/useChatState';
 import { useChatActions } from '@extension/ChatBox/hooks/useChatActions';
 import { useScreenShareState } from '@extension/ScreenShare/hooks';
+import { useGitHubShareState } from '@extension/GitHubShare/hooks/useGitHubShareState';
 
 interface ChatBoxProps {
   ticketId: string;
@@ -31,6 +32,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ ticketId, engineerName, 
   const { messages, chatManager, refreshMessages, isTyping, typingUser, triggerTypingIndicator } = useChatState(ticketId, engineerProfile, messagesEndRef);
   const { inputValue, handleSendMessage, handleKeyPress, handleInputChange, injectEngineerMessage } = useChatActions(ticketId, chatManager, refreshMessages);
   const { activeRequest } = useScreenShareState(ticketId);
+  const { activeRequest: codeShareRequest } = useGitHubShareState();
 
   // Expose functions via ref (same pattern as dashboard)
   useImperativeHandle(ref, () => ({
@@ -43,7 +45,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ ticketId, engineerName, 
   const rating = 5.0;
 
   return (
-    <div data-testid="chat-box" className={`unjam-w-120 unjam-h-[450px] unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-bg-blue-50 unjam-flex unjam-flex-col unjam-z-50 unjam-font-sans ${className}`}>
+    <div data-testid="chat-box" className={`unjam-w-80 unjam-h-[450px] unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-bg-blue-50 unjam-flex unjam-flex-col unjam-z-50 unjam-font-sans ${className}`}>
       {/* Chat Header */}
       <ChatHeader
         engineerName={engineerName}
@@ -73,6 +75,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ ticketId, engineerName, 
         <ScreenShare
           ticketId={ticketId}
           engineerProfile={engineerProfile}
+          hideWhenCodeShareRequest={codeShareRequest?.status === 'pending' && codeShareRequest?.sender.type === 'engineer'}
         />
         <GitHubShare
           hideWhenScreenShareRequest={activeRequest?.status === 'pending' && activeRequest?.sender.type === 'engineer'}

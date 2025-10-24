@@ -67,7 +67,7 @@ const CreditSuccess: React.FC = () => {
           {/* Action Buttons */}
           <div className="unjam-flex unjam-flex-col unjam-gap-3">
             <button
-              onClick={() => navigate('/app')}
+              onClick={() => navigate('/onboarding')}
               className="unjam-w-full unjam-px-6 unjam-py-3 unjam-bg-blue-600 unjam-text-white unjam-font-medium unjam-rounded-lg hover:unjam-bg-blue-700 unjam-transition-colors"
             >
               Go to Dashboard

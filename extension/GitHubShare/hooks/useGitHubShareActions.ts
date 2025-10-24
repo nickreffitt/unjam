@@ -7,6 +7,9 @@ import { type UseGitHubShareStateReturn } from './useGitHubShareState';
 export interface UseGitHubShareActionsReturn {
   handleShareCodeClick: () => Promise<void>;
   handleLinkRepository: (githubRepoUrl: string) => Promise<void>;
+  handleStopSharing: () => Promise<void>;
+  handleAcceptRequest: () => Promise<void>;
+  handleRejectRequest: () => Promise<void>;
 }
 
 export const useGitHubShareActions = (
@@ -21,7 +24,13 @@ export const useGitHubShareActions = (
     setIsRepoLinkModalOpen,
     setPlatformData,
     setIsLinkingRepo,
-    activeTicket
+    setIsSharingCode,
+    setIsStoppingShare,
+    activeTicket,
+    activeCollaborator,
+    activeRequest,
+    setActiveRequest,
+    refreshCollaborator
   } = githubShareState;
 
   /**
@@ -79,12 +88,14 @@ export const useGitHubShareActions = (
 
       if (existingRepo) {
         // Auto-invite engineer (no prompts)
+        setIsSharingCode(true);
         try {
           await codeShareManager.inviteCollaborator(
             existingRepo.id,
-            activeTicket.id,
-            activeTicket.assignedTo.githubUsername
+            activeTicket,
           );
+          // Refresh the collaborator state
+          await refreshCollaborator();
           onSuccess(`Engineer ${activeTicket.assignedTo.name} invited to repository`);
         } catch (error) {
           console.error('Failed to invite collaborator:', error);
@@ -92,6 +103,8 @@ export const useGitHubShareActions = (
             title: 'Failed to Invite Engineer',
             message: error instanceof Error ? error.message : 'Could not invite engineer to repository. Please try again.'
           });
+        } finally {
+          setIsSharingCode(false);
         }
         return;
       }
@@ -106,16 +119,7 @@ export const useGitHubShareActions = (
         message: error instanceof Error ? error.message : 'An unexpected error occurred.'
       });
     }
-  }, [
-    activeTicket,
-    githubIntegration,
-    codeShareManager,
-    onSuccess,
-    onError,
-    setIsAuthModalOpen,
-    setIsRepoLinkModalOpen,
-    setPlatformData
-  ]);
+  }, [activeTicket, githubIntegration, codeShareManager, setPlatformData, setIsRepoLinkModalOpen, onError, setIsAuthModalOpen, setIsSharingCode, refreshCollaborator, onSuccess]);
 
   /**
    * Handle repository link submission from modal
@@ -140,18 +144,17 @@ export const useGitHubShareActions = (
 
     setIsLinkingRepo(true);
     try {
-      // Validate repository first
-      await codeShareManager.validateRepository(githubRepoUrl);
-
       // Create repository mapping and invite engineer
       await codeShareManager.createRepositoryAndInvite(
         platformInfo.externalProjectUrl,
         platformInfo.platformName,
         platformInfo.projectId,
         githubRepoUrl,
-        activeTicket.id,
-        activeTicket.assignedTo.githubUsername
+        activeTicket
       );
+
+      // Refresh the collaborator state
+      await refreshCollaborator();
 
       // Success
       onSuccess(`Repository linked and engineer ${activeTicket.assignedTo.name} invited`);
@@ -169,11 +172,114 @@ export const useGitHubShareActions = (
     onSuccess,
     onError,
     setIsRepoLinkModalOpen,
-    setIsLinkingRepo
+    setIsLinkingRepo,
+    refreshCollaborator
   ]);
+
+  /**
+   * Handle stop sharing button click
+   * Removes the active collaborator from the repository
+   */
+  const handleStopSharing = useCallback(async () => {
+    if (!activeTicket || !activeCollaborator) {
+      onError({
+        title: 'Invalid State',
+        message: 'No active collaboration to stop.'
+      });
+      return;
+    }
+
+    setIsStoppingShare(true);
+    try {
+      await codeShareManager.removeCollaborator(
+        activeCollaborator.repositoryId,
+        activeTicket
+      );
+
+      // Refresh the collaborator state
+      await refreshCollaborator();
+
+      onSuccess(`Engineer ${activeTicket.assignedTo?.name} removed from repository`);
+    } catch (error) {
+      console.error('Failed to remove collaborator:', error);
+      onError({
+        title: 'Failed to Stop Sharing',
+        message: error instanceof Error ? error.message : 'Could not remove engineer from repository. Please try again.'
+      });
+    } finally {
+      setIsStoppingShare(false);
+    }
+  }, [activeTicket, activeCollaborator, codeShareManager, refreshCollaborator, onSuccess, onError, setIsStoppingShare]);
+
+  /**
+   * Handle accepting a code share request
+   * Follows the same flow as clicking "Share Code" button, then marks request as accepted
+   */
+  const handleAcceptRequest = useCallback(async () => {
+    if (!activeRequest) {
+      onError({
+        title: 'Invalid State',
+        message: 'No active request to accept.'
+      });
+      return;
+    }
+
+    const requestId = activeRequest.id;
+
+    // Clear the active request and set loading state immediately to switch UI
+    setActiveRequest(null);
+    setIsSharingCode(true);
+
+    try {
+      // Call the same flow as "Share Code"
+      await handleShareCodeClick();
+
+      // After successful share, update request status to accepted
+      await codeShareManager.updateCodeShareRequestStatus(requestId, 'accepted');
+      console.debug('Code share request accepted:', requestId);
+    } catch (error) {
+      console.error('Failed to accept request:', error);
+      // Error handling is already done in handleShareCodeClick
+    }
+  }, [activeRequest, setActiveRequest, setIsSharingCode, codeShareManager, handleShareCodeClick, onError]);
+
+  /**
+   * Handle rejecting a code share request
+   */
+  const handleRejectRequest = useCallback(async () => {
+    if (!activeRequest) {
+      onError({
+        title: 'Invalid State',
+        message: 'No active request to reject.'
+      });
+      return;
+    }
+
+    const requestId = activeRequest.id;
+
+    // Clear the active request immediately to switch UI to loading state
+    setActiveRequest(null);
+    setIsSharingCode(true); 
+
+    try {
+      await codeShareManager.updateCodeShareRequestStatus(requestId, 'rejected');
+      onSuccess(`Code share request rejected`);
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      onError({
+        title: 'Failed to Reject Request',
+        message: error instanceof Error ? error.message : 'Could not reject code share request. Please try again.'
+      });
+    } finally {
+      setIsSharingCode(false);
+    }
+  }, [activeRequest, setActiveRequest, setIsSharingCode, onError, codeShareManager, onSuccess]);
 
   return {
     handleShareCodeClick,
-    handleLinkRepository
+    handleLinkRepository,
+    handleStopSharing,
+    handleAcceptRequest,
+    handleRejectRequest
   };
 };

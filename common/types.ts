@@ -81,8 +81,9 @@ export type CodeShareEventType =
   | 'projectRepositoryDeleted'
   | 'repositoryCollaboratorCreated'
   | 'repositoryCollaboratorUpdated'
-  | 'repositoryCollaboratorRemoved'
-  | 'repositoryCollaboratorDeleted';
+  | 'repositoryCollaboratorDeleted'
+  | 'codeShareRequestCreated'
+  | 'codeShareRequestUpdated';
 
 export interface ErrorDisplay {
   title: string;
@@ -104,13 +105,25 @@ export type ScreenShareStatus = 'pending' | 'accepted' | 'rejected' | 'expired' 
 export interface ScreenShareRequest {
   id: string;
   ticketId: string;
-  sender: UserProfile; 
+  sender: UserProfile;
   receiver: UserProfile;
   status: ScreenShareStatus;
   createdAt: Date;
   updatedAt: Date;
   expiresAt: Date; // Request expires after 10 seconds
   autoAccept?: boolean; // True if engineer initiated and should auto-accept
+}
+
+export type CodeShareStatus = 'pending' | 'accepted' | 'rejected' | 'expired';
+
+export interface CodeShareRequest {
+  id: string;
+  sender: UserProfile;
+  receiver: UserProfile;
+  status: CodeShareStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date; // Request expires after 5 seconds
 }
 
 export type SessionStatus = 'initializing' | 'active' | 'ended' | 'error' | 'disconnected';
@@ -298,6 +311,28 @@ export interface EngineerAccountEvent {
 export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent | CheckoutSessionEvent;
 export type BillingEngineerEvent = EngineerAccountEvent;
 
+// GitHub Webhook Event types
+export interface CollaboratorRemovedEvent {
+  repositoryId: number;
+  repositoryFullName: string;
+  repositoryOwner: string;
+  repositoryName: string;
+  collaboratorId: number;
+  collaboratorLogin: string;
+}
+
+export interface RepositoryDeletedEvent {
+  repositoryId: number;
+  repositoryFullName: string;
+  repositoryOwner: string;
+  repositoryName: string;
+}
+
+export type GitHubWebhookEvent =
+  | { collaboratorRemoved: CollaboratorRemovedEvent }
+  | { repositoryDeleted: RepositoryDeletedEvent };
+
+
 // Billing Credits API types
 export interface CreditBalanceRequest {
   profile_id: string;
@@ -384,7 +419,6 @@ export interface ProjectRepository {
 
 export interface RepositoryCollaborator {
   id: string;
-  ticketId: string;
   repositoryId: string;
   engineerId: string;
   githubUsername: string;

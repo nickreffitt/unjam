@@ -21,6 +21,14 @@ export interface ProjectRepositoryStore {
   getByCustomerAndExternalUrl(customerId: string, externalProjectUrl: string): Promise<ProjectRepository | null>;
 
   /**
+   * Gets a project repository by GitHub owner and repository name
+   * @param owner - The GitHub repository owner
+   * @param repo - The GitHub repository name
+   * @returns The project repository if found, null otherwise
+   */
+  getByGitHubRepo(owner: string, repo: string): Promise<ProjectRepository | null>;
+
+  /**
    * Gets all repositories for a customer
    * @param customerId - The customer profile ID
    * @returns Array of project repositories

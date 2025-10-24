@@ -48,6 +48,8 @@ const RepoLinkModal: React.FC<RepoLinkModalProps> = ({
       return;
     }
 
+    console.debug(`About to submit url: ${trimmedUrl}`)
+
     setIsSubmitting(true);
     try {
       await onSubmit(trimmedUrl);

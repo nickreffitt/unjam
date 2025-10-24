@@ -66,6 +66,30 @@ export class ProjectRepositoryStoreSupabase implements ProjectRepositoryStore {
   }
 
   /**
+   * Gets a project repository by GitHub owner and repository name
+   * @param owner - The GitHub repository owner
+   * @param repo - The GitHub repository name
+   * @returns The project repository if found, null otherwise
+   */
+  async getByGitHubRepo(owner: string, repo: string): Promise<ProjectRepository | null> {
+    console.debug('ProjectRepositoryStoreSupabase: Getting repository by GitHub owner/repo:', owner, repo);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select('*')
+      .eq('github_owner', owner)
+      .eq('github_repo', repo)
+      .maybeSingle();
+
+    if (error) {
+      console.error('ProjectRepositoryStoreSupabase: Get by GitHub repo failed:', error);
+      throw new Error(`Failed to get project repository: ${error.message}`);
+    }
+
+    return data ? GitHubSupabaseRowMapper.mapRowToProjectRepository(data) : null;
+  }
+
+  /**
    * Gets all repositories for a customer
    * @param customerId - The customer profile ID
    * @returns Array of project repositories

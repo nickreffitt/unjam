@@ -1,7 +1,8 @@
 import {
   type GitHubIntegration,
   type ProjectRepository,
-  type RepositoryCollaborator
+  type RepositoryCollaborator,
+  type CodeShareRequest
 } from '@common/types';
 
 /**
@@ -58,14 +59,27 @@ export interface CodeShareEventEmitter {
   emitRepositoryCollaboratorUpdated(collaborator: RepositoryCollaborator): void;
 
   /**
-   * Emits a repository collaborator removed event
-   * @param collaborator - The removed repository collaborator
-   */
-  emitRepositoryCollaboratorRemoved(collaborator: RepositoryCollaborator): void;
-
-  /**
    * Emits a repository collaborator deleted event
    * @param collaboratorId - The ID of the deleted collaborator
+   * @param engineerId - The engineer ID from the deleted collaborator
    */
-  emitRepositoryCollaboratorDeleted(collaboratorId: string): void;
+  emitRepositoryCollaboratorDeleted(collaboratorId: string, engineerId: string): void;
+
+  /**
+   * Emits a code share request created event
+   * @param request - The created code share request
+   */
+  emitCodeShareRequestCreated(request: CodeShareRequest): void;
+
+  /**
+   * Emits a code share request updated event
+   * @param request - The updated code share request
+   */
+  emitCodeShareRequestUpdated(request: CodeShareRequest): void;
+
+  /**
+   * Emits a code share request deleted event
+   * @param requestId - The ID of the deleted code share request
+   */
+  emitCodeShareRequestDeleted(requestId: string): void;
 }

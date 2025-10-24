@@ -19,7 +19,7 @@ const GitHubAuthModal: React.FC<GitHubAuthModalProps> = ({
   };
 
   const handleGoToDashboard = () => {
-    const dashboardUrl = `${import.meta.env.VITE_APP_URL}/app/connect-github`;
+    const dashboardUrl = `${import.meta.env.VITE_APP_URL}/app/github/connect`;
     window.open(dashboardUrl, '_blank');
     onClose();
   };

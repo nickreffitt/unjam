@@ -1,4 +1,6 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
+import { type Ticket } from '@common/types';
+
 
 /**
  * Response from OAuth callback endpoint
@@ -29,7 +31,6 @@ export interface InviteCollaboratorResponse {
   success: boolean;
   collaborator: {
     id: string;
-    ticketId: string;
     repositoryId: string;
     engineerId: string;
     githubUsername: string;
@@ -102,8 +103,8 @@ export class CodeShareApiManager {
    * @returns Validation response with owner and repo extracted
    * @throws Error if the request fails or repository is invalid
    */
-  async validateRepository(githubRepoUrl: string): Promise<ValidateRepositoryResponse> {
-    console.info(`[CodeShareApiManager] Validating repository: ${githubRepoUrl}`);
+  async validateRepository(githubRepoUrl: string, customerId: string): Promise<ValidateRepositoryResponse> {
+    console.info(`[CodeShareApiManager] Validating repository: ${githubRepoUrl} with customerId: ${customerId}`);
 
     try {
       const response = await this.makeAuthenticatedRequest<ValidateRepositoryResponse>(
@@ -111,14 +112,15 @@ export class CodeShareApiManager {
         {
           action_type: 'validate_repository',
           payload: {
-            github_repo_url: githubRepoUrl
+            github_repo_url: githubRepoUrl,
+            customer_id: customerId
           }
         },
         'Failed to validate repository'
       );
 
       console.info(`[CodeShareApiManager] Repository validation result: ${response.valid}`);
-      return response;
+      return response;  
 
     } catch (err) {
       const error = err as Error;
@@ -130,18 +132,16 @@ export class CodeShareApiManager {
   /**
    * Invites an engineer as a collaborator to a GitHub repository
    * @param repositoryId - The project repository ID
-   * @param ticketId - The ticket ID
-   * @param engineerGithubUsername - Engineer's GitHub username
+   * @param ticket - The active ticket
    * @returns Invite response with collaborator details
    * @throws Error if the request fails or invite cannot be sent
    */
   async inviteCollaborator(
     repositoryId: string,
-    ticketId: string,
-    engineerGithubUsername: string
+    ticket: Ticket,
   ): Promise<InviteCollaboratorResponse> {
     console.info(
-      `[CodeShareApiManager] Inviting collaborator ${engineerGithubUsername} to repository ${repositoryId}`
+      `[CodeShareApiManager] Inviting collaborator ${ticket.assignedTo?.githubUsername} to repository ${repositoryId}`
     );
 
     try {
@@ -150,9 +150,10 @@ export class CodeShareApiManager {
         {
           action_type: 'invite_collaborator',
           payload: {
+            customer_id: ticket.createdBy.id,
             repository_id: repositoryId,
-            ticket_id: ticketId,
-            engineer_github_username: engineerGithubUsername
+            engineer_id: ticket.assignedTo?.id,
+            engineer_github_username: ticket.assignedTo?.githubUsername
           }
         },
         'Failed to invite collaborator'
@@ -171,18 +172,16 @@ export class CodeShareApiManager {
   /**
    * Removes an engineer as a collaborator from a GitHub repository
    * @param repositoryId - The project repository ID
-   * @param ticketId - The ticket ID
-   * @param engineerGithubUsername - Engineer's GitHub username
+   * @param ticket - The active ticket
    * @returns Remove response
    * @throws Error if the request fails or removal cannot be processed
    */
   async removeCollaborator(
     repositoryId: string,
-    ticketId: string,
-    engineerGithubUsername: string
+    ticket: Ticket,
   ): Promise<RemoveCollaboratorResponse> {
     console.info(
-      `[CodeShareApiManager] Removing collaborator ${engineerGithubUsername} from repository ${repositoryId}`
+      `[CodeShareApiManager] Removing collaborator ${ticket.assignedTo?.githubUsername} from repository ${repositoryId}`
     );
 
     try {
@@ -191,9 +190,10 @@ export class CodeShareApiManager {
         {
           action_type: 'remove_collaborator',
           payload: {
+            customer_id: ticket.createdBy.id,
             repository_id: repositoryId,
-            ticket_id: ticketId,
-            engineer_github_username: engineerGithubUsername
+            engineer_id: ticket.assignedTo?.id,
+            engineer_github_username: ticket.assignedTo?.githubUsername
           }
         },
         'Failed to remove collaborator'

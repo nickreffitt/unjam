@@ -1,0 +1,14 @@
+{
+  "imports": {
+    "stripe": "npm:stripe@19",
+    "supabase": "npm:@supabase/supabase-js@2",
+    "octokit": "npm:octokit@5",
+    "server": "https://deno.land/std@0.168.0/http/server.ts",
+    "@types": "../../../common/types.ts",
+    "@supabase-types": "../../../common/supabase.types.ts",
+    "@events/": "../_shared/events/",
+    "@services/": "../_shared/services/",
+    "@stores/": "../_shared/stores/",
+    "@util/": "../_shared/util/"
+  }
+}

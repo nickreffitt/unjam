@@ -6,9 +6,9 @@ export interface ProjectRepositoryChanges {
   /**
    * Starts listening for project repository changes
    * Should set up subscriptions to receive real-time changes
-   * @param customerId - The customer ID to filter updates for
+   * @param profileId - The profile ID (customer or engineer) to filter updates for
    */
-  start(customerId: string): Promise<void>;
+  start(profileId: string): Promise<void>;
 
   /**
    * Stops listening for project repository changes

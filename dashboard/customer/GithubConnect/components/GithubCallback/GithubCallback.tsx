@@ -32,7 +32,7 @@ const GithubCallback: React.FC = () => {
         setStatus('success');
         // Redirect to github connect page after 2 seconds
         setTimeout(() => {
-          navigate('/github-connect');
+          navigate('/');
         }, 2000);
       } else {
         setStatus('error');

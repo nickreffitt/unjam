@@ -2,6 +2,7 @@ import {
   type GitHubIntegration,
   type ProjectRepository,
   type RepositoryCollaborator,
+  type CodeShareRequest,
   type CodeShareEventType
 } from '@common/types';
 import { type CodeShareEventEmitter } from './CodeShareEventEmitter';
@@ -80,19 +81,36 @@ export class CodeShareEventEmitterLocal implements CodeShareEventEmitter {
   }
 
   /**
-   * Emits a repository collaborator removed event
-   * @param collaborator - The removed repository collaborator
+   * Emits a repository collaborator deleted event
+   * @param collaboratorId - The ID of the deleted collaborator
+   * @param engineerId - The engineer ID from the deleted collaborator
    */
-  emitRepositoryCollaboratorRemoved(collaborator: RepositoryCollaborator): void {
-    this.emitWindowEvent('repositoryCollaboratorRemoved', { collaborator });
+  emitRepositoryCollaboratorDeleted(collaboratorId: string, engineerId: string): void {
+    this.emitWindowEvent('repositoryCollaboratorDeleted', { collaboratorId, engineerId });
   }
 
   /**
-   * Emits a repository collaborator deleted event
-   * @param collaboratorId - The ID of the deleted collaborator
+   * Emits a code share request created event
+   * @param request - The created code share request
    */
-  emitRepositoryCollaboratorDeleted(collaboratorId: string): void {
-    this.emitWindowEvent('repositoryCollaboratorDeleted', { collaboratorId });
+  emitCodeShareRequestCreated(request: CodeShareRequest): void {
+    this.emitWindowEvent('codeShareRequestCreated', { request });
+  }
+
+  /**
+   * Emits a code share request updated event
+   * @param request - The updated code share request
+   */
+  emitCodeShareRequestUpdated(request: CodeShareRequest): void {
+    this.emitWindowEvent('codeShareRequestUpdated', { request });
+  }
+
+  /**
+   * Emits a code share request deleted event
+   * @param requestId - The ID of the deleted code share request
+   */
+  emitCodeShareRequestDeleted(requestId: string): void {
+    this.emitWindowEvent('codeShareRequestDeleted', { requestId });
   }
 
   /**

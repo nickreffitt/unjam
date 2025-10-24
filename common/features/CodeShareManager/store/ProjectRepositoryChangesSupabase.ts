@@ -18,7 +18,7 @@ export interface ProjectRepositoryEventEmitter {
 export class ProjectRepositoryChangesSupabase implements ProjectRepositoryChanges {
   private supabaseClient: SupabaseClient;
   private eventEmitter: ProjectRepositoryEventEmitter;
-  private customerId?: string;
+  private profileId?: string;
   private channel: RealtimeChannel | null = null;
   private readonly tableName: string = 'project_repositories';
 
@@ -39,52 +39,47 @@ export class ProjectRepositoryChangesSupabase implements ProjectRepositoryChange
 
   /**
    * Starts listening for project repository changes
-   * Sets up a realtime subscription for the customer's repositories
-   * @param customerId - The customer ID to filter updates for
+   * Sets up a realtime subscription for the profile's repositories
+   * @param profileId - The profile ID (customer or engineer) to filter updates for
    */
-  async start(customerId: string): Promise<void> {
-    console.debug(`ProjectRepositoryChangesSupabase: start(${customerId})`);
-    if (!customerId) {
-      throw new Error('ProjectRepositoryChangesSupabase: customerId is required');
+  async start(profileId: string): Promise<void> {
+    console.debug(`ProjectRepositoryChangesSupabase: start(${profileId})`);
+    if (!profileId) {
+      throw new Error('ProjectRepositoryChangesSupabase: profileId is required');
     }
-    this.customerId = customerId;
+    this.profileId = profileId;
 
     if (this.channel) {
       console.debug('ProjectRepositoryChangesSupabase: Already listening for changes');
       return;
     }
 
-    console.debug(`ProjectRepositoryChangesSupabase: Starting listener for customer ${this.customerId}`);
+    console.debug(`ProjectRepositoryChangesSupabase: Starting listener for profile ${this.profileId}`);
 
     // Set auth for realtime authorization
     const session = await this.supabaseClient.auth.getSession();
     await this.supabaseClient.realtime.setAuth(session.data.session?.access_token ?? null);
 
-    // Subscribe to project repository broadcast channel for this customer
+    // Subscribe to project repository broadcast channel for this profile
+    // The trigger broadcasts to both customer and engineer (collaborator) channels
     this.channel = this.supabaseClient
-      .channel(`project-repositories-${customerId}`, {
+      .channel(`project-repositories-${profileId}`, {
         config: { private: true },
       })
       .on('broadcast', { event: 'INSERT' }, (payload) => {
         console.debug('ProjectRepositoryChangesSupabase: Repository created:', payload);
         const record = payload.payload.record as Record<string, unknown>;
-        if (record.customer_id === customerId) {
-          this.handleRepositoryInsert(record);
-        }
+        this.handleRepositoryInsert(record);
       })
       .on('broadcast', { event: 'UPDATE' }, (payload) => {
         console.debug('ProjectRepositoryChangesSupabase: Repository updated:', payload);
         const record = payload.payload.record as Record<string, unknown>;
-        if (record.customer_id === customerId) {
-          this.handleRepositoryUpdate(record);
-        }
+        this.handleRepositoryUpdate(record);
       })
       .on('broadcast', { event: 'DELETE' }, (payload) => {
         console.debug('ProjectRepositoryChangesSupabase: Repository deleted:', payload);
         const record = payload.payload.old_record as Record<string, unknown>;
-        if (record.customer_id === customerId) {
-          this.handleRepositoryDelete(record);
-        }
+        this.handleRepositoryDelete(record);
       })
       .subscribe((status, error) => {
         console.debug('ProjectRepositoryChangesSupabase: Channel status:', status, ' error:', error);

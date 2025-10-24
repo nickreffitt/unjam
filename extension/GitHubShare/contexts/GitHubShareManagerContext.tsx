@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { CodeShareManager } from '@common/features/CodeShareManager';
+import { CodeShareManager } from '@common/features/CodeShareManager/CodeShareManager';
 import {
   type GitHubIntegrationStore,
   GitHubIntegrationStoreSupabase,
@@ -9,13 +9,14 @@ import {
   ProjectRepositoryChangesSupabase,
   type RepositoryCollaboratorStore,
   RepositoryCollaboratorStoreSupabase,
-  RepositoryCollaboratorChangesSupabase
+  RepositoryCollaboratorChangesSupabase,
+  CodeShareRequestStoreSupabase
 } from '@common/features/CodeShareManager/store';
 import { CodeShareEventEmitterLocal } from '@common/features/CodeShareManager/events';
 import { CodeShareApiManager } from '@common/features/CodeShareApiManager/CodeShareApiManager';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
 import { useSupabase } from '@extension/shared/contexts/SupabaseContext';
-import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
+import { CodeShareRequestChangesSupabase } from '@common/features/CodeShareManager/store/CodeShareRequestChangesSupabase';
 
 interface GitHubShareManagerContextType {
   codeShareManager: CodeShareManager;
@@ -32,7 +33,6 @@ interface GitHubShareManagerProviderProps {
 
 export const GitHubShareManagerProvider: React.FC<GitHubShareManagerProviderProps> = ({ children }) => {
   const { customerProfile } = useUserProfile();
-  const { ticketManager } = useTicketManager();
   const { supabaseClient, supabaseUrl } = useSupabase();
 
   // Create shared instances using centralized customer profile
@@ -41,16 +41,17 @@ export const GitHubShareManagerProvider: React.FC<GitHubShareManagerProviderProp
       throw new Error('No profile set');
     }
 
-
     const eventEmitter = new CodeShareEventEmitterLocal();
 
     // Create stores
     const githubIntegrationStore = new GitHubIntegrationStoreSupabase(supabaseClient);
+    const codeShareRequestStore = new CodeShareRequestStoreSupabase(supabaseClient, eventEmitter);
     const projectRepositoryStore = new ProjectRepositoryStoreSupabase(supabaseClient);
     const repositoryCollaboratorStore = new RepositoryCollaboratorStoreSupabase(supabaseClient);
 
     // Create changes listeners
     const githubIntegrationChanges = new GitHubIntegrationChangesSupabase(supabaseClient, eventEmitter);
+    const codeShareRequestChanges = new CodeShareRequestChangesSupabase(supabaseClient, eventEmitter);
     const projectRepositoryChanges = new ProjectRepositoryChangesSupabase(supabaseClient, eventEmitter);
     const repositoryCollaboratorChanges = new RepositoryCollaboratorChangesSupabase(supabaseClient, eventEmitter);
 
@@ -66,9 +67,11 @@ export const GitHubShareManagerProvider: React.FC<GitHubShareManagerProviderProp
     const codeShareManager = new CodeShareManager(
       customerProfile,
       githubIntegrationStore,
+      codeShareRequestStore,
       projectRepositoryStore,
       repositoryCollaboratorStore,
       githubIntegrationChanges,
+      codeShareRequestChanges,
       projectRepositoryChanges,
       repositoryCollaboratorChanges,
       apiManager,

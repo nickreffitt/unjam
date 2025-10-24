@@ -12,3 +12,6 @@ export { type RepositoryCollaboratorStore } from './RepositoryCollaboratorStore'
 export { RepositoryCollaboratorStoreSupabase } from './RepositoryCollaboratorStoreSupabase';
 export { type RepositoryCollaboratorChanges } from './RepositoryCollaboratorChanges';
 export { RepositoryCollaboratorChangesSupabase } from './RepositoryCollaboratorChangesSupabase';
+
+export { type CodeShareRequestStore } from './CodeShareRequestStore';
+export { CodeShareRequestStoreSupabase } from './CodeShareRequestStoreSupabase';

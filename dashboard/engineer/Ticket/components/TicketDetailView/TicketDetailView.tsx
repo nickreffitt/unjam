@@ -7,6 +7,7 @@ import TicketStatusBanner from '@dashboard/engineer/Ticket/components/TicketStat
 import ChatBox, { type ChatBoxRef } from '@dashboard/engineer/ChatBox/ChatBox';
 import { ChatManagerProvider } from '@dashboard/engineer/ChatBox/contexts/ChatManagerContext';
 import ScreenShare from '@dashboard/engineer/ScreenShare/components/ScreenShare/ScreenShare';
+import CodeShare from '@dashboard/engineer/CodeShare/components/CodeShare/CodeShare';
 
 interface NotFoundConfig {
   title?: string;
@@ -97,8 +98,17 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
         {/* Ticket Details */}
         <div className="lg:unjam-col-span-2">
           {screenShareActive && ticket.createdBy && (
-            <ScreenShare ticketId={ticket.id} customer={ticket.createdBy} />
+            <div className="unjam-bg-white unjam-rounded-lg unjam-shadow-sm unjam-border unjam-border-gray-200 unjam-p-6 unjam-mb-6">
+              <div className="unjam-flex unjam-gap-3">
+                <ScreenShare ticketId={ticket.id} customer={ticket.createdBy} />
+              </div>
+            </div>
           )}
+          <div className="unjam-bg-white unjam-rounded-lg unjam-shadow-sm unjam-border unjam-border-gray-200 unjam-p-6 unjam-mb-6">
+              <div className="unjam-flex unjam-gap-3">
+                <CodeShare customer={ticket.createdBy} />
+              </div>
+            </div>
           <TicketDetailsCard
             ticket={ticket}
             showAssignedTo={showAssignedTo}

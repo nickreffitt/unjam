@@ -19,7 +19,7 @@ export class ProjectRepositoryStoreSupabase implements ProjectRepositoryStore {
     this.supabaseClient = supabaseClient;
     console.debug('ProjectRepositoryStoreSupabase: Initialized');
   }
-
+  
   /**
    * Creates a new project repository mapping
    * @param repository - The repository to create
@@ -78,7 +78,7 @@ export class ProjectRepositoryStoreSupabase implements ProjectRepositoryStore {
    * @param externalProjectUrl - The external project URL
    * @returns The project repository if found, null otherwise
    */
-  async getByExternalUrl(customerId: string, externalProjectUrl: string): Promise<ProjectRepository | null> {
+  async getByCustomerAndExternalUrl(customerId: string, externalProjectUrl: string): Promise<ProjectRepository | null> {
     console.debug('ProjectRepositoryStoreSupabase: Getting repository for customer:', customerId, 'url:', externalProjectUrl);
 
     const { data, error } = await this.supabaseClient
@@ -91,6 +91,30 @@ export class ProjectRepositoryStoreSupabase implements ProjectRepositoryStore {
     if (error) {
       console.error('ProjectRepositoryStoreSupabase: Get by customer and external URL failed:', error);
       throw new Error(`Failed to get project repository by customer and external URL: ${error.message}`);
+    }
+
+    return data ? GitHubSupabaseRowMapper.mapRowToProjectRepository(data) : null;
+  }
+
+  /**
+   * Gets a project repository by GitHub owner and repository name
+   * @param owner - The GitHub repository owner
+   * @param repo - The GitHub repository name
+   * @returns The project repository if found, null otherwise
+   */
+  async getByGitHubRepo(owner: string, repo: string): Promise<ProjectRepository | null> {
+    console.debug('ProjectRepositoryStoreSupabase: Getting repository by GitHub owner/repo:', owner, repo);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select('*')
+      .eq('github_owner', owner)
+      .eq('github_repo', repo)
+      .maybeSingle();
+
+    if (error) {
+      console.error('ProjectRepositoryStoreSupabase: Get by GitHub repo failed:', error);
+      throw new Error(`Failed to get project repository: ${error.message}`);
     }
 
     return data ? GitHubSupabaseRowMapper.mapRowToProjectRepository(data) : null;
@@ -116,6 +140,60 @@ export class ProjectRepositoryStoreSupabase implements ProjectRepositoryStore {
     }
 
     return data.map(row => GitHubSupabaseRowMapper.mapRowToProjectRepository(row));
+  }
+
+  /**
+   * Creates or updates a project repository mapping
+   * @param repository - The repository data
+   * @returns The created/updated project repository
+   */
+  async upsert(repository: Omit<ProjectRepository, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProjectRepository> {
+    console.debug('ProjectRepositoryStoreSupabase: Upserting repository:', repository);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .upsert(
+        {
+          customer_id: repository.customerId,
+          external_project_url: repository.externalProjectUrl,
+          external_platform: repository.externalPlatform,
+          external_project_id: repository.externalProjectId,
+          github_repo_url: repository.githubRepoUrl,
+          github_owner: repository.githubOwner,
+          github_repo: repository.githubRepo
+        },
+        {
+          onConflict: 'customer_id,external_project_url',
+          ignoreDuplicates: false
+        }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.error('ProjectRepositoryStoreSupabase: Upsert failed:', error);
+      throw new Error(`Failed to upsert project repository: ${error.message}`);
+    }
+
+    return GitHubSupabaseRowMapper.mapRowToProjectRepository(data);
+  }
+
+  /**
+   * Deletes a project repository by ID
+   * @param id - The repository ID
+   */
+  async delete(id: string): Promise<void> {
+    console.debug('ProjectRepositoryStoreSupabase: Deleting repository:', id);
+
+    const { error } = await this.supabaseClient
+      .from(this.tableName)
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('ProjectRepositoryStoreSupabase: Delete failed:', error);
+      throw new Error(`Failed to delete project repository: ${error.message}`);
+    }
   }
 
   /**
