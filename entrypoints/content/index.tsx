@@ -11,6 +11,7 @@ import { ExtensionAuthManagerProvider, useExtensionAuthManager } from '@extensio
 import { SubscriptionManagerProvider } from '@extension/shared/contexts/SubscriptionManagerContext';
 import { RatingManagerProvider } from '@extension/contexts/RatingManagerContext';
 import { type CustomerProfile } from '@common/types';
+import { GitHubShareManagerProvider } from '@extension/GitHubShare/contexts/GitHubShareManagerContext';
 
 let uiMounted = false;
 let rootInstance: ReactDOM.Root | null = null;
@@ -71,7 +72,9 @@ const ContentApp = () => {
             <RatingManagerProvider>
               <ChatManagerProvider>
                 <ScreenShareManagerProvider>
-                  <ExtensionContainer />
+                  <GitHubShareManagerProvider>
+                    <ExtensionContainer />
+                  </GitHubShareManagerProvider>
                 </ScreenShareManagerProvider>
               </ChatManagerProvider>
             </RatingManagerProvider>

@@ -337,12 +337,35 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.customer-billing-webhook]
 enabled = true
 verify_jwt = false
+import_map = "./functions/customer-billing-webhook/deno.json"
+entrypoint = "./functions/customer-billing-webhook/index.ts"
+
 [functions.billing-links]
 enabled = true
 verify_jwt = true
+import_map = "./functions/billing-links/deno.json"
+entrypoint = "./functions/billing-links/index.ts"
+
 [functions.engineer-billing-webhook]
 enabled = true
 verify_jwt = false
+import_map = "./functions/engineer-billing-webhook/deno.json"
+entrypoint = "./functions/engineer-billing-webhook/index.ts"
+
 [functions.billing_credits]
 enabled = true
 verify_jwt = true
+import_map = "./functions/billing_credits/deno.json"
+entrypoint = "./functions/billing_credits/index.ts"
+
+[functions.code-share]
+enabled = true
+verify_jwt = true
+import_map = "./functions/code-share/deno.json"
+entrypoint = "./functions/code-share/index.ts"
+
+[functions.code-share-webhook]
+enabled = true
+verify_jwt = false
+import_map = "./functions/code-share-webhook/deno.json"
+entrypoint = "./functions/code-share-webhook/index.ts"

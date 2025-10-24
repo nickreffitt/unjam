@@ -107,7 +107,7 @@ const ScreenShare: React.FC<ScreenShareProps> = ({ ticketId, customer }) => {
   }, [remoteStream]);
 
   return (
-    <div className="unjam-bg-white unjam-rounded-lg unjam-shadow-sm unjam-border unjam-border-gray-200 unjam-p-6 unjam-mb-6">
+    <>
       {(() => {
         switch (uiState) {
           case 'incoming_call':
@@ -161,10 +161,11 @@ const ScreenShare: React.FC<ScreenShareProps> = ({ ticketId, customer }) => {
                 </div>
               </div>
             );
+          case 'active_session':
+            break;
 
           case 'requesting':
           case 'loading':
-          case 'active_session':
           case 'idle':
           default:
             return (
@@ -176,7 +177,6 @@ const ScreenShare: React.FC<ScreenShareProps> = ({ ticketId, customer }) => {
                 <Monitor size={16} />
                 {uiState === 'requesting' && 'Requesting...'}
                 {uiState === 'loading' && 'Loading...'}
-                {uiState === 'active_session' && 'Session Active'}
                 {uiState === 'connection_lost' && 'Connection Lost'}
                 {uiState === 'connection_failed' && 'Connection Failed'}
                 {uiState === 'idle' && 'Request Screenshare'}
@@ -187,13 +187,13 @@ const ScreenShare: React.FC<ScreenShareProps> = ({ ticketId, customer }) => {
 
       {/* Video element to display the remote stream when active */}
       {uiState === 'active_session' && remoteStream && (
-        <div className="unjam-mt-4 unjam-p-4 unjam-bg-gray-50 unjam-border unjam-border-gray-200 unjam-rounded-lg">
-          <div className="unjam-flex unjam-items-center unjam-justify-between unjam-mb-3">
+        <div className="unjam-mt-4 unjam-rounded-lg">
+          <div className="unjam-flex unjam-items-center unjam-justify-between">
             <h3 className="unjam-text-lg unjam-font-semibold unjam-text-gray-900">
-              {currentRequest?.sender.name || 'Customer'} Screen Share
+              Customer Screen Share
             </h3>
             <div className="unjam-flex unjam-items-center unjam-gap-2">
-              <div className="unjam-w-3 unjam-h-3 unjam-bg-green-500 unjam-rounded-full"></div>
+              <div className="unjam-w-3 unjam-h-3 unjam-bg-green-500 unjam-rounded-full" />
               <span className="unjam-text-sm unjam-text-gray-600">Live</span>
             </div>
           </div>
@@ -206,11 +206,11 @@ const ScreenShare: React.FC<ScreenShareProps> = ({ ticketId, customer }) => {
             controls
           />
           <p className="unjam-text-sm unjam-text-gray-500 unjam-mt-2">
-            You are viewing {currentRequest?.sender.name || 'the customer'}'s screen
+            You are viewing the customer's screen
           </p>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

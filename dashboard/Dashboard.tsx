@@ -18,12 +18,16 @@ import { TicketManagerProvider } from '@dashboard/engineer/Ticket/contexts/Ticke
 import { TicketListManagerProvider } from '@dashboard/engineer/TicketList/contexts/TicketListManagerContext';
 import { ChatManagerProvider } from '@dashboard/engineer/ChatBox/contexts/ChatManagerContext';
 import { ScreenShareManagerProvider } from '@dashboard/engineer/ScreenShare/contexts/ScreenShareManagerContext';
+import { CodeShareManagerProvider } from '@dashboard/engineer/CodeShare/contexts/CodeShareManagerContext';
 import Onboarding from '@dashboard/pages/customer/Onboarding';
 import BuyCredits from '@dashboard/pages/customer/BuyCredits';
 import CustomerSidebar from '@dashboard/customer/Sidebar/Sidebar';
 import { SubscriptionManagerProvider } from '@dashboard/customer/Subscription';
 import CreditSuccess from '@dashboard/pages/customer/CreditSuccess';
+import GithubConnect from '@dashboard/pages/customer/GithubConnect/GithubConnect';
+import GithubCallback from '@dashboard/pages/customer/GithubCallback/GithubCallback';
 import { BillingAccountManagerProvider } from './engineer/BillingAccount';
+import { GithubConnectManagerProvider } from './customer/GithubConnect';
 
 
 const ProtectedEngineerDashboard: React.FC = () => {
@@ -33,22 +37,24 @@ const ProtectedEngineerDashboard: React.FC = () => {
         <TicketListManagerProvider>
           <ChatManagerProvider>
             <ScreenShareManagerProvider>
-              <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
-                <Sidebar />
-                <div className="unjam-flex-1 unjam-overflow-hidden">
-                  <Routes>
-                    <Route path="new" element={<NewTicketsList />} />
-                    <Route path="new/:ticketId" element={<TicketPreview />} />
-                    <Route path="active" element={<ActiveTicketsList />} />
-                    <Route path="active/:ticketId" element={<ActiveTicket />} />
-                    <Route path="completed" element={<CompletedTicketsList />} />
-                    <Route path="completed/:ticketId" element={<CompletedTicket />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="auth/logout" element={<Logout />} />
-                    <Route path="*" element={<NewTicketsList />} />
-                  </Routes>
+              <CodeShareManagerProvider>
+                <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
+                  <Sidebar />
+                  <div className="unjam-flex-1 unjam-overflow-hidden">
+                    <Routes>
+                      <Route path="new" element={<NewTicketsList />} />
+                      <Route path="new/:ticketId" element={<TicketPreview />} />
+                      <Route path="active" element={<ActiveTicketsList />} />
+                      <Route path="active/:ticketId" element={<ActiveTicket />} />
+                      <Route path="completed" element={<CompletedTicketsList />} />
+                      <Route path="completed/:ticketId" element={<CompletedTicket />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="auth/logout" element={<Logout />} />
+                      <Route path="*" element={<NewTicketsList />} />
+                    </Routes>
+                  </div>
                 </div>
-              </div>
+              </CodeShareManagerProvider>
             </ScreenShareManagerProvider>
           </ChatManagerProvider>
         </TicketListManagerProvider>
@@ -61,18 +67,22 @@ const ProtectedEngineerDashboard: React.FC = () => {
 const ProtectedCustomerDashboard: React.FC = () => {
   return (
     <SubscriptionManagerProvider>
-      <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
-        <CustomerSidebar />
-        <div className="unjam-flex-1 unjam-overflow-hidden">
-          <Routes>
-            <Route path="onboarding" element={<Onboarding />} />
-            <Route path="buy" element={<BuyCredits />} />
-            <Route path="buy/success" element={<CreditSuccess />} />
-            <Route path="auth/logout" element={<Logout />} />
-            <Route path="*" element={<BuyCredits />} />
-          </Routes>
+      <GithubConnectManagerProvider>
+        <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
+          <CustomerSidebar />
+          <div className="unjam-flex-1 unjam-overflow-hidden">
+            <Routes>
+              <Route path="onboarding" element={<Onboarding />} />
+              <Route path="buy" element={<BuyCredits />} />
+              <Route path="buy/success" element={<CreditSuccess />} />
+              <Route path="github/connect" element={<GithubConnect />} />
+              <Route path="github/callback" element={<GithubCallback />} />
+              <Route path="auth/logout" element={<Logout />} />
+              <Route path="*" element={<BuyCredits />} />
+            </Routes>
+          </div>
         </div>
-      </div>
+      </GithubConnectManagerProvider>
     </SubscriptionManagerProvider>
   );
 };

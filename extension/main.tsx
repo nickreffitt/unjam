@@ -6,6 +6,7 @@ import { ChatManagerProvider } from '@extension/ChatBox/contexts/ChatManagerCont
 import { ScreenShareManagerProvider } from '@extension/ScreenShare/contexts/ScreenShareManagerContext'
 import { SubscriptionManagerProvider } from '@extension/shared/contexts/SubscriptionManagerContext'
 import { RatingManagerProvider } from '@extension/contexts/RatingManagerContext'
+import { GitHubShareManagerProvider } from '@extension/GitHubShare/contexts/GitHubShareManagerContext'
 
 // Simple routing based on URL path
 const App = () => {
@@ -15,7 +16,9 @@ const App = () => {
           <RatingManagerProvider>
             <ChatManagerProvider>
               <ScreenShareManagerProvider>
-                <CustomerExtension />
+                <GitHubShareManagerProvider>
+                  <CustomerExtension />
+                </GitHubShareManagerProvider>
               </ScreenShareManagerProvider>
             </ChatManagerProvider>
           </RatingManagerProvider>

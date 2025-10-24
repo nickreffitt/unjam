@@ -72,6 +72,19 @@ export type ChatEventType = 'chatMessageSent' | 'chatMessagesRead' | 'chatReload
 
 export type RatingEventType = 'ratingCreated' | 'ratingUpdated';
 
+export type CodeShareEventType =
+  | 'gitHubIntegrationCreated'
+  | 'gitHubIntegrationUpdated'
+  | 'gitHubIntegrationDeleted'
+  | 'projectRepositoryCreated'
+  | 'projectRepositoryUpdated'
+  | 'projectRepositoryDeleted'
+  | 'repositoryCollaboratorCreated'
+  | 'repositoryCollaboratorUpdated'
+  | 'repositoryCollaboratorDeleted'
+  | 'codeShareRequestCreated'
+  | 'codeShareRequestUpdated';
+
 export interface ErrorDisplay {
   title: string;
   message: string;
@@ -92,13 +105,25 @@ export type ScreenShareStatus = 'pending' | 'accepted' | 'rejected' | 'expired' 
 export interface ScreenShareRequest {
   id: string;
   ticketId: string;
-  sender: UserProfile; 
+  sender: UserProfile;
   receiver: UserProfile;
   status: ScreenShareStatus;
   createdAt: Date;
   updatedAt: Date;
   expiresAt: Date; // Request expires after 10 seconds
   autoAccept?: boolean; // True if engineer initiated and should auto-accept
+}
+
+export type CodeShareStatus = 'pending' | 'accepted' | 'rejected' | 'expired';
+
+export interface CodeShareRequest {
+  id: string;
+  sender: UserProfile;
+  receiver: UserProfile;
+  status: CodeShareStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date; // Request expires after 5 seconds
 }
 
 export type SessionStatus = 'initializing' | 'active' | 'ended' | 'error' | 'disconnected';
@@ -286,6 +311,28 @@ export interface EngineerAccountEvent {
 export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent | CheckoutSessionEvent;
 export type BillingEngineerEvent = EngineerAccountEvent;
 
+// GitHub Webhook Event types
+export interface CollaboratorRemovedEvent {
+  repositoryId: number;
+  repositoryFullName: string;
+  repositoryOwner: string;
+  repositoryName: string;
+  collaboratorId: number;
+  collaboratorLogin: string;
+}
+
+export interface RepositoryDeletedEvent {
+  repositoryId: number;
+  repositoryFullName: string;
+  repositoryOwner: string;
+  repositoryName: string;
+}
+
+export type GitHubWebhookEvent =
+  | { collaboratorRemoved: CollaboratorRemovedEvent }
+  | { repositoryDeleted: RepositoryDeletedEvent };
+
+
 // Billing Credits API types
 export interface CreditBalanceRequest {
   profile_id: string;
@@ -330,4 +377,51 @@ export interface Rating {
   notes?: string; // Optional additional feedback
   createdAt: Date;
   updatedAt: Date | null;
+}
+
+// GitHub Share types
+export interface GuideSlide {
+  title: string;
+  description: string;
+  steps: string[];
+  image?: string; // Optional screenshot URL
+}
+
+export interface PlatformGuide {
+  platformName: string;
+  urlPattern: RegExp;
+  extractProjectId: (url: string) => string | null;
+  slides: GuideSlide[];
+}
+
+export interface GitHubIntegration {
+  id: string;
+  customerId: string;
+  githubAccessToken: string;
+  githubUsername: string;
+  githubUserId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProjectRepository {
+  id: string;
+  customerId: string;
+  externalProjectUrl: string;
+  externalPlatform: string;
+  externalProjectId: string;
+  githubRepoUrl: string;
+  githubOwner: string;
+  githubRepo: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RepositoryCollaborator {
+  id: string;
+  repositoryId: string;
+  engineerId: string;
+  githubUsername: string;
+  invitedAt: Date;
+  removedAt?: Date;
 }

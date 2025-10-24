@@ -87,3 +87,60 @@ CREATE POLICY "Users can update their own ratings" ON ratings
 
 -- Enable realtime for ratings table
 ALTER publication supabase_realtime ADD TABLE ratings;
+
+-- Create a trigger function to broadcast rating changes
+-- ratings-changes: For all rating INSERT and UPDATE events
+CREATE OR REPLACE FUNCTION public.broadcast_rating_changes()
+RETURNS trigger
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Handle INSERT events (new ratings)
+  IF TG_OP = 'INSERT' THEN
+    PERFORM realtime.broadcast_changes(
+      'ratings-changes',
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN NEW;
+  END IF;
+
+  -- Handle UPDATE events
+  IF TG_OP = 'UPDATE' THEN
+    PERFORM realtime.broadcast_changes(
+      'ratings-changes',
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+    RETURN NEW;
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
+-- Create a trigger to execute the function on rating changes
+CREATE TRIGGER handle_rating_changes
+AFTER INSERT OR UPDATE
+ON public.ratings
+FOR EACH ROW
+EXECUTE FUNCTION broadcast_rating_changes();
+
+-- Create Realtime Authorization policy for broadcast channel
+-- Allow authenticated users involved in the ticket to subscribe to rating broadcasts
+CREATE POLICY "Users can subscribe to rating broadcasts for their tickets"
+ON realtime.messages
+FOR SELECT
+TO authenticated
+USING (
+  realtime.topic() = 'ratings-changes'
+);

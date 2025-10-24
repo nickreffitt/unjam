@@ -145,7 +145,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   };
 
   return (
-    <div data-testid="ticket-box" className={`unjam-w-120 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border ${getStatusColor()} unjam-p-4 unjam-font-sans`}>
+    <div data-testid="ticket-box" className={`unjam-w-80 unjam-bg-white unjam-rounded-lg unjam-shadow-lg unjam-border ${getStatusColor()} unjam-p-4 unjam-font-sans`}>
       {/* Header */}
       <div className="unjam-flex unjam-items-center unjam-justify-between unjam-mb-3">
         <div className="unjam-flex unjam-items-center unjam-gap-2">
