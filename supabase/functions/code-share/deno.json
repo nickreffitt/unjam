@@ -9,6 +9,7 @@
     "@events/": "../_shared/events/",
     "@services/": "../_shared/services/",
     "@stores/": "../_shared/stores/",
-    "@util/": "../_shared/util/"
+    "@util/": "../_shared/util/",
+    "@config/": "../_shared/config/"
   }
 }

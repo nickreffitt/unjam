@@ -8,17 +8,16 @@ import { ProjectRepositoryStoreSupabase } from '@stores/ProjectRepository/index.
 import { RepositoryCollaboratorStoreSupabase } from '@stores/RepositoryCollaborator/index.ts'
 import { createClient } from "supabase"
 import { Octokit } from "octokit"
+import { getExtensionCorsOrigin } from '@config/cors.ts'
 
 export const handler = async (request: Request): Promise<Response> => {
-  const allowedOrigins = ['https://unjam.nickreffitt.com', 'http://localhost:5175']
-  const origin = request.headers.get('Origin') || ''
-  const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://unjam.nickreffitt.com'
+  const corsOrigin = getExtensionCorsOrigin(request.headers.get('Origin'))
 
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
       headers: {
-        'Access-Control-Allow-Origin': corsOrigin,
+        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },

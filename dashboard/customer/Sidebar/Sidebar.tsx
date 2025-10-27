@@ -1,20 +1,37 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, CreditCard, ArrowDownToLine } from 'lucide-react';
+import { LogOut, CreditCard, ArrowDownToLine, Github, Check } from 'lucide-react';
+import { useSubscriptionState } from '../Subscription/hooks/useSubscriptionState';
+import { useGithubConnectState } from '../GithubConnect/hooks/useGithubConnectState';
+import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const { hasActiveSubscription } = useSubscriptionState();
+  const { integration } = useGithubConnectState();
+  const { authUser } = useAuthState();
+
+  const hasExtensionInstalled = !!authUser.profile?.extensionInstalledAt;
+  const hasGithubConnected = !!integration;
 
   const navItems = [
     {
       path: '/buy',
-      label: 'Choose Plan',
-      icon: CreditCard
+      label: hasActiveSubscription ? 'Manage Plan' : 'Choose Plan',
+      icon: CreditCard,
+      completed: false
     },
     {
       path: '/onboarding',
       label: 'Get Extension',
-      icon: ArrowDownToLine
+      icon: ArrowDownToLine,
+      completed: hasExtensionInstalled
+    },
+    {
+      path: '/github/connect',
+      label: 'Connect GitHub',
+      icon: Github,
+      completed: hasGithubConnected
     },
   ];
 
@@ -50,7 +67,10 @@ const Sidebar: React.FC = () => {
                 }`}
               >
                 <item.icon size={18} />
-                <span className="unjam-font-medium">{item.label}</span>
+                <span className="unjam-font-medium unjam-flex-1">{item.label}</span>
+                {item.completed && (
+                  <Check size={18} className="unjam-text-green-600" />
+                )}
               </Link>
             </li>
           ))}

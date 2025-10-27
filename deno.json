@@ -13,7 +13,8 @@
     "@events/": "./supabase/functions/_shared/events/",
     "@services/": "./supabase/functions/_shared/services/",
     "@stores/": "./supabase/functions/_shared/stores/",
-    "@util/": "./supabase/functions/_shared/util/"
+    "@util/": "./supabase/functions/_shared/util/",
+    "@config/": "./supabase/functions/_shared/config/"
   },
   "nodeModulesDir": "auto"
 }

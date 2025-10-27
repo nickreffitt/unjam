@@ -82,12 +82,12 @@ export const GithubConnectManagerProvider: React.FC<GithubConnectManagerProvider
       codeShareApiManager,
       githubClientId
     );
-  }, [supabaseUrl, supabaseClient, userProfile, githubClientId]);
+  }, [supabaseUrl, supabaseClient, userProfile.id, githubClientId]);
 
   const contextValue: GithubConnectManagerContextType = useMemo(() => ({
     userProfile,
     codeShareManager
-  }), [userProfile, codeShareManager]);
+  }), [userProfile.id, codeShareManager]);
 
   return (
     <GithubConnectManagerContext.Provider value={contextValue}>

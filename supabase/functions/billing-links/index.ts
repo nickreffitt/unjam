@@ -6,7 +6,7 @@ import { BillingEngineerAccountServiceStripe } from '@services/BillingEngineerAc
 import { BillingLinksHandler } from './BillingLinksHandler.ts'
 import { createClient } from "supabase";
 import Stripe from "stripe";
-import { getDashboardCorsOrigin } from "../_shared/config/cors.ts";
+import { getDashboardCorsOrigin } from "@config/cors.ts";
 
 console.debug("Billing Links function loaded")
 
