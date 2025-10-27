@@ -41,9 +41,9 @@ export const GithubConnectManagerProvider: React.FC<GithubConnectManagerProvider
 
   const userProfile = authUser.profile as CustomerProfile;
 
-  const githubClientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+  const githubClientId = import.meta.env.VITE_GH_CLIENT_ID;
   if (!githubClientId) {
-    throw new Error('No VITE_GITHUB_CLIENT_ID set');
+    throw new Error('No VITE_GH_CLIENT_ID set');
   }
 
   const codeShareManager = useMemo(() => {

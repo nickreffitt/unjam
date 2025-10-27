@@ -61,8 +61,8 @@ export const handler = async (request: Request): Promise<Response> => {
     // Route to appropriate handler based on action_type
     if (action_type === 'oauth_callback') {
       // OAuth callback doesn't require existing integration
-      const githubClientId = Deno.env.get('GITHUB_CLIENT_ID') as string
-      const githubClientSecret = Deno.env.get('GITHUB_CLIENT_SECRET') as string
+      const githubClientId = Deno.env.get('GH_CLIENT_ID') as string
+      const githubClientSecret = Deno.env.get('GH_CLIENT_SECRET') as string
 
       const oauthService = new GitHubOAuthService(githubClientId, githubClientSecret)
       const oauthHandler = new CodeShareOAuthHandler(integrationStore, oauthService)

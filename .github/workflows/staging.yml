@@ -31,6 +31,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       STRIPE_TABLE_ID: ${{ secrets.STRIPE_TABLE_ID }}
       STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+      GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_REF }}
@@ -89,6 +90,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }}
           VITE_STRIPE_TABLE_ID: ${{ env.STRIPE_TABLE_ID }}
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ env.STRIPE_PUBLISHABLE_KEY }}
+          VITE_GH_CLIENT_ID: ${{ env.GH_CLIENT_ID }}
           VITE_AUTO_COMPLETE_TIMEOUT_SECONDS: ${{ env.AUTO_COMPLETE_TIMEOUT_SECONDS }}
         run: |
           # Create .env.production file for the build
@@ -96,6 +98,7 @@ jobs:
           echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env.production
           echo "VITE_STRIPE_TABLE_ID=$VITE_STRIPE_TABLE_ID" >> .env.production
           echo "VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY" >> .env.production
+          echo "VITE_GH_CLIENT_ID=$VITE_GH_CLIENT_ID" >> .env.production
           echo "VITE_AUTO_COMPLETE_TIMEOUT_SECONDS=$VITE_AUTO_COMPLETE_TIMEOUT_SECONDS" >> .env.production
 
           # Build the extension
@@ -165,7 +168,7 @@ jobs:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
-          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY,EXTENSION_ZIP_FILENAME,AUTO_COMPLETE_TIMEOUT_SECONDS,SUPABASE_SERVICE_ROLE_KEY
+          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY,GH_CLIENT_ID,EXTENSION_ZIP_FILENAME,AUTO_COMPLETE_TIMEOUT_SECONDS,SUPABASE_SERVICE_ROLE_KEY
           script: |
             # Update system packages
             apt update
@@ -203,6 +206,7 @@ jobs:
             echo "VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> /opt/unjam/.env.production
             echo "VITE_STRIPE_TABLE_ID=$STRIPE_TABLE_ID" >> /opt/unjam/.env.production
             echo "VITE_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY" >> /opt/unjam/.env.production
+            echo "VITE_GH_CLIENT_ID=$GH_CLIENT_ID" >> /opt/unjam/.env.production
             echo "VITE_EXTENSION_ZIP_FILENAME=$EXTENSION_ZIP_FILENAME" >> /opt/unjam/.env.production
             echo "VITE_AUTO_COMPLETE_TIMEOUT_SECONDS=$AUTO_COMPLETE_TIMEOUT_SECONDS" >> /opt/unjam/.env.production
 

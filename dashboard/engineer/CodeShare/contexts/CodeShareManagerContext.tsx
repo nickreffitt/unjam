@@ -55,7 +55,7 @@ export const CodeShareManagerProvider: React.FC<CodeShareManagerProviderProps> =
     // Initialize API manager
     const codeShareApiManager = new CodeShareApiManager(supabaseClient, edgeFunctionUrl);
 
-    const githubClientId = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
+    const githubClientId = import.meta.env.VITE_GH_CLIENT_ID || '';
 
     // Create CodeShareManager
     console.debug('Instantiating CodeShareManager in engineer dashboard');

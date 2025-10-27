@@ -60,7 +60,7 @@ export const GitHubShareManagerProvider: React.FC<GitHubShareManagerProviderProp
     const apiManager = new CodeShareApiManager(supabaseClient, edgeFunctionUrl);
 
     // Get GitHub client ID from environment
-    const githubClientId = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
+    const githubClientId = import.meta.env.VITE_GH_CLIENT_ID || '';
 
     // Create CodeShareManager
     console.debug('Instantiating CodeShareManager in extension');
