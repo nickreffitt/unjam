@@ -25,6 +25,7 @@ jobs:
       IMAGE_NAME: ${{ github.repository }}
       APP_NAME: unjam-frontend
       DOMAIN: app.unj.am
+      APP_URL: https://app.unj.am
       LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -91,6 +92,7 @@ jobs:
           VITE_STRIPE_TABLE_ID: ${{ env.STRIPE_TABLE_ID }}
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ env.STRIPE_PUBLISHABLE_KEY }}
           VITE_GH_CLIENT_ID: ${{ env.GH_CLIENT_ID }}
+          VITE_APP_URL: ${{ env.APP_URL }}
           VITE_AUTO_COMPLETE_TIMEOUT_SECONDS: ${{ env.AUTO_COMPLETE_TIMEOUT_SECONDS }}
         run: |
           # Create .env.production file for the build
@@ -99,6 +101,7 @@ jobs:
           echo "VITE_STRIPE_TABLE_ID=$VITE_STRIPE_TABLE_ID" >> .env.production
           echo "VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY" >> .env.production
           echo "VITE_GH_CLIENT_ID=$VITE_GH_CLIENT_ID" >> .env.production
+          echo "VITE_APP_URL=$VITE_APP_URL" >> .env.production
           echo "VITE_AUTO_COMPLETE_TIMEOUT_SECONDS=$VITE_AUTO_COMPLETE_TIMEOUT_SECONDS" >> .env.production
 
           # Build the extension
@@ -168,7 +171,7 @@ jobs:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
-          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY,GH_CLIENT_ID,EXTENSION_ZIP_FILENAME,AUTO_COMPLETE_TIMEOUT_SECONDS,SUPABASE_SERVICE_ROLE_KEY
+          envs: APP_NAME,DOMAIN,APP_URL,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY,GH_CLIENT_ID,EXTENSION_ZIP_FILENAME,AUTO_COMPLETE_TIMEOUT_SECONDS,SUPABASE_SERVICE_ROLE_KEY
           script: |
             # Update system packages
             apt update
@@ -207,6 +210,7 @@ jobs:
             echo "VITE_STRIPE_TABLE_ID=$STRIPE_TABLE_ID" >> /opt/unjam/.env.production
             echo "VITE_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY" >> /opt/unjam/.env.production
             echo "VITE_GH_CLIENT_ID=$GH_CLIENT_ID" >> /opt/unjam/.env.production
+            echo "VITE_APP_URL=$APP_URL" >> /opt/unjam/.env.production
             echo "VITE_EXTENSION_ZIP_FILENAME=$EXTENSION_ZIP_FILENAME" >> /opt/unjam/.env.production
             echo "VITE_AUTO_COMPLETE_TIMEOUT_SECONDS=$AUTO_COMPLETE_TIMEOUT_SECONDS" >> /opt/unjam/.env.production
 
