@@ -6,6 +6,7 @@ import { type CustomerProfile, type EngineerProfile } from '@common/types';
 describe('TicketManager', () => {
   let ticketStore: TicketStore;
   let mockTicketChanges: TicketChanges;
+  const autoCompleteTimeoutSeconds = 1800; // 30 minutes
 
   // Create mock user profiles
   const mockCustomer: CustomerProfile = {
@@ -45,7 +46,7 @@ describe('TicketManager', () => {
   describe('createTicket', () => {
     it('should create a ticket when user is a customer', async () => {
       // Given a TicketManager instance for a customer
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const problemDescription = 'My application is not loading properly';
 
       // When creating a ticket
@@ -66,7 +67,7 @@ describe('TicketManager', () => {
 
     it('should truncate long problem descriptions in summary', async () => {
       // Given a customer with a long problem description
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const longDescription = 'This is a very long problem description that exceeds fifty characters and should be truncated';
 
       // When creating a ticket
@@ -80,7 +81,7 @@ describe('TicketManager', () => {
 
     it('should throw error when non-customer tries to create ticket', async () => {
       // Given a TicketManager instance for an engineer
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
 
       // When trying to create a ticket as an engineer
       // Then it should throw an error
@@ -94,7 +95,7 @@ describe('TicketManager', () => {
   describe('claimTicket', () => {
     it('should allow engineer to claim an unassigned ticket', async () => {
       // Given an engineer and an unassigned ticket in the store
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const unassignedTicket = {
         id: 'TKT-999',
         status: 'waiting' as const,
@@ -118,7 +119,7 @@ describe('TicketManager', () => {
 
     it('should throw error when customer tries to claim ticket', async () => {
       // Given a customer and a ticket in the store
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const ticket = {
         id: 'TKT-999',
         status: 'waiting' as const,
@@ -140,7 +141,7 @@ describe('TicketManager', () => {
 
     it('should throw error when ticket is already assigned', async () => {
       // Given an engineer and an already assigned ticket in the store
-      const ticketManager = new TicketManager(anotherEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(anotherEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const assignedTicket = {
         id: 'TKT-999',
         status: 'in-progress' as const,
@@ -164,7 +165,7 @@ describe('TicketManager', () => {
 
     it('should not allow engineer to claim more than 3 active tickets', async () => {
       // Given an engineer with 3 active tickets already
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
 
       // Create 3 active tickets assigned to the engineer
       for (let i = 1; i <= 3; i++) {
@@ -207,7 +208,7 @@ describe('TicketManager', () => {
   describe('markAsFixed', () => {
     it('should mark ticket as fixed when engineer is assigned to it', async () => {
       // Given an engineer and a ticket assigned to them
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const assignedTicket = {
         id: 'TKT-999',
         status: 'in-progress' as const,
@@ -243,7 +244,7 @@ describe('TicketManager', () => {
 
     it('should throw error when customer tries to mark ticket as fixed', async () => {
       // Given a customer and a ticket in the store
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const ticket = {
         id: 'TKT-999',
         status: 'in-progress' as const,
@@ -267,7 +268,7 @@ describe('TicketManager', () => {
 
     it('should throw error when ticket is not found', async () => {
       // Given an engineer and no ticket in the store
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
 
       // When trying to mark a non-existent ticket as fixed
       // Then it should throw an error
@@ -278,7 +279,7 @@ describe('TicketManager', () => {
 
     it('should throw error when engineer is not assigned to the ticket', async () => {
       // Given an engineer and a ticket assigned to another engineer
-      const ticketManager = new TicketManager(anotherEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(anotherEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const assignedTicket = {
         id: 'TKT-999',
         status: 'in-progress' as const,
@@ -302,7 +303,7 @@ describe('TicketManager', () => {
 
     it('should throw error when ticket has no assigned engineer', async () => {
       // Given an engineer and an unassigned ticket
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const unassignedTicket = {
         id: 'TKT-999',
         status: 'waiting' as const,
@@ -326,7 +327,7 @@ describe('TicketManager', () => {
   describe('markAsResolved', () => {
     it('should mark ticket as completed when called', async () => {
       // Given any user and a ticket awaiting confirmation
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const awaitingTicket = {
         id: 'TKT-999',
         status: 'awaiting-confirmation' as const,
@@ -346,14 +347,14 @@ describe('TicketManager', () => {
       // When marking the ticket as resolved
       const resolvedTicket = await ticketManager.markAsResolved('TKT-999');
 
-      // Then the ticket should be marked as completed
-      expect(resolvedTicket.status).toBe('completed');
+      // Then the ticket should be marked as pending-payment
+      expect(resolvedTicket.status).toBe('pending-payment');
       expect(resolvedTicket.resolvedAt).toBeInstanceOf(Date);
     });
 
     it('should throw error when ticket is not found', async () => {
       // Given any user and no ticket in the store
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
 
       // When trying to mark a non-existent ticket as resolved
       // Then it should throw an error
@@ -366,7 +367,7 @@ describe('TicketManager', () => {
   describe('autoCompleteTicket', () => {
     it('should auto-complete ticket when status is awaiting-confirmation', async () => {
       // Given any user and a ticket awaiting confirmation
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const awaitingTicket = {
         id: 'TKT-999',
         status: 'awaiting-confirmation' as const,
@@ -393,7 +394,7 @@ describe('TicketManager', () => {
 
     it('should not auto-complete ticket when status is not awaiting-confirmation', async () => {
       // Given any user and a ticket not awaiting confirmation
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const completedTicket = {
         id: 'TKT-999',
         status: 'completed' as const,
@@ -421,7 +422,7 @@ describe('TicketManager', () => {
   describe('abandonTicket', () => {
     it('should abandon ticket when engineer is assigned to it', async () => {
       // Given an engineer and a ticket assigned to them
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const assignedTicket = {
         id: 'TKT-999',
         status: 'in-progress' as const,
@@ -456,7 +457,7 @@ describe('TicketManager', () => {
 
     it('should abandon ticket with awaiting-confirmation status', async () => {
       // Given an engineer and a ticket they marked as fixed
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const awaitingTicket = {
         id: 'TKT-999',
         status: 'awaiting-confirmation' as const,
@@ -486,7 +487,7 @@ describe('TicketManager', () => {
 
     it('should throw error when customer tries to abandon ticket', async () => {
       // Given a customer and a ticket in the store
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const ticket = {
         id: 'TKT-999',
         status: 'in-progress' as const,
@@ -510,7 +511,7 @@ describe('TicketManager', () => {
 
     it('should throw error when ticket is not found', async () => {
       // Given an engineer and no ticket in the store
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
 
       // When trying to abandon a non-existent ticket
       // Then it should throw an error
@@ -521,7 +522,7 @@ describe('TicketManager', () => {
 
     it('should throw error when engineer is not assigned to the ticket', async () => {
       // Given an engineer and a ticket assigned to another engineer
-      const ticketManager = new TicketManager(anotherEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(anotherEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const assignedTicket = {
         id: 'TKT-999',
         status: 'in-progress' as const,
@@ -545,7 +546,7 @@ describe('TicketManager', () => {
 
     it('should throw error when ticket has no assigned engineer', async () => {
       // Given an engineer and an unassigned ticket
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const unassignedTicket = {
         id: 'TKT-999',
         status: 'waiting' as const,
@@ -569,7 +570,7 @@ describe('TicketManager', () => {
   describe('User Type Validation', () => {
     it('should correctly identify customer user type', async () => {
       // Given a customer TicketManager
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
 
       // When performing customer operations
       const ticket = await ticketManager.createTicket('Test problem');
@@ -581,7 +582,7 @@ describe('TicketManager', () => {
 
     it('should correctly identify engineer user type', async () => {
       // Given an engineer TicketManager and a ticket to claim
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const unassignedTicket = {
         id: 'TKT-999',
         status: 'waiting' as const,
@@ -606,7 +607,7 @@ describe('TicketManager', () => {
   describe('markStillBroken', () => {
     it('should mark ticket as still broken when customer indicates fix did not work', async () => {
       // Given a customer TicketManager and a ticket awaiting confirmation
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const awaitingConfirmationTicket = {
         id: 'TKT-999',
         status: 'awaiting-confirmation' as const,
@@ -636,7 +637,7 @@ describe('TicketManager', () => {
 
     it('should throw error when engineer tries to mark ticket as still broken', async () => {
       // Given an engineer TicketManager and a ticket awaiting confirmation
-      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const awaitingConfirmationTicket = {
         id: 'TKT-999',
         status: 'awaiting-confirmation' as const,
@@ -662,7 +663,7 @@ describe('TicketManager', () => {
 
     it('should throw error when ticket is not found', async () => {
       // Given a customer TicketManager
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
 
       // When trying to mark non-existent ticket as still broken
       // Then it should throw an error
@@ -673,7 +674,7 @@ describe('TicketManager', () => {
 
     it('should throw error when customer tries to mark another customer\'s ticket as still broken', async () => {
       // Given a customer TicketManager and another customer's ticket
-      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges);
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
       const otherCustomer = {
         id: 'CUST-OTHER',
         name: 'Other Customer',

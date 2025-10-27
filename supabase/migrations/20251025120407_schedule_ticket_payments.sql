@@ -18,6 +18,7 @@ SELECT
           'Content-Type', 'application/json',
           'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'SUPABASE_SERVICE_ROLE_KEY')
         )
+        timeout_milliseconds:=5000
       ) as request_id;
     $$
   );
