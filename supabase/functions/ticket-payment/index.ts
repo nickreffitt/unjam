@@ -16,6 +16,23 @@ console.debug("Ticket Payment queue processor loaded")
 
 export const handler = async (request: Request): Promise<Response> => {
   try {
+    // Validate HTTP method
+    if (request.method !== 'POST') {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Method not allowed. Use POST.'
+        }),
+        {
+          status: 405,
+          headers: {
+            'Content-Type': 'application/json',
+            'Allow': 'POST'
+          }
+        }
+      )
+    }
+
     console.info('⏰ Ticket Payment queue processor starting...')
 
     // Get service role key from environment

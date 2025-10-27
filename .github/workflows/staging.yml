@@ -24,10 +24,11 @@ jobs:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
       APP_NAME: unjam-frontend
-      DOMAIN: app.unj.am 
+      DOMAIN: app.unj.am
       LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       STRIPE_TABLE_ID: ${{ secrets.STRIPE_TABLE_ID }}
       STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -154,6 +155,7 @@ jobs:
           scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/docker-compose.yml ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
           scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/nginx-reverse-proxy.conf ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
           scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/zero-downtime-deploy.sh ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/process-payments-cron.sh ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
 
           rm /tmp/ssh_key
 
@@ -163,7 +165,7 @@ jobs:
           host: ${{ secrets.SVR_HOST }}
           username: ${{ secrets.SVR_USERNAME }}
           key: ${{ secrets.SVR_PRIVATE_KEY }}
-          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY,EXTENSION_ZIP_FILENAME,AUTO_COMPLETE_TIMEOUT_SECONDS
+          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL,SUPABASE_URL,SUPABASE_ANON_KEY,STRIPE_TABLE_ID,STRIPE_PUBLISHABLE_KEY,EXTENSION_ZIP_FILENAME,AUTO_COMPLETE_TIMEOUT_SECONDS,SUPABASE_SERVICE_ROLE_KEY
           script: |
             # Update system packages
             apt update
@@ -253,6 +255,37 @@ jobs:
               echo "Running zero-downtime deployment..."
               /opt/unjam/zero-downtime-deploy.sh
             fi
+
+            # Setup cron job for ticket payments
+            echo "Setting up cron job for ticket payments..."
+
+            # Create secure environment file for cron with restricted permissions
+            cat > /opt/unjam/.env.cron <<EOF
+            SUPABASE_URL=$SUPABASE_URL
+            SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+            EOF
+
+            # Set strict permissions (only root can read/write)
+            chmod 600 /opt/unjam/.env.cron
+
+            # Make cron script executable
+            chmod +x /opt/unjam/process-payments-cron.sh
+
+            # Install cron if not installed
+            if ! command -v cron &> /dev/null; then
+              apt install -y cron
+              systemctl enable cron
+              systemctl start cron
+            fi
+
+            # Add cron job (runs every 5 minutes)
+            # Remove existing cron job if it exists
+            crontab -l 2>/dev/null | grep -v "process-payments-cron.sh" | crontab -
+
+            # Add new cron job
+            (crontab -l 2>/dev/null; echo "*/5 * * * * /opt/unjam/process-payments-cron.sh >> /var/log/ticket-payments-cron.log 2>&1") | crontab -
+
+            echo "Cron job installed successfully"
 
             # Clean up
             rm -f "/tmp/image.tar"
