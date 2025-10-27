@@ -1,13 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTicketListState } from '@dashboard/engineer/TicketList/hooks/useTicketListState';
 import TicketsTable from '@dashboard/engineer/TicketList/components/TicketsTable/TicketsTable';
 import { MessageCircle, Clock, ToggleLeft, ToggleRight, Ticket } from 'lucide-react';
+import { shouldShowCompletedState } from '@common/util/ticketStatusHelpers';
 
 const ActiveTicketsList: React.FC = () => {
-  const { tickets } = useTicketListState(['in-progress']);
+  const { tickets: rawTickets } = useTicketListState(['in-progress']);
   const [showEmpty, setShowEmpty] = useState(false);
   const navigate = useNavigate();
+
+  // Filter to include awaiting-confirmation tickets, but exclude ones with expired timers
+  const tickets = useMemo(() => {
+    return rawTickets.filter(ticket => {
+      // Include in-progress tickets
+      if (ticket.status === 'in-progress') {
+        return true;
+      }
+      // Include awaiting-confirmation tickets only if timer hasn't expired
+      if (ticket.status === 'awaiting-confirmation' && !shouldShowCompletedState(ticket)) {
+        return true;
+      }
+      // Exclude everything else
+      return false;
+    });
+  }, [rawTickets]);
 
   const getChatButton = (ticket: any) => (
     <Link

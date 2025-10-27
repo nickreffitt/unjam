@@ -100,9 +100,9 @@ export class TicketListManager {
 
     // Now TypeScript knows this.userProfile is EngineerProfile
     const engineerProfile = this.userProfile;
-    const ticketStatuses: TicketStatus[] = ['completed', 'auto-completed'];
+    const ticketStatuses: TicketStatus[] = ['completed', 'auto-completed', 'pending-payment', 'awaiting-confirmation'];
 
-    // Get completed and auto-completed tickets assigned to this engineer from the store
+    // Get completed, auto-completed, pending-payment, and awaiting-confirmation tickets assigned to this engineer from the store
     const allCompletedTickets = await this.ticketStore.getAllEngineerTicketsByStatus(
       engineerProfile,
       ticketStatuses,

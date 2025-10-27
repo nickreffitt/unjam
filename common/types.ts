@@ -1,4 +1,4 @@
-export type TicketStatus = 'waiting' | 'in-progress' | 'awaiting-confirmation' | 'marked-resolved' | 'completed' | 'auto-completed';
+export type TicketStatus = 'waiting' | 'in-progress' | 'awaiting-confirmation' | 'marked-resolved' | 'completed' | 'auto-completed' | 'pending-payment' | 'payment-failed';
 export type UserType = 'customer' | 'engineer';
 export type AuthUserStatus = 'loading' | 'not-signed-in' | 'requires-profile' | 'signed-in';
 export interface AuthUser {

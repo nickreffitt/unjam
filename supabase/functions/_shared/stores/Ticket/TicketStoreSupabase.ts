@@ -49,4 +49,44 @@ export class TicketStoreSupabase implements TicketStore {
     console.info(`[TicketStoreSupabase] Found ticket ${ticketId} for customer ${ticketInfo.customerId}`)
     return ticketInfo
   }
+
+  /**
+   * Updates the status of a ticket
+   * @param ticketId - The ticket ID
+   * @param status - The new status
+   * @returns Updated ticket billing info if found, undefined otherwise
+   */
+  async updateStatus(ticketId: string, status: string): Promise<TicketBillingInfo | undefined> {
+    console.info(`[TicketStoreSupabase] Updating ticket ${ticketId} status to: ${status}`)
+
+    const { data, error } = await this.supabase
+      .from('tickets')
+      .update({ status })
+      .eq('id', ticketId)
+      .select('id, created_by, assigned_to, status, created_at, claimed_at, resolved_at')
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // Not found
+        console.info(`[TicketStoreSupabase] Ticket not found: ${ticketId}`)
+        return undefined
+      }
+      console.error(`[TicketStoreSupabase] Error updating ticket status:`, error)
+      throw new Error(`Failed to update ticket status: ${error.message}`)
+    }
+
+    const ticketInfo: TicketBillingInfo = {
+      id: data.id,
+      customerId: data.created_by,
+      engineerId: data.assigned_to,
+      status: data.status,
+      createdAt: new Date(data.created_at),
+      claimedAt: data.claimed_at ? new Date(data.claimed_at) : null,
+      resolvedAt: data.resolved_at ? new Date(data.resolved_at) : null
+    }
+
+    console.info(`[TicketStoreSupabase] Updated ticket ${ticketId} status successfully`)
+    return ticketInfo
+  }
 }

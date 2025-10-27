@@ -22,4 +22,12 @@ export interface TicketStore {
    * @returns Ticket billing info if found, undefined otherwise
    */
   fetchBillingInfo(ticketId: string): Promise<TicketBillingInfo | undefined>
+
+  /**
+   * Updates the status of a ticket
+   * @param ticketId - The ticket ID
+   * @param status - The new status
+   * @returns Updated ticket billing info if found, undefined otherwise
+   */
+  updateStatus(ticketId: string, status: string): Promise<TicketBillingInfo | undefined>
 }

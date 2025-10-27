@@ -5,7 +5,9 @@ CREATE TYPE ticket_status AS ENUM (
   'awaiting-confirmation',
   'marked-resolved',
   'completed',
-  'auto-completed'
+  'auto-completed',
+  'pending-payment',
+  'payment-failed'
 );
 
 -- Create tickets table

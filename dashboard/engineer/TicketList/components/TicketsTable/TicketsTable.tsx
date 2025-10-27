@@ -60,6 +60,14 @@ const TicketsTableContent: React.FC<TicketsTableProps> = ({
       return 'Completed';
     }
 
+    if (ticket.status === 'pending-payment') {
+      return 'Pending Payment';
+    }
+
+    if (ticket.status === 'awaiting-confirmation') {
+      return 'Awaiting Confirmation';
+    }
+
     switch (timeSource) {
       case 'createdAt':
         return formatLiveElapsedTime(ticket.createdAt);
@@ -116,7 +124,7 @@ const TicketsTableContent: React.FC<TicketsTableProps> = ({
                     <td className="unjam-py-4 unjam-px-6">
                       <div className={`unjam-flex unjam-items-center unjam-text-sm ${timeDisplayColor}`}>
                         <span className="unjam-mr-2">
-                          {ticket.status === 'completed' || ticket.status === 'auto-completed'
+                          {ticket.status === 'completed' || ticket.status === 'auto-completed' || ticket.status === 'pending-payment' || ticket.status === 'awaiting-confirmation'
                             ? <Check size={14} />
                             : <Clock size={14} />
                           }

@@ -4,7 +4,7 @@ import TicketsTable from '@dashboard/engineer/TicketList/components/TicketsTable
 import { CheckCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 
 const CompletedTicketsList: React.FC = () => {
-  const { tickets } = useTicketListState(['completed', 'auto-completed']);
+  const { tickets } = useTicketListState(['completed', 'auto-completed', 'pending-payment', 'awaiting-confirmation']);
   const [showEmpty, setShowEmpty] = useState(false);
 
   return (

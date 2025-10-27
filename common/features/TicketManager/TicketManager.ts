@@ -4,21 +4,23 @@ import {
 } from '@common/types';
 import { isCustomerProfile, isEngineerProfile } from '@common/util';
 import { type TicketStore, type TicketChanges } from '@common/features/TicketManager/store';
-import { type ApiManager } from '@common/features/ApiManager/ApiManager';
-
-const AUTO_COMPLETE_TIMEOUT_MINUTES = 30;
 
 export class TicketManager {
   private userProfile: UserProfile;
   private ticketStore: TicketStore;
   private ticketChanges: TicketChanges;
-  private apiManager: ApiManager;
+  private autoCompleteTimeoutSeconds: number;
 
-  constructor(userProfile: UserProfile, ticketStore: TicketStore, ticketChanges: TicketChanges, apiManager: ApiManager) {
+  constructor(
+    userProfile: UserProfile, 
+    ticketStore: TicketStore, 
+    ticketChanges: TicketChanges, 
+    autoCompleteTimeoutSeconds: number,
+  ) {
     this.userProfile = userProfile;
     this.ticketStore = ticketStore;
     this.ticketChanges = ticketChanges;
-    this.apiManager = apiManager;
+    this.autoCompleteTimeoutSeconds = autoCompleteTimeoutSeconds;
 
     // Start listening for ticket changes if TicketChanges is provided
     this.ticketChanges.start(userProfile.id);
@@ -121,11 +123,11 @@ export class TicketManager {
     }
 
     // Calculate auto-complete timeout
-    const timeoutMinutes = AUTO_COMPLETE_TIMEOUT_MINUTES;
+    const timeoutSeconds = this.autoCompleteTimeoutSeconds;
     const now = new Date();
-    const autoCompleteTimeoutAt = new Date(now.getTime() + (timeoutMinutes * 60 * 1000));
+    const autoCompleteTimeoutAt = new Date(now.getTime() + (timeoutSeconds * 1000));
 
-    console.debug('TicketManager: markAsFixed - timeoutMinutes:', timeoutMinutes, 'now:', now, 'autoCompleteTimeoutAt:', autoCompleteTimeoutAt);
+    console.debug('TicketManager: markAsFixed - timeoutSeconds:', timeoutSeconds, 'now:', now, 'autoCompleteTimeoutAt:', autoCompleteTimeoutAt);
 
     // Update the ticket to awaiting confirmation status
     const updatedTicket: Ticket = {
@@ -135,15 +137,17 @@ export class TicketManager {
       autoCompleteTimeoutAt,
     };
 
+    // The database trigger will automatically enqueue the ticket for auto-completion
     return await this.ticketStore.update(ticketId, updatedTicket);
   }
 
   /**
    * Marks a ticket as resolved (customer confirmation or auto-complete)
-   * Triggers credit transfer to engineer and deducts customer credits
+   * Sets status to pending-payment to initiate payment processing
+   * Cancels any pending auto-complete tasks in the queue
    * @param ticketId - The ID of the ticket to mark as resolved
    * @returns The updated ticket
-   * @throws Error if ticket not found or credit transfer fails
+   * @throws Error if ticket not found
    */
   async markAsResolved(ticketId: string): Promise<Ticket> {
     // Get the ticket from the store
@@ -152,34 +156,23 @@ export class TicketManager {
       throw new Error(`Ticket with ID ${ticketId} not found`);
     }
 
-    // Update the ticket to completed status
+    // The database trigger will automatically cancel the queued message
+    // when status changes away from 'awaiting-confirmation'
+
+    // Update the ticket to pending-payment status
     const updatedTicket: Ticket = {
       ...ticket,
-      status: 'completed',
+      status: 'pending-payment',
       resolvedAt: new Date(),
     };
 
-    const result = await this.ticketStore.update(ticketId, updatedTicket);
-
-    // Process credit transfer (deduct customer credits, pay engineer)
-    try {
-      console.info(`[TicketManager] Processing credit transfer for ticket: ${ticketId}`);
-      await this.apiManager.processCreditTransfer(ticket.createdBy.id, ticketId);
-      console.info(`[TicketManager] Credit transfer completed successfully for ticket: ${ticketId}`);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[TicketManager] Credit transfer failed for ticket ${ticketId}:`, errorMessage);
-      // Note: We don't re-throw here to avoid blocking ticket completion
-      // The transfer can be retried or handled by admin reconciliation
-      // The audit record in engineer_transfers will show the failure
-    }
-
-    return result;
+    return await this.ticketStore.update(ticketId, updatedTicket);
   }
 
   /**
    * Marks a ticket as still broken (customer indicates fix didn't work)
    * Returns ticket to in-progress status while maintaining engineer assignment
+   * Cancels any pending auto-complete tasks in the queue
    * @param ticketId - The ID of the ticket to mark as still broken
    * @returns The updated ticket
    * @throws Error if user is not a customer or ticket not found
@@ -200,6 +193,9 @@ export class TicketManager {
     if (ticket.createdBy.id !== customerProfile.id) {
       throw new Error('You can only mark your own tickets as still broken');
     }
+
+    // The database trigger will automatically cancel the queued message
+    // when status changes away from 'awaiting-confirmation'
 
     // Update the ticket back to in-progress, keeping the engineer assignment and claimedAt
     const updatedTicket: Ticket = {

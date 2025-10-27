@@ -40,6 +40,14 @@ CREATE POLICY "Users can view collaborators for their repositories" ON repositor
     )
   );
 
+-- Engineers can view collaborator records where they are the engineer
+CREATE POLICY "Engineers can view their own collaborator records" ON repository_collaborators
+  FOR SELECT USING (
+    engineer_id IN (
+      SELECT id FROM profiles WHERE auth_id = auth.uid()
+    )
+  );
+
 -- Allow authenticated users to insert collaborators for repositories they own
 CREATE POLICY "Users can insert collaborators for their repositories" ON repository_collaborators
   FOR INSERT WITH CHECK (

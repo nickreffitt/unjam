@@ -4,6 +4,7 @@ import { type Ticket } from '@common/types';
 import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
 import { useTicketActions } from '@extension/Ticket/hooks/useTicketActions';
 import Rating from '@extension/Rating/Rating';
+import { shouldShowCompletedState } from '@common/util/ticketStatusHelpers';
 
 interface TicketBoxProps {
   ticket: Ticket | null;
@@ -41,6 +42,35 @@ const Timer: React.FC<TimerProps> = ({ startTime }) => {
   return <span>{minutes}:{seconds.toString().padStart(2, '0')}</span>;
 };
 
+interface CountdownTimerProps {
+  endTime: Date;
+  ticketStatus: string;
+}
+
+const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, ticketStatus }) => {
+  const [remaining, setRemaining] = useState(() => {
+    const now = new Date();
+    return Math.max(0, Math.floor((endTime.getTime() - now.getTime()) / 1000));
+  });
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const diff = Math.max(0, Math.floor((endTime.getTime() - now.getTime()) / 1000));
+      setRemaining(diff);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+
+    return () => clearInterval(interval);
+  }, [endTime, ticketStatus]);
+
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  return <span>{minutes}:{seconds.toString().padStart(2, '0')}</span>;
+};
+
 const TicketBox: React.FC<TicketBoxProps> = ({
   ticket,
   onHide,
@@ -48,6 +78,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   onToggleChat
 }) => {
   const [copied, setCopied] = useState(false);
+  const [, forceUpdate] = useState({});
 
   // Get state and actions from hooks
   const {
@@ -65,6 +96,16 @@ const TicketBox: React.FC<TicketBoxProps> = ({
     handleConfirmFixed,
     handleMarkStillBroken
   } = useTicketActions(ticket, setActiveTicket, setIsTicketVisible);
+
+  // Force re-render every second when in awaiting-confirmation state to check if timer expired
+  useEffect(() => {
+    if (ticket?.status === 'awaiting-confirmation' && ticket.autoCompleteTimeoutAt) {
+      const interval = setInterval(() => {
+        forceUpdate({});
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [ticket?.status, ticket?.autoCompleteTimeoutAt]);
 
   if (!ticket) return null;
 
@@ -113,15 +154,16 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   };
 
   const getStatusIcon = () => {
+    if (shouldShowCompletedState(ticket)) {
+      return <CheckCircle size={18} />;
+    }
+
     switch (ticket.status) {
       case 'waiting':
         return <Clock size={18} />;
       case 'in-progress':
         return <Clock size={18} />;
       case 'awaiting-confirmation':
-        return <CheckCircle size={18} />;
-      case 'completed':
-      case 'auto-completed':
         return <CheckCircle size={18} />;
       default:
         return <Clock size={18} />;
@@ -129,15 +171,16 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   };
 
   const getStatusColor = () => {
+    if (shouldShowCompletedState(ticket)) {
+      return 'unjam-border-green-400 unjam-bg-green-50';
+    }
+
     switch (ticket.status) {
       case 'waiting':
         return 'unjam-border-orange-400 unjam-bg-orange-50';
       case 'in-progress':
         return 'unjam-border-orange-400 unjam-bg-orange-50';
       case 'awaiting-confirmation':
-        return 'unjam-border-green-400 unjam-bg-green-50';
-      case 'completed':
-      case 'auto-completed':
         return 'unjam-border-green-400 unjam-bg-green-50';
       default:
         return 'unjam-border-orange-400 unjam-bg-orange-50';
@@ -214,10 +257,15 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         </div>
       )}
 
-      {ticket.status === 'awaiting-confirmation' && (
+      {ticket.status === 'awaiting-confirmation' && !shouldShowCompletedState(ticket) && (
         <div className="unjam-text-center">
           <p className="unjam-text-gray-600 unjam-mb-4">Issue resolved! Please confirm:</p>
-          
+          {ticket.autoCompleteTimeoutAt && (
+            <div className="unjam-text-2xl unjam-text-black unjam-font-mono unjam-mb-4">
+              <CountdownTimer endTime={ticket.autoCompleteTimeoutAt} ticketStatus={ticket.status} />
+            </div>
+          )}
+
           <div className="unjam-flex unjam-gap-2">
             <button
               onClick={handleConfirmFixed}
@@ -237,7 +285,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         </div>
       )}
 
-      {(ticket.status === 'completed' || ticket.status === 'auto-completed') && (
+      {shouldShowCompletedState(ticket) && (
         <Rating ticket={ticket} onClose={handleHide} />
       )}
     </div>

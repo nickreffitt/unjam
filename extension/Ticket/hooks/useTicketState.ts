@@ -3,6 +3,7 @@ import { type Ticket } from '@common/types';
 import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
 import { useTicketListener } from '@common/features/TicketManager/hooks';
 import { useUserProfile } from '@extension/shared/UserProfileContext';
+import { canCreateNewTicket } from '@common/util/ticketStatusHelpers';
 
 export interface UseTicketStateReturn {
   activeTicket: Ticket | null;
@@ -128,8 +129,8 @@ export const useTicketState = (): UseTicketStateReturn => {
   // Handle create new ticket button click
   const handleCreateNewTicketClick = useCallback(() => {
     console.debug('useTicketState: handleCreateNewTicketClick called', { activeTicket, isModalOpen });
-    // If ticket exists and is not resolved, just show the existing ticket
-    if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
+    // If ticket exists and is not in a completed state, just show the existing ticket
+    if (!canCreateNewTicket(activeTicket)) {
       setIsTicketVisible(true);
     } else {
       // Only allow creating new ticket if no ticket exists or current ticket is completed
@@ -140,8 +141,8 @@ export const useTicketState = (): UseTicketStateReturn => {
 
   // Get appropriate button text based on ticket state
   const getButtonText = useCallback(() => {
-    // If ticket exists and is not completed, show "Show Active Ticket"
-    if (activeTicket && activeTicket.status !== 'completed' && activeTicket.status !== 'auto-completed') {
+    // If ticket exists and is not in a completed state, show "Show Active Ticket"
+    if (!canCreateNewTicket(activeTicket)) {
       return 'Show Active Ticket';
     }
     // If no ticket exists or ticket is completed, allow creating new ticket

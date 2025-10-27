@@ -19,7 +19,9 @@
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "cypress:run": "cypress run",
-    "cypress:open": "cypress open"
+    "cypress:open": "cypress open",
+    "types:dev": "npx supabase gen types typescript --local > ./common/supabase.types.ts",
+    "types:prod": "npx supabase gen types typescript --project-id fztlbcojvolnruifwnke --schema public > ./common/supabase.types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

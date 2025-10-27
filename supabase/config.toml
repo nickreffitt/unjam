@@ -369,3 +369,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/code-share-webhook/deno.json"
 entrypoint = "./functions/code-share-webhook/index.ts"
+
+[functions.ticket-payment]
+enabled = true
+verify_jwt = false
+import_map = "./functions/ticket-payment/deno.json"
+entrypoint = "./functions/ticket-payment/index.ts"

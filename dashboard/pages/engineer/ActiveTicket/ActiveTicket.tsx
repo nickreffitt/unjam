@@ -7,6 +7,7 @@ import TicketDetailView from '@dashboard/engineer/Ticket/components/TicketDetail
 import { Check, AlertTriangle, Clock, TestTube, Timer, MessageSquare, Keyboard } from 'lucide-react';
 import { type ChatBoxRef } from '@dashboard/engineer/ChatBox/ChatBox';
 import { useChatManager } from '@dashboard/engineer/ChatBox/contexts/ChatManagerContext';
+import { shouldShowCompletedState } from '@common/util/ticketStatusHelpers';
 
 const ActiveTicket: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -97,12 +98,26 @@ const ActiveTicket: React.FC = () => {
         }
         return `${formatElapsedTime(elapsedTime)} - Active`;
       case 'awaiting-confirmation':
-        // Show countdown to autoCompleteTimeoutAt
+        // Check if timer has expired
+        if (shouldShowCompletedState(ticket)) {
+          // Timer expired, show as pending payment
+          if (ticket.claimedAt && ticket.resolvedAt) {
+            return `${formatCompletionTime(ticket.claimedAt, ticket.resolvedAt)} - Pending Payment`;
+          }
+          return 'Pending Payment';
+        }
+        // Timer still active, show countdown
         if (ticket.autoCompleteTimeoutAt) {
           const timeoutDate = new Date(ticket.autoCompleteTimeoutAt);
           return `Waiting for customer confirmation - Auto-complete in ${formatCountdownTime(timeoutDate)}`;
         }
         return `Waiting for customer confirmation - Auto-complete in ${formatElapsedTime(timeoutRemaining)}`;
+      case 'pending-payment':
+        // Show completion time with pending payment status
+        if (ticket.claimedAt && ticket.resolvedAt) {
+          return `${formatCompletionTime(ticket.claimedAt, ticket.resolvedAt)} - Pending Payment`;
+        }
+        return 'Pending Payment';
       case 'auto-completed':
         // Show actual completion time from claimedAt to resolvedAt
         if (ticket.claimedAt && ticket.resolvedAt) {
@@ -145,10 +160,28 @@ const ActiveTicket: React.FC = () => {
     }
 
     if (ticket.status === 'awaiting-confirmation') {
+      // Check if timer expired
+      if (shouldShowCompletedState(ticket)) {
+        return (
+          <div className="unjam-bg-blue-100 unjam-text-blue-800 unjam-px-4 unjam-py-2 unjam-rounded-md unjam-font-medium unjam-flex unjam-items-center unjam-gap-2">
+            <Check size={16} />
+            Payment will be processed shortly
+          </div>
+        );
+      }
       return (
         <div className="unjam-bg-yellow-100 unjam-text-yellow-800 unjam-px-4 unjam-py-2 unjam-rounded-md unjam-font-medium unjam-flex unjam-items-center unjam-gap-2">
           <Clock size={16} />
           Waiting for customer confirmation
+        </div>
+      );
+    }
+
+    if (ticket.status === 'pending-payment') {
+      return (
+        <div className="unjam-bg-blue-100 unjam-text-blue-800 unjam-px-4 unjam-py-2 unjam-rounded-md unjam-font-medium unjam-flex unjam-items-center unjam-gap-2">
+          <Check size={16} />
+          Payment will be processed shortly
         </div>
       );
     }

@@ -69,6 +69,20 @@ export const getStatusDisplay = (status: string) => {
         textColor: 'unjam-text-green-700',
         dotColor: 'unjam-bg-green-400'
       };
+    case 'pending-payment':
+      return {
+        text: 'Pending Payment',
+        bgColor: 'unjam-bg-blue-100',
+        textColor: 'unjam-text-blue-800',
+        dotColor: 'unjam-bg-blue-400'
+      };
+    case 'awaiting-confirmation':
+      return {
+        text: 'Awaiting Confirmation',
+        bgColor: 'unjam-bg-yellow-100',
+        textColor: 'unjam-text-yellow-800',
+        dotColor: 'unjam-bg-yellow-400'
+      };
     case 'in-progress':
       return {
         text: 'In Progress',
@@ -115,6 +129,20 @@ export const getCompletionMessage = (status: string) => {
         text: 'This ticket has been completed successfully. Customer has confirmed the resolution.',
         bgColor: 'bg-green-100',
         textColor: 'text-green-800'
+      };
+    case 'pending-payment':
+      return {
+        icon: '💳',
+        text: 'This ticket has been completed. Payment will be processed shortly.',
+        bgColor: 'bg-blue-100',
+        textColor: 'text-blue-800'
+      };
+    case 'awaiting-confirmation':
+      return {
+        icon: '⏳',
+        text: 'This ticket has been marked as fixed. Waiting for customer to confirm the fix.',
+        bgColor: 'bg-yellow-100',
+        textColor: 'text-yellow-800'
       };
     default:
       return {
