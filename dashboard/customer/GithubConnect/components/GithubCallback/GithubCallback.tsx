@@ -87,7 +87,7 @@ const GithubCallback: React.FC = () => {
                     {error?.message || 'Unable to connect your GitHub account'}
                   </p>
                   <button
-                    onClick={() => navigate('/github-connect')}
+                    onClick={() => navigate('/github/connect')}
                     className="unjam-px-6 unjam-py-2 unjam-bg-blue-600 unjam-text-white unjam-rounded-lg hover:unjam-bg-blue-700 unjam-transition-colors"
                   >
                     Try Again
