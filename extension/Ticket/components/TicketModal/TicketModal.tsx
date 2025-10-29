@@ -15,6 +15,7 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [pendingCredits, setPendingCredits] = useState<number | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
 
   // Use shared TicketManager from context
@@ -40,9 +41,11 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
         // If subscription exists, fetch credit balance
         if (activeSubscription) {
           const balance = await subscriptionManager.getCreditBalanceForProfile(customerProfile.id);
-          setCreditBalance(balance);
+          setCreditBalance(balance.creditBalance);
+          setPendingCredits(balance.pendingCredits)
         } else {
           setCreditBalance(null);
+          setPendingCredits(null);
         }
       } catch (error) {
         console.error('Failed to fetch subscription data:', error);
@@ -54,6 +57,7 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
     fetchSubscriptionData();
   }, [isOpen, customerProfile.id, subscriptionManager]);
 
+
   if (!isOpen) return null;
 
   // Redirect to dashboard if no subscription
@@ -62,8 +66,13 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
     window.open(dashboardUrl, '_blank');
   };
 
+  // Calculate available credits (total - pending)
+  const availableCredits = creditBalance !== null && pendingCredits !== null
+    ? creditBalance - pendingCredits
+    : creditBalance;
+
   // Check if ticket creation should be disabled
-  const isTicketDisabled = isLoadingSubscription || !subscription || creditBalance === 0;
+  const isTicketDisabled = isLoadingSubscription || !subscription || availableCredits === 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +113,21 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+  };
+
   return (
     <div 
       className="unjam-fixed unjam-inset-0 unjam-bg-black unjam-bg-opacity-50 unjam-flex unjam-items-center unjam-justify-center unjam-z-50 unjam-font-sans"
@@ -140,10 +164,15 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
                 Go to Dashboard
               </button>
             </div>
-          ) : creditBalance === 0 ? (
+          ) : availableCredits === 0 ? (
             <div className="unjam-text-center unjam-py-8">
               <p className="unjam-text-gray-800 unjam-font-medium unjam-mb-2">No Credits Available</p>
-              <p className="unjam-text-gray-600 unjam-mb-4">You have 0 credits remaining. Please purchase more credits to create tickets.</p>
+              <p className="unjam-text-gray-600 unjam-mb-4">
+                {creditBalance === 0
+                  ? 'You have 0 credits remaining. Please purchase more credits to create tickets.'
+                  : `All ${creditBalance} credits are currently being used by pending tickets. Please wait for them to complete or purchase more credits.`
+                }
+              </p>
               <button
                 onClick={handleGoToDashboard}
                 className="unjam-px-4 unjam-py-2 unjam-text-sm unjam-font-medium unjam-text-white unjam-bg-blue-600 unjam-rounded-md hover:unjam-bg-blue-700 unjam-transition-colors"
@@ -164,6 +193,9 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onKeyUp={handleKeyUp}
+                  onKeyPress={handleKeyPress}
                   placeholder="Please describe the problem you're experiencing..."
                   className="unjam-bg-white unjam-text-black unjam-w-full unjam-p-3 unjam-border unjam-border-gray-300 unjam-rounded-md unjam-resize-none unjam-focus:ring-2 unjam-focus:ring-blue-500 unjam-focus:border-blue-500 unjam-outline-none"
                   rows={4}
@@ -173,8 +205,18 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
               </div>
 
               {/* Credit Balance Display */}
-              <div className="unjam-mb-4 unjam-text-sm unjam-text-gray-600">
-                Credits available: {(creditBalance || 0)}
+              <div className="unjam-mb-4 unjam-space-y-1">
+                <div className="unjam-text-sm unjam-text-gray-600">
+                  <span className="unjam-font-medium">Credit Balance:</span> {creditBalance || 0}
+                </div>
+                {pendingCredits !== null && pendingCredits > 0 && (
+                  <div className="unjam-text-sm unjam-text-orange-600">
+                    <span className="unjam-font-medium">Pending Credits:</span> {pendingCredits}
+                  </div>
+                )}
+                <div className="unjam-text-sm unjam-text-green-600 unjam-font-semibold">
+                  <span className="unjam-font-medium">Available Credits:</span> {availableCredits || 0}
+                </div>
               </div>
 
               {/* Footer */}

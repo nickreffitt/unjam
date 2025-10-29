@@ -1,4 +1,4 @@
-import type { Subscription } from '@common/types';
+import type { CreditBalanceResponse, Subscription } from '@common/types';
 import { type SubscriptionStore } from '@common/features/SubscriptionManager/store';
 import { type ApiManager } from '@common/features/ApiManager';
 
@@ -26,7 +26,7 @@ export class SubscriptionManager {
    * @returns The credit balance amount
    * @throws Error if the request fails
    */
-  async getCreditBalanceForProfile(profileId: string): Promise<number> {
+  async getCreditBalanceForProfile(profileId: string): Promise<CreditBalanceResponse> {
     return await this.apiManager.fetchCreditBalance(profileId);
   }
 

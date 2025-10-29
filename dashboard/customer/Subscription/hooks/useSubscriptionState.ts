@@ -10,6 +10,7 @@ export const useSubscriptionState = () => {
   const { subscriptionManager, userProfile } = useSubscriptionManager();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [pendingCredits, setPendingCredits] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,11 +28,13 @@ export const useSubscriptionState = () => {
         if (activeSubscription) {
           console.info('[useSubscriptionState] Active subscription found, fetching credit balance');
           const balance = await subscriptionManager.getCreditBalanceForProfile(userProfile.id);
-          setCreditBalance(balance);
+          setCreditBalance(balance.creditBalance);
+          setPendingCredits(balance.pendingCredits)
           console.info('[useSubscriptionState] Successfully fetched credit balance');
         } else {
           console.info('[useSubscriptionState] No active subscription found');
           setCreditBalance(null);
+          setPendingCredits(null)
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load subscription state';
@@ -39,6 +42,7 @@ export const useSubscriptionState = () => {
         setError(errorMessage);
         setSubscription(null);
         setCreditBalance(null);
+        setPendingCredits(null);
       } finally {
         setIsLoading(false);
       }
@@ -50,6 +54,7 @@ export const useSubscriptionState = () => {
   return {
     subscription,
     creditBalance,
+    pendingCredits,
     isLoading,
     error,
     hasActiveSubscription: subscription !== null

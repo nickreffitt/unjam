@@ -3,6 +3,7 @@ import { BillingCreditsHandler } from './BillingCreditsHandler.ts'
 import { createClient } from "supabase";
 import Stripe from "stripe";
 import { BillingCustomerStoreSupabase } from "@stores/BillingCustomer/index.ts";
+import { TicketStoreSupabase } from "@stores/Ticket/index.ts";
 import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts";
 import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
 import type { CreditBalanceRequest } from "@types";
@@ -54,6 +55,7 @@ export const handler = async (request: Request): Promise<Response> => {
 
     // Initialize stores
     const customerStore = new BillingCustomerStoreSupabase(supabase)
+    const ticketStore = new TicketStoreSupabase(supabase)
 
     // Initialize services
     const creditsService = new BillingCreditsServiceStripe(stripe) // Uses 'ticket_completed' meter by default
@@ -64,6 +66,7 @@ export const handler = async (request: Request): Promise<Response> => {
       customerStore,
       subscriptionService,
       creditsService,
+      ticketStore,
     )
 
     // Handle GET request - fetch credit balance

@@ -22,6 +22,21 @@ export const RatingForm: React.FC<RatingFormProps> = ({ ticket, onSuccess }) => 
     onSuccess,
   });
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+  };
+
   const renderStars = () => {
     return Array.from({ length: 5 }, (_, index) => (
       <button
@@ -48,8 +63,11 @@ export const RatingForm: React.FC<RatingFormProps> = ({ ticket, onSuccess }) => 
       <textarea
         value={feedback}
         onChange={(e) => setFeedback(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onKeyPress={handleKeyPress}
         placeholder="Share your feedback (optional)"
-        className="unjam-w-full unjam-bg-white unjam-text-black unjam-p-2 unjam-border unjam-border-gray-300 unjam-rounded unjam-text-sm unjam-resize-none unjam-mb-4"
+        className="unjam-rating-feedback unjam-w-full unjam-bg-white unjam-text-black unjam-p-2 unjam-border unjam-border-gray-300 unjam-rounded unjam-text-sm unjam-resize-none unjam-mb-4"
         rows={3}
         data-testid="rating-feedback-textarea"
       />

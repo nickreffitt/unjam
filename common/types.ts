@@ -340,6 +340,7 @@ export interface CreditBalanceRequest {
 
 export interface CreditBalanceResponse {
   creditBalance: number;
+  pendingCredits: number;
 }
 
 export interface CreditTransferRequest {

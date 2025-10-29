@@ -9,6 +9,7 @@ export interface TicketBillingInfo {
   createdAt: Date
   claimedAt: Date | null // When engineer claimed the ticket (start of work)
   resolvedAt: Date | null // When ticket was marked resolved/completed
+  markAsFixedAt: Date | null
 }
 
 /**
@@ -30,4 +31,12 @@ export interface TicketStore {
    * @returns Updated ticket billing info if found, undefined otherwise
    */
   updateStatus(ticketId: string, status: string): Promise<TicketBillingInfo | undefined>
+
+  /**
+   * Fetches tickets by customer ID and statuses
+   * @param customerId - The customer profile ID
+   * @param statuses - Array of ticket statuses to filter by
+   * @returns Array of ticket billing info
+   */
+  fetchByCustomerAndStatuses(customerId: string, statuses: string[]): Promise<TicketBillingInfo[]>
 }

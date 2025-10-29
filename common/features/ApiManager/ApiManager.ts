@@ -136,18 +136,18 @@ export class ApiManager {
    * @returns The credit balance amount
    * @throws Error if the request fails
    */
-  async fetchCreditBalance(profileId: string): Promise<number> {
+  async fetchCreditBalance(profileId: string): Promise<CreditBalanceResponse> {
     console.info(`[ApiManager] Fetching credit balance for profile: ${profileId}`);
 
     try {
-      const { creditBalance } = await this.makeAuthenticatedGetRequest<CreditBalanceResponse>(
+      const creditBalanceResponse = await this.makeAuthenticatedGetRequest<CreditBalanceResponse>(
         'billing_credits',
         { profile_id: profileId },
         'Failed to fetch credit balance'
       );
 
-      console.info(`[ApiManager] Successfully fetched credit balance: ${creditBalance}`);
-      return creditBalance;
+      console.info(`[ApiManager] Successfully fetched credit balance: ${creditBalanceResponse.creditBalance}, pending credits: ${creditBalanceResponse.pendingCredits}`);
+      return creditBalanceResponse;
 
     } catch (err) {
       const error = err as Error;

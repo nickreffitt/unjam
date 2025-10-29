@@ -22,7 +22,7 @@ export class TicketStoreSupabase implements TicketStore {
 
     const { data, error } = await this.supabase
       .from('tickets')
-      .select('id, created_by, assigned_to, status, created_at, claimed_at, resolved_at')
+      .select('id, created_by, assigned_to, status, created_at, claimed_at, resolved_at, marked_as_fixed_at')
       .eq('id', ticketId)
       .single()
 
@@ -43,7 +43,8 @@ export class TicketStoreSupabase implements TicketStore {
       status: data.status,
       createdAt: new Date(data.created_at),
       claimedAt: data.claimed_at ? new Date(data.claimed_at) : null,
-      resolvedAt: data.resolved_at ? new Date(data.resolved_at) : null
+      resolvedAt: data.resolved_at ? new Date(data.resolved_at) : null,
+      markAsFixedAt: data.marked_as_fixed_at ? new Date(data.marked_as_fixed_at) : null
     }
 
     console.info(`[TicketStoreSupabase] Found ticket ${ticketId} for customer ${ticketInfo.customerId}`)
@@ -63,7 +64,7 @@ export class TicketStoreSupabase implements TicketStore {
       .from('tickets')
       .update({ status })
       .eq('id', ticketId)
-      .select('id, created_by, assigned_to, status, created_at, claimed_at, resolved_at')
+      .select('id, created_by, assigned_to, status, created_at, claimed_at, resolved_at, marked_as_fixed_at')
       .single()
 
     if (error) {
@@ -83,10 +84,46 @@ export class TicketStoreSupabase implements TicketStore {
       status: data.status,
       createdAt: new Date(data.created_at),
       claimedAt: data.claimed_at ? new Date(data.claimed_at) : null,
-      resolvedAt: data.resolved_at ? new Date(data.resolved_at) : null
+      resolvedAt: data.resolved_at ? new Date(data.resolved_at) : null,
+      markAsFixedAt: data.marked_as_fixed_at ? new Date(data.marked_as_fixed_at) : null
     }
 
     console.info(`[TicketStoreSupabase] Updated ticket ${ticketId} status successfully`)
     return ticketInfo
+  }
+
+  /**
+   * Fetches tickets by customer ID and statuses
+   * @param customerId - The customer profile ID
+   * @param statuses - Array of ticket statuses to filter by
+   * @returns Array of ticket billing info
+   */
+  async fetchByCustomerAndStatuses(customerId: string, statuses: string[]): Promise<TicketBillingInfo[]> {
+    console.info(`[TicketStoreSupabase] Fetching tickets for customer ${customerId} with statuses: ${statuses.join(', ')}`)
+
+    const { data, error } = await this.supabase
+      .from('tickets')
+      .select('id, created_by, assigned_to, status, created_at, claimed_at, resolved_at, marked_as_fixed_at')
+      .eq('created_by', customerId)
+      .in('status', statuses)
+
+    if (error) {
+      console.error(`[TicketStoreSupabase] Error fetching tickets:`, error)
+      throw new Error(`Failed to fetch tickets: ${error.message}`)
+    }
+
+    const tickets: TicketBillingInfo[] = data.map(ticket => ({
+      id: ticket.id,
+      customerId: ticket.created_by,
+      engineerId: ticket.assigned_to,
+      status: ticket.status,
+      createdAt: new Date(ticket.created_at),
+      claimedAt: ticket.claimed_at ? new Date(ticket.claimed_at) : null,
+      resolvedAt: ticket.resolved_at ? new Date(ticket.resolved_at) : null,
+      markAsFixedAt: ticket.marked_as_fixed_at ? new Date(ticket.marked_as_fixed_at) : null
+    }))
+
+    console.info(`[TicketStoreSupabase] Found ${tickets.length} tickets`)
+    return tickets
   }
 }

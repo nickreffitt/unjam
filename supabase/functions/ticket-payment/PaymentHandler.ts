@@ -166,7 +166,7 @@ export class PaymentHandler {
 
     // Calculate elapsed time in hours
     const startTime = ticket.claimedAt || ticket.createdAt
-    const endTime = ticket.resolvedAt || new Date()
+    const endTime = ticket.resolvedAt || ticket.markAsFixedAt || new Date()
     const elapsedMilliseconds = endTime.getTime() - startTime.getTime()
     const elapsedHours = elapsedMilliseconds / (1000 * 60 * 60)
 

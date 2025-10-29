@@ -18,6 +18,23 @@ const ChatInput: React.FC<ChatInputProps> = ({
   placeholder = 'Type your message...',
   disabled = false,
 }) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+  };
+
+  const handleKeyPressInternal = (e: React.KeyboardEvent) => {
+    // Stop propagation to prevent host page keyboard shortcuts
+    e.nativeEvent.stopPropagation();
+    // Call the original onKeyPress handler
+    onKeyPress(e);
+  };
+
   return (
     <div className="unjam-flex unjam-items-center unjam-gap-3">
       <input
@@ -25,10 +42,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onKeyPress={onKeyPress}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onKeyPress={handleKeyPressInternal}
         placeholder={placeholder}
         disabled={disabled}
-        className="
+        className="unjam-chat-input
           unjam-flex-1
           unjam-px-4
           unjam-py-2
