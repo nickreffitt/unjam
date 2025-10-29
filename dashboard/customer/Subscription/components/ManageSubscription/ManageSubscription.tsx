@@ -48,28 +48,15 @@ const ManageSubscription: React.FC<ManageSubscriptionProps> = ({
           </div>
 
           {creditBalance !== null && (
-            <div className="unjam-space-y-2">
-              <div>
-                <span className="unjam-text-gray-600">Credit Balance:</span>
-                <span className="unjam-ml-2 unjam-font-semibold">
-                  {creditBalance}
-                </span>
-              </div>
+            <div>
+              <span className="unjam-text-gray-600">Credit Balance:</span>
+              <span className="unjam-ml-2 unjam-font-semibold">
+                {creditBalance}
+              </span>
               {pendingCredits !== null && pendingCredits > 0 && (
-                <div className="unjam-ml-4">
-                  <span className="unjam-text-gray-500 unjam-text-sm">Pending Credits:</span>
-                  <span className="unjam-ml-2 unjam-text-sm unjam-text-orange-600 unjam-font-semibold">
-                    {pendingCredits}
-                  </span>
-                </div>
-              )}
-              {creditBalance !== null && pendingCredits !== null && (
-                <div className="unjam-ml-4">
-                  <span className="unjam-text-gray-500 unjam-text-sm">Available Credits:</span>
-                  <span className="unjam-ml-2 unjam-text-sm unjam-font-semibold unjam-text-green-600">
-                    {creditBalance - pendingCredits}
-                  </span>
-                </div>
+                <span className="unjam-ml-1 unjam-text-orange-600 unjam-font-semibold">
+                  ({pendingCredits} pending)
+                </span>
               )}
             </div>
           )}

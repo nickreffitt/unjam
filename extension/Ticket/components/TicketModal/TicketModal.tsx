@@ -71,9 +71,6 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
     ? creditBalance - pendingCredits
     : creditBalance;
 
-  // Check if ticket creation should be disabled
-  const isTicketDisabled = isLoadingSubscription || !subscription || availableCredits === 0;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) return;
@@ -205,17 +202,12 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
               </div>
 
               {/* Credit Balance Display */}
-              <div className="unjam-mb-4 unjam-space-y-1">
+              <div className="unjam-mb-4">
                 <div className="unjam-text-sm unjam-text-gray-600">
                   <span className="unjam-font-medium">Credit Balance:</span> {creditBalance || 0}
-                </div>
-                {pendingCredits !== null && pendingCredits > 0 && (
-                  <div className="unjam-text-sm unjam-text-orange-600">
-                    <span className="unjam-font-medium">Pending Credits:</span> {pendingCredits}
-                  </div>
-                )}
-                <div className="unjam-text-sm unjam-text-green-600 unjam-font-semibold">
-                  <span className="unjam-font-medium">Available Credits:</span> {availableCredits || 0}
+                  {pendingCredits !== null && pendingCredits > 0 && (
+                    <span className="unjam-text-orange-600"> ({pendingCredits} pending)</span>
+                  )}
                 </div>
               </div>
 

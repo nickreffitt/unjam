@@ -82,7 +82,7 @@ export class CodeShareManager {
    * @throws Error if GitHub client ID is not configured
    */
   getAuthorizationUrl(): string {
-    const redirectUri = `${import.meta.env.VITE_APP_URL}/app/github/callback`;
+    const redirectUri = `${import.meta.env.VITE_APP_URL}/github/callback`;
     const scope = 'repo';
     return `https://github.com/login/oauth/authorize?client_id=${this.githubClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}`;
   }
