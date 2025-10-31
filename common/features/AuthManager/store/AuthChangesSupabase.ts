@@ -88,13 +88,29 @@ export class AuthChangesSupabase implements AuthChanges {
    * Handles profile update events
    * Maps the database row to a UserProfile and emits the appropriate event
    */
-  private handleProfileUpdate(row: Record<string, unknown>): void {
+  private async handleProfileUpdate(row: Record<string, unknown>): Promise<void> {
     try {
       const profile = AuthSupabaseRowMapper.mapRowToProfile(row);
 
-      // Create AuthUser from profile
+      // Get current user from Supabase session
+      const { data: { user: supabaseUser } } = await this.supabaseClient.auth.getUser();
+
+      if (!supabaseUser) {
+        console.warn('AuthChangesSupabase: No authenticated user found when handling profile update');
+        return;
+      }
+
+      // Map Supabase user to our User type
+      const user = {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        createdAt: new Date(supabaseUser.created_at),
+      };
+
+      // Create complete AuthUser with both user and profile
       const authUser: AuthUser = {
         status: 'signed-in',
+        user,
         profile,
       };
 
