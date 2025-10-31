@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Github, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useGithubConnectState } from './hooks/useGithubConnectState';
 import { useGithubConnectActions } from './hooks/useGithubConnectActions';
 import GithubConnectStatus from './components/GithubConnectStatus';
@@ -7,8 +8,20 @@ import GithubConnectStatus from './components/GithubConnectStatus';
 const GithubConnect: React.FC = () => {
   const { integration, isLoading, error: stateError } = useGithubConnectState();
   const { startOAuthFlow, error: actionError } = useGithubConnectActions();
+  const navigate = useNavigate();
 
   const error = stateError || actionError;
+
+  // Redirect to home page after showing connected status
+  useEffect(() => {
+    if (integration) {
+      const timer = setTimeout(() => {
+        navigate('/');
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [integration, navigate]);
 
   if (isLoading) {
     return (

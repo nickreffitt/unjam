@@ -36,19 +36,17 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ALTER TABLE webrtc_signals ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
--- Users can view signals addressed to them
-CREATE POLICY "Users can view signals addressed to them" ON webrtc_signals
+-- Consolidated SELECT policy (combines signals addressed to user + signals sent by user)
+CREATE POLICY "Consolidated: View webrtc signals" ON webrtc_signals
   FOR SELECT USING (
+    -- Users can view signals addressed to them
     to_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
-  );
-
--- Users can view signals they sent
-CREATE POLICY "Users can view signals they sent" ON webrtc_signals
-  FOR SELECT USING (
+    OR
+    -- Users can view signals they sent
     from_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -56,7 +54,7 @@ CREATE POLICY "Users can view signals they sent" ON webrtc_signals
 CREATE POLICY "Users can create signals" ON webrtc_signals
   FOR INSERT WITH CHECK (
     from_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -64,7 +62,7 @@ CREATE POLICY "Users can create signals" ON webrtc_signals
 CREATE POLICY "Users can update signals addressed to them" ON webrtc_signals
   FOR UPDATE USING (
     to_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -72,11 +70,11 @@ CREATE POLICY "Users can update signals addressed to them" ON webrtc_signals
 CREATE POLICY "Users can delete signals for their sessions" ON webrtc_signals
   FOR DELETE USING (
     from_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
     OR
     to_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -88,6 +86,7 @@ ALTER publication supabase_realtime ADD TABLE webrtc_signals;
 CREATE OR REPLACE FUNCTION public.broadcast_webrtc_signal_changes()
 RETURNS trigger
 SECURITY DEFINER
+SET search_path = public
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -159,7 +158,7 @@ USING (
       SELECT 1 FROM tickets
       WHERE tickets.id::text = REPLACE(realtime.topic(), 'webrtc-signals-', '')
       AND tickets.created_by IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
     OR
@@ -168,7 +167,7 @@ USING (
       SELECT 1 FROM tickets
       WHERE tickets.id::text = REPLACE(realtime.topic(), 'webrtc-signals-', '')
       AND tickets.assigned_to IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
   )

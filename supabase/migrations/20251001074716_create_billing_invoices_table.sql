@@ -43,4 +43,4 @@ ALTER TABLE billing_invoices ENABLE ROW LEVEL SECURITY;
 -- Create RLS policies
 -- Service role can manage all billing invoices (for webhook handlers)
 CREATE POLICY "Service role can manage all billing invoices" ON billing_invoices
-  FOR ALL USING (auth.jwt()->>'role' = 'service_role');
+  FOR ALL USING ((select auth.jwt())->>'role' = 'service_role');

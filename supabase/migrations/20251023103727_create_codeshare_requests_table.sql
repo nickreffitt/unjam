@@ -40,11 +40,11 @@ ALTER TABLE codeshare_requests ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their codeshare requests" ON codeshare_requests
   FOR SELECT USING (
     sender_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
     OR
     receiver_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -53,7 +53,7 @@ CREATE POLICY "Users can create codeshare requests" ON codeshare_requests
   FOR INSERT WITH CHECK (
     -- User must be the sender of the request
     sender_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -61,11 +61,11 @@ CREATE POLICY "Users can create codeshare requests" ON codeshare_requests
 CREATE POLICY "Users can update codeshare requests they're involved in" ON codeshare_requests
   FOR UPDATE USING (
     sender_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
     OR
     receiver_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -73,7 +73,7 @@ CREATE POLICY "Users can update codeshare requests they're involved in" ON codes
 CREATE POLICY "Users can delete codeshare requests they sent" ON codeshare_requests
   FOR DELETE USING (
     sender_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -185,6 +185,6 @@ USING (
   AND
   -- User can only subscribe to their own channel (based on their profile ID)
   REPLACE(realtime.topic(), 'codeshare-requests-', '') IN (
-    SELECT id::text FROM profiles WHERE auth_id = auth.uid()
+    SELECT id::text FROM profiles WHERE auth_id = (select auth.uid())
   )
 );

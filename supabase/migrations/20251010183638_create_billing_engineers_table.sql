@@ -50,31 +50,29 @@ ALTER TABLE billing_engineers ENABLE ROW LEVEL SECURITY;
 -- Create RLS policies
 -- Service role can manage all billing engineer accounts (for webhook handlers)
 CREATE POLICY "Service role can manage all billing engineers" ON billing_engineers
-  FOR ALL USING (auth.jwt()->>'role' = 'service_role');
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- Engineers can read their own billing account
-CREATE POLICY "Engineers can read their own billing account" ON billing_engineers
+-- Engineers can read their own billing account OR customers can read engineers for their tickets
+CREATE POLICY "Users can view relevant billing engineers" ON billing_engineers
   FOR SELECT USING (
+    -- Engineers can read their own billing account
     profile_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
-  );
-
--- Add INSERT policy for engineers to create their own billing account
-CREATE POLICY "Engineers can insert their own billing account" ON billing_engineers
-  FOR INSERT WITH CHECK (
-    profile_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid() AND type = 'engineer'
-    )
-  );
-
--- Customers can read billing engineer accounts for engineers they have tickets with
-CREATE POLICY "Customers can read engineer billing accounts for their tickets" ON billing_engineers
-  FOR SELECT USING (
+    OR
+    -- Customers can read billing engineer accounts for engineers they have tickets with
     profile_id IN (
       SELECT assigned_to FROM tickets
       WHERE created_by IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
+    )
+  );
+
+-- Engineers can insert their own billing account
+CREATE POLICY "Engineers can insert their own billing account" ON billing_engineers
+  FOR INSERT WITH CHECK (
+    profile_id IN (
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid()) AND type = 'engineer'
     )
   );

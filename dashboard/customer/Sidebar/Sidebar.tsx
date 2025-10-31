@@ -1,20 +1,27 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, CreditCard, ArrowDownToLine, Github, Check } from 'lucide-react';
-import { useSubscriptionState } from '../Subscription/hooks/useSubscriptionState';
-import { useGithubConnectState } from '../GithubConnect/hooks/useGithubConnectState';
-import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
+import { LogOut, CreditCard, ArrowDownToLine, Github, Check, Home } from 'lucide-react';
+import { useOnboardingState } from '../OnboardingStatus/hooks/useOnboardingState';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { hasActiveSubscription } = useSubscriptionState();
-  const { integration } = useGithubConnectState();
-  const { authUser } = useAuthState();
+  const {
+    subscription,
+    extensionInstalled,
+    githubIntegration
+  } = useOnboardingState();
 
-  const hasExtensionInstalled = !!authUser.profile?.extensionInstalledAt;
-  const hasGithubConnected = !!integration;
+  const hasActiveSubscription = subscription !== null;
+  const hasExtensionInstalled = extensionInstalled;
+  const hasGithubConnected = githubIntegration !== null;
 
-  const navItems = [
+  const homeItem = {
+    path: '/',
+    label: 'Home',
+    icon: Home
+  };
+
+  const getStartedItems = [
     {
       path: '/buy',
       label: hasActiveSubscription ? 'Manage Plan' : 'Choose Plan',
@@ -42,6 +49,9 @@ const Sidebar: React.FC = () => {
   };
 
   const isActivePath = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
     return location.pathname.startsWith(path);
   };
 
@@ -53,28 +63,51 @@ const Sidebar: React.FC = () => {
           <h1 className="unjam-text-xl unjam-font-semibold unjam-text-gray-900">Unjam</h1>
         </div>
       </div>
-      
+
       <nav className="unjam-flex-1 unjam-p-4 unjam-flex unjam-flex-col">
+        {/* Home link */}
         <ul className="unjam-space-y-2">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className={`unjam-flex unjam-items-center unjam-space-x-3 unjam-px-4 unjam-py-3 unjam-rounded-lg unjam-transition-colors unjam-text-sm ${
-                  isActivePath(item.path)
-                    ? 'unjam-bg-blue-50 unjam-text-blue-700 unjam-border unjam-border-blue-200'
-                    : 'unjam-text-gray-700 hover:unjam-bg-gray-50 hover:unjam-text-gray-900'
-                }`}
-              >
-                <item.icon size={18} />
-                <span className="unjam-font-medium unjam-flex-1">{item.label}</span>
-                {item.completed && (
-                  <Check size={18} className="unjam-text-green-600" />
-                )}
-              </Link>
-            </li>
-          ))}
+          <li>
+            <Link
+              to={homeItem.path}
+              className={`unjam-flex unjam-items-center unjam-space-x-3 unjam-px-4 unjam-py-3 unjam-rounded-lg unjam-transition-colors unjam-text-sm ${
+                isActivePath(homeItem.path)
+                  ? 'unjam-bg-blue-50 unjam-text-blue-700 unjam-border unjam-border-blue-200'
+                  : 'unjam-text-gray-700 hover:unjam-bg-gray-50 hover:unjam-text-gray-900'
+              }`}
+            >
+              <homeItem.icon size={18} />
+              <span className="unjam-font-medium">{homeItem.label}</span>
+            </Link>
+          </li>
         </ul>
+
+        {/* Get Started section */}
+        <div className="unjam-mt-6 unjam-pt-6 unjam-border-t unjam-border-gray-200">
+          <h2 className="unjam-px-2 unjam-mb-2 unjam-text-xs unjam-font-semibold unjam-text-gray-500 unjam-uppercase unjam-tracking-wider">
+            Get Started
+          </h2>
+          <ul className="unjam-space-y-2 unjam-pl-2">
+            {getStartedItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={`unjam-flex unjam-items-center unjam-space-x-3 unjam-px-4 unjam-py-3 unjam-rounded-lg unjam-transition-colors unjam-text-sm ${
+                    isActivePath(item.path)
+                      ? 'unjam-bg-blue-50 unjam-text-blue-700 unjam-border unjam-border-blue-200'
+                      : 'unjam-text-gray-700 hover:unjam-bg-gray-50 hover:unjam-text-gray-900'
+                  }`}
+                >
+                  <item.icon size={18} />
+                  <span className="unjam-font-medium unjam-flex-1">{item.label}</span>
+                  {item.completed && (
+                    <Check size={18} className="unjam-text-green-600" />
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
 
         {/* Logout at bottom */}
         <div className="unjam-mt-auto unjam-pt-4 unjam-border-t unjam-border-gray-200">

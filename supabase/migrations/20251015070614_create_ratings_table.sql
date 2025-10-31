@@ -23,9 +23,6 @@ CREATE TABLE ratings (
     ON DELETE CASCADE
 );
 
--- Create unique index on ticket_id to prevent duplicate ratings for same ticket
-CREATE UNIQUE INDEX ratings_ticket_id_idx ON ratings (ticket_id);
-
 -- Create index on created_by for filtering ratings by creator
 CREATE INDEX ratings_created_by_idx ON ratings (created_by);
 
@@ -43,19 +40,17 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ALTER TABLE ratings ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
--- Users can read ratings they created
-CREATE POLICY "Users can read ratings they created" ON ratings
+-- Consolidated SELECT policy (combines ratings created + ratings received)
+CREATE POLICY "Consolidated: View ratings" ON ratings
   FOR SELECT USING (
+    -- Users can read ratings they created
     created_by IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
-  );
-
--- Users can read ratings for them (ratings they received)
-CREATE POLICY "Users can read ratings for them" ON ratings
-  FOR SELECT USING (
+    OR
+    -- Users can read ratings for them (ratings they received)
     rating_for IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -64,15 +59,15 @@ CREATE POLICY "Users can read ratings for them" ON ratings
 CREATE POLICY "Users can create ratings for their tickets" ON ratings
   FOR INSERT WITH CHECK (
     created_by IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
     AND ticket_id IN (
       SELECT id FROM tickets
       WHERE created_by IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
       OR assigned_to IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
   );
@@ -81,7 +76,7 @@ CREATE POLICY "Users can create ratings for their tickets" ON ratings
 CREATE POLICY "Users can update their own ratings" ON ratings
   FOR UPDATE USING (
     created_by IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 

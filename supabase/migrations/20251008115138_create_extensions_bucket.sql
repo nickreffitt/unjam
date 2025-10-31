@@ -17,13 +17,13 @@ USING (bucket_id = 'extensions');
 -- Allow service role to upload extensions (for CI/CD)
 CREATE POLICY "Service role can upload extensions"
 ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'extensions' AND auth.role() = 'service_role');
+WITH CHECK (bucket_id = 'extensions' AND (select auth.role()) = 'service_role');
 
 -- Allow service role to update/delete extensions
 CREATE POLICY "Service role can update extensions"
 ON storage.objects FOR UPDATE
-USING (bucket_id = 'extensions' AND auth.role() = 'service_role');
+USING (bucket_id = 'extensions' AND (select auth.role()) = 'service_role');
 
 CREATE POLICY "Service role can delete extensions"
 ON storage.objects FOR DELETE
-USING (bucket_id = 'extensions' AND auth.role() = 'service_role');
+USING (bucket_id = 'extensions' AND (select auth.role()) = 'service_role');

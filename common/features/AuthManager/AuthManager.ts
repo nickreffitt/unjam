@@ -62,47 +62,6 @@ export class AuthManager {
   }
 
   /**
-   * Sign in user with magic link
-   * Sends a passwordless authentication email to the user
-   *
-   * @param email - User's email address
-   * @throws Error if sign in fails
-   */
-  async signInWithMagicLink(email: string): Promise<void> {
-    console.debug('AuthManager: Delegating magic link sign in to AuthUserStore');
-    return this.authUserStore.signInWithMagicLink(email);
-  }
-
-  /**
-   * Verify a magic link token and sign in the user
-   * Verifies the token hash from the magic link URL and authenticates the user
-   *
-   * @param tokenHash - The token hash from the magic link URL
-   * @returns Promise that resolves with the authenticated user profile
-   * @throws Error if verification fails
-   */
-  async verifyMagicLink(tokenHash: string): Promise<User> {
-    console.debug('AuthManager: Delegating magic link verification to AuthUserStore');
-    const user = await this.authUserStore.verifyMagicLink(tokenHash);
-    const userProfile = await this.convertUserToUserProfile(user);
-    if (userProfile) {
-      this.currentAuthUser = {
-        status: 'signed-in',
-        user,
-        profile: userProfile
-      };
-      this.startProfileChangesListener(userProfile.id);
-    } else {
-      this.currentAuthUser = {
-        status: 'requires-profile',
-        user
-      };
-      this.authEventEmitter.emitUserRequiresProfile(this.currentAuthUser);
-    }
-    return user;
-  }
-
-  /**
    * Sign in user with OTP (One-Time Password)
    * Sends a 6-digit code to the user's email for passwordless authentication
    *

@@ -14,9 +14,6 @@ CREATE TABLE github_integrations (
     ON DELETE CASCADE
 );
 
--- Create unique index on customer_id to ensure one GitHub integration per customer
-CREATE UNIQUE INDEX github_integrations_customer_id_idx ON github_integrations (customer_id);
-
 -- Create index on github_username for faster lookups
 CREATE INDEX github_integrations_github_username_idx ON github_integrations (github_username);
 
@@ -38,7 +35,7 @@ CREATE POLICY "Customers can view their own GitHub integration" ON github_integr
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = github_integrations.customer_id
-      AND profiles.auth_id = auth.uid()
+      AND profiles.auth_id = (select auth.uid())
       AND profiles.type = 'customer'
     )
   );
@@ -50,7 +47,7 @@ CREATE POLICY "Customers can insert their own GitHub integration" ON github_inte
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = customer_id
-      AND profiles.auth_id = auth.uid()
+      AND profiles.auth_id = (select auth.uid())
       AND profiles.type = 'customer'
     )
   );
@@ -62,7 +59,7 @@ CREATE POLICY "Customers can update their own GitHub integration" ON github_inte
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = github_integrations.customer_id
-      AND profiles.auth_id = auth.uid()
+      AND profiles.auth_id = (select auth.uid())
       AND profiles.type = 'customer'
     )
   )
@@ -70,7 +67,7 @@ CREATE POLICY "Customers can update their own GitHub integration" ON github_inte
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = customer_id
-      AND profiles.auth_id = auth.uid()
+      AND profiles.auth_id = (select auth.uid())
       AND profiles.type = 'customer'
     )
   );
@@ -82,7 +79,7 @@ CREATE POLICY "Customers can delete their own GitHub integration" ON github_inte
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = github_integrations.customer_id
-      AND profiles.auth_id = auth.uid()
+      AND profiles.auth_id = (select auth.uid())
       AND profiles.type = 'customer'
     )
   );
@@ -94,6 +91,7 @@ ALTER publication supabase_realtime ADD TABLE github_integrations;
 CREATE OR REPLACE FUNCTION public.broadcast_github_integration_changes()
 RETURNS trigger
 SECURITY DEFINER
+SET search_path = public
 LANGUAGE plpgsql
 AS $$
 BEGIN

@@ -58,21 +58,19 @@ ALTER TABLE engineer_transfers ENABLE ROW LEVEL SECURITY;
 -- Create RLS policies
 -- Service role can manage all engineer transfers (for billing functions)
 CREATE POLICY "Service role can manage all engineer transfers" ON engineer_transfers
-  FOR ALL USING (auth.jwt()->>'role' = 'service_role');
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- Engineers can read their own transfers
-CREATE POLICY "Engineers can read their own transfers" ON engineer_transfers
+-- Engineers can read their own transfers OR customers can read transfers for their tickets
+CREATE POLICY "Users can view relevant engineer transfers" ON engineer_transfers
   FOR SELECT USING (
+    -- Engineers can read their own transfers
     engineer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
-  );
-
--- Customers can read transfers for their tickets
-CREATE POLICY "Customers can read transfers for their tickets" ON engineer_transfers
-  FOR SELECT USING (
+    OR
+    -- Customers can read transfers for their tickets
     customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -80,7 +78,7 @@ CREATE POLICY "Customers can read transfers for their tickets" ON engineer_trans
 CREATE POLICY "Customers can insert transfers for their tickets" ON engineer_transfers
   FOR INSERT WITH CHECK (
     customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -88,6 +86,6 @@ CREATE POLICY "Customers can insert transfers for their tickets" ON engineer_tra
 CREATE POLICY "Customers can update transfers for their tickets" ON engineer_transfers
   FOR UPDATE USING (
     customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );

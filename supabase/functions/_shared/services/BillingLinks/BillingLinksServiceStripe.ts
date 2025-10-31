@@ -23,7 +23,7 @@ export class BillingLinksServiceStripe implements BillingLinksService {
       const appUrl = (host) ? host : Deno.env.get('APP_URL')
       const session = await this.stripe.billingPortal.sessions.create({
         customer: stripeCustomerId,
-        return_url: `${appUrl}/app/buy`
+        return_url: `${appUrl}/buy`
       })
 
       console.info(`[BillingLinksServiceStripe] Successfully created portal session: ${session.id}`)
@@ -45,8 +45,8 @@ export class BillingLinksServiceStripe implements BillingLinksService {
       const appUrl = (host) ? host : Deno.env.get('APP_URL')
       const accountLink = await this.stripe.accountLinks.create({
         account: engineerAccount.id,
-        refresh_url: `${appUrl}/app/engineer/onboarding`,
-        return_url: `${appUrl}/app/engineer/dashboard`,
+        refresh_url: `${appUrl}/engineer/onboarding`,
+        return_url: `${appUrl}/engineer/dashboard`,
         type: 'account_onboarding',
       })
 

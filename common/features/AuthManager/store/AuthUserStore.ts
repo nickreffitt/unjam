@@ -9,26 +9,6 @@ import { type User } from '@common/types';
 export interface AuthUserStore {
   
   /**
-   * Sign in user with magic link
-   * Sends a passwordless authentication email to the user
-   *
-   * @param email - User's email address
-   * @param redirectUrl - URL to redirect to after clicking magic link
-   * @throws Error if sign in fails
-   */
-  signInWithMagicLink(email: string, redirectUrl?: string): Promise<void>;
-
-  /**
-   * Verify a magic link token and sign in the user
-   * Verifies the token hash from the magic link URL and authenticates the user
-   *
-   * @param tokenHash - The token hash from the magic link URL
-   * @returns Promise that resolves with the authenticated user
-   * @throws Error if verification fails
-   */
-  verifyMagicLink(tokenHash: string): Promise<User>;
-
-  /**
    * Sign in user with OTP (One-Time Password)
    * Sends a 6-digit code to the user's email for passwordless authentication
    *
