@@ -269,6 +269,39 @@ export class TicketStoreSupabase implements TicketStore {
   }
 
   /**
+   * Gets paginated tickets created by a specific customer
+   * Returns completed and auto-completed tickets only
+   * @param customerId - The ID of the customer
+   * @param size - Number of tickets to return (page size)
+   * @param offset - Number of tickets to skip (for pagination)
+   * @returns Array of tickets created by the customer
+   */
+  async getCustomerTickets(customerId: string, size: number, offset: number = 0): Promise<Ticket[]> {
+    console.debug(`TicketStoreSupabase: Getting tickets for customer ${customerId}, size: ${size}, offset: ${offset}`);
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select(`
+        *,
+        created_by:profiles!tickets_created_by_fkey(*),
+        assigned_to:profiles!tickets_assigned_to_fkey(*)
+      `)
+      .eq('created_by', customerId)
+      .in('status', ['completed', 'auto-completed'])
+      .range(offset, offset + size - 1)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('TicketStoreSupabase: Get customer tickets failed:', error);
+      throw new Error(`Failed to get customer tickets: ${error.message}`);
+    }
+
+    const tickets = data.map(row => TicketSupabaseRowMapper.mapRowToTicket(row));
+    console.debug(`TicketStoreSupabase: Retrieved ${tickets.length} tickets for customer`);
+    return tickets;
+  }
+
+  /**
    * Gets all tickets (mainly for testing purposes)
    * @returns All tickets in the store
    */

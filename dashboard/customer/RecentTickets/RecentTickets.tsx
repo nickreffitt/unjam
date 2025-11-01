@@ -1,27 +1,42 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Star } from 'lucide-react';
+import { RecentTicketsManagerProvider } from './contexts/RecentTicketsManagerContext';
+import { useRecentTicketsState, useRecentTicketsActions } from './hooks';
 import type { Ticket } from '@common/types';
 
-interface RecentTicketsProps {
-  tickets: Ticket[];
-  currentPage: number;
-  totalPages: number;
-  onNextPage: () => void;
-  onPrevPage: () => void;
-  onTicketClick: (ticketId: string) => void;
-}
+const RecentTicketsContent: React.FC = () => {
+  const {
+    ticketsWithRatings,
+    currentPage,
+    totalPages,
+    hasNextPage,
+    hasPrevPage,
+    isLoading,
+    error,
+    setCurrentPage
+  } = useRecentTicketsState();
 
-const RecentTickets: React.FC<RecentTicketsProps> = ({
-  tickets,
-  currentPage,
-  totalPages,
-  onNextPage,
-  onPrevPage,
-  onTicketClick,
-}) => {
-  const formatCreditsUsed = (elapsedTime: number): string => {
+  const { handleNextPage, handlePrevPage, handleTicketClick } = useRecentTicketsActions({
+    currentPage,
+    hasNextPage,
+    hasPrevPage,
+    setCurrentPage
+  });
+
+  const calculateElapsedTime = (ticket: Ticket): number => {
+    // Calculate elapsed time from claimedAt to resolvedAt (or markedAsFixedAt if resolvedAt not set)
+    if (!ticket.claimedAt) return 0;
+
+    const endTime = ticket.resolvedAt || ticket.markedAsFixedAt;
+    if (!endTime) return 0;
+
+    const elapsedMs = endTime.getTime() - ticket.claimedAt.getTime();
+    return Math.floor(elapsedMs / 1000); // Convert to seconds
+  };
+
+  const formatCreditsUsed = (elapsedTimeSeconds: number): string => {
     // Calculate credits based on elapsed time (1 credit per hour, max 2)
-    const hours = elapsedTime / 3600;
+    const hours = elapsedTimeSeconds / 3600;
     const credits = Math.min(Math.ceil(hours), 2);
     return `${credits} credit${credits > 1 ? 's' : ''}`;
   };
@@ -38,7 +53,57 @@ const RecentTickets: React.FC<RecentTicketsProps> = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  if (tickets.length === 0) {
+  const renderStars = (ratingValue?: number) => {
+    if (!ratingValue) {
+      return <span className="unjam-text-gray-400 unjam-text-xs">Not rated</span>;
+    }
+
+    // Rating is 0-500, convert to 0-5 stars
+    const stars = ratingValue / 100;
+    const fullStars = Math.floor(stars);
+    const hasHalfStar = stars % 1 >= 0.5;
+
+    return (
+      <div className="unjam-flex unjam-items-center unjam-space-x-0.5">
+        {[...Array(5)].map((_, i) => (
+          <Star
+            key={i}
+            className={`unjam-h-4 unjam-w-4 ${
+              i < fullStars
+                ? 'unjam-text-yellow-400 unjam-fill-yellow-400'
+                : i === fullStars && hasHalfStar
+                ? 'unjam-text-yellow-400'
+                : 'unjam-text-gray-300'
+            }`}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="unjam-bg-white unjam-shadow unjam-rounded-lg unjam-p-6">
+        <h2 className="unjam-text-xl unjam-font-semibold unjam-text-gray-900 unjam-mb-4">Recent Tickets</h2>
+        <div className="unjam-text-center unjam-py-8">
+          <p className="unjam-text-gray-500">Loading tickets...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="unjam-bg-white unjam-shadow unjam-rounded-lg unjam-p-6">
+        <h2 className="unjam-text-xl unjam-font-semibold unjam-text-gray-900 unjam-mb-4">Recent Tickets</h2>
+        <div className="unjam-text-center unjam-py-8">
+          <p className="unjam-text-red-600">Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (ticketsWithRatings.length === 0) {
     return (
       <div className="unjam-bg-white unjam-shadow unjam-rounded-lg unjam-p-6">
         <h2 className="unjam-text-xl unjam-font-semibold unjam-text-gray-900 unjam-mb-4">Recent Tickets</h2>
@@ -74,13 +139,16 @@ const RecentTickets: React.FC<RecentTicketsProps> = ({
               <th className="unjam-px-4 unjam-py-3 unjam-text-left unjam-text-xs unjam-font-medium unjam-text-gray-500 unjam-uppercase unjam-tracking-wider">
                 Credits Used
               </th>
+              <th className="unjam-px-4 unjam-py-3 unjam-text-left unjam-text-xs unjam-font-medium unjam-text-gray-500 unjam-uppercase unjam-tracking-wider">
+                Rating
+              </th>
             </tr>
           </thead>
           <tbody className="unjam-bg-white unjam-divide-y unjam-divide-gray-200">
-            {tickets.map((ticket) => (
+            {ticketsWithRatings.map(({ ticket, rating }) => (
               <tr
                 key={ticket.id}
-                onClick={() => onTicketClick(ticket.id)}
+                onClick={() => handleTicketClick(ticket.id)}
                 className="hover:unjam-bg-gray-50 unjam-cursor-pointer unjam-transition-colors"
               >
                 <td className="unjam-px-4 unjam-py-3 unjam-whitespace-nowrap unjam-text-sm unjam-text-gray-500">
@@ -106,8 +174,11 @@ const RecentTickets: React.FC<RecentTicketsProps> = ({
                 </td>
                 <td className="unjam-px-4 unjam-py-3 unjam-whitespace-nowrap unjam-text-sm unjam-text-gray-500">
                   {(ticket.status === 'completed' || ticket.status === 'auto-completed')
-                    ? formatCreditsUsed(ticket.elapsedTime)
+                    ? formatCreditsUsed(calculateElapsedTime(ticket))
                     : '-'}
+                </td>
+                <td className="unjam-px-4 unjam-py-3 unjam-whitespace-nowrap unjam-text-sm">
+                  {renderStars(rating?.rating)}
                 </td>
               </tr>
             ))}
@@ -119,10 +190,10 @@ const RecentTickets: React.FC<RecentTicketsProps> = ({
       {totalPages > 1 && (
         <div className="unjam-flex unjam-items-center unjam-justify-between unjam-mt-4 unjam-pt-4 unjam-border-t unjam-border-gray-200">
           <button
-            onClick={onPrevPage}
-            disabled={currentPage === 1}
+            onClick={handlePrevPage}
+            disabled={!hasPrevPage}
             className={`unjam-flex unjam-items-center unjam-space-x-1 unjam-px-3 unjam-py-1 unjam-rounded unjam-text-sm ${
-              currentPage === 1
+              !hasPrevPage
                 ? 'unjam-text-gray-400 unjam-cursor-not-allowed'
                 : 'unjam-text-gray-700 hover:unjam-bg-gray-100 unjam-transition-colors'
             }`}
@@ -131,13 +202,13 @@ const RecentTickets: React.FC<RecentTicketsProps> = ({
             <span>Previous</span>
           </button>
           <span className="unjam-text-sm unjam-text-gray-600">
-            Page {currentPage} of {totalPages}
+            Page {currentPage + 1} of {totalPages}
           </span>
           <button
-            onClick={onNextPage}
-            disabled={currentPage === totalPages}
+            onClick={handleNextPage}
+            disabled={!hasNextPage}
             className={`unjam-flex unjam-items-center unjam-space-x-1 unjam-px-3 unjam-py-1 unjam-rounded unjam-text-sm ${
-              currentPage === totalPages
+              !hasNextPage
                 ? 'unjam-text-gray-400 unjam-cursor-not-allowed'
                 : 'unjam-text-gray-700 hover:unjam-bg-gray-100 unjam-transition-colors'
             }`}
@@ -148,6 +219,14 @@ const RecentTickets: React.FC<RecentTicketsProps> = ({
         </div>
       )}
     </div>
+  );
+};
+
+const RecentTickets: React.FC = () => {
+  return (
+    <RecentTicketsManagerProvider>
+      <RecentTicketsContent />
+    </RecentTicketsManagerProvider>
   );
 };
 

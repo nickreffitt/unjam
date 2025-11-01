@@ -93,6 +93,34 @@ export class RatingManager {
   }
 
   /**
+   * Gets ratings by multiple ticket IDs (batch fetch)
+   * @param ticketIds - Array of ticket IDs
+   * @returns Array of ratings for the specified tickets
+   */
+  async getRatingsByTicketIds(ticketIds: string[]): Promise<Rating[]> {
+    if (!Array.isArray(ticketIds)) {
+      throw new Error('Ticket IDs must be an array');
+    }
+
+    const trimmedIds = ticketIds
+      .filter(id => id && id.trim().length > 0)
+      .map(id => id.trim());
+
+    if (trimmedIds.length === 0) {
+      console.debug('RatingManager: No valid ticket IDs provided, returning empty array');
+      return [];
+    }
+
+    const ratings = await this.ratingStore.getByTicketIds(trimmedIds);
+
+    console.debug(
+      `RatingManager: Retrieved ${ratings.length} ratings for ${trimmedIds.length} tickets`
+    );
+
+    return ratings;
+  }
+
+  /**
    * Gets all ratings created by a specific user
    * @param profileId - The profile ID of the user who created the ratings
    * @returns Array of ratings

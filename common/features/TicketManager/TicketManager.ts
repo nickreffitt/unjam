@@ -305,6 +305,23 @@ export class TicketManager {
   }
 
   /**
+   * Gets paginated tickets for this customer
+   * Returns completed and auto-completed tickets only
+   * @param size - Number of tickets to return (page size)
+   * @param offset - Number of tickets to skip (for pagination)
+   * @returns Array of tickets created by the customer
+   * @throws Error if user is not a customer
+   */
+  async getCustomerTickets(size: number, offset: number = 0): Promise<Ticket[]> {
+    if (!isCustomerProfile(this.userProfile)) {
+      throw new Error('Only customers can retrieve customer tickets');
+    }
+
+    const customerProfile = this.userProfile;
+    return await this.ticketStore.getCustomerTickets(customerProfile.id, size, offset);
+  }
+
+  /**
    * Reloads ticket data from storage to sync with other tabs
    */
   reload(): void {

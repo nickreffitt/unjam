@@ -110,6 +110,38 @@ export class RatingStoreSupabase implements RatingStore {
   }
 
   /**
+   * Gets ratings by multiple ticket IDs (batch fetch)
+   * @param ticketIds - Array of ticket IDs
+   * @returns Array of ratings for the specified tickets
+   */
+  async getByTicketIds(ticketIds: string[]): Promise<Rating[]> {
+    if (ticketIds.length === 0) {
+      console.debug('RatingStoreSupabase: Empty ticket IDs array, returning empty array');
+      return [];
+    }
+
+    console.debug('RatingStoreSupabase: Getting ratings for', ticketIds.length, 'tickets');
+
+    const { data, error } = await this.supabaseClient
+      .from(this.tableName)
+      .select(`
+        *,
+        created_by_profile:profiles!ratings_created_by_fkey(*),
+        rating_for_profile:profiles!ratings_rating_for_fkey(*)
+      `)
+      .in('ticket_id', ticketIds);
+
+    if (error) {
+      console.error('RatingStoreSupabase: Get by ticket IDs failed:', error);
+      throw new Error(`Failed to get ratings by ticket IDs: ${error.message}`);
+    }
+
+    const ratings = data.map(row => RatingSupabaseRowMapper.mapRowToRating(row));
+    console.debug(`RatingStoreSupabase: Retrieved ${ratings.length} ratings for batch of tickets`);
+    return ratings;
+  }
+
+  /**
    * Gets all ratings created by a specific user
    * @param profileId - The profile ID of the user who created the ratings
    * @returns Array of ratings
