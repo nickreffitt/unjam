@@ -38,21 +38,19 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ALTER TABLE project_repositories ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
--- Customers can view their own repositories
-CREATE POLICY "Customers can view their own repositories" ON project_repositories
+-- Consolidated SELECT policy (combines customer own repositories + engineer assigned ticket repositories)
+CREATE POLICY "Consolidated: View project repositories" ON project_repositories
   FOR SELECT USING (
+    -- Customers can view their own repositories
     customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
-  );
-
--- Engineers can view repositories for customers whose tickets they are assigned to
-CREATE POLICY "Engineers can view repositories for assigned tickets" ON project_repositories
-  FOR SELECT USING (
+    OR
+    -- Engineers can view repositories for customers whose tickets they are assigned to
     EXISTS (
       SELECT 1 FROM tickets
       INNER JOIN profiles ON profiles.id = tickets.assigned_to
-      WHERE profiles.auth_id = auth.uid()
+      WHERE profiles.auth_id = (select auth.uid())
       AND profiles.type = 'engineer'
       AND tickets.created_by = project_repositories.customer_id
     )
@@ -62,7 +60,7 @@ CREATE POLICY "Engineers can view repositories for assigned tickets" ON project_
 CREATE POLICY "Customers can create their own repositories" ON project_repositories
   FOR INSERT WITH CHECK (
     customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -70,7 +68,7 @@ CREATE POLICY "Customers can create their own repositories" ON project_repositor
 CREATE POLICY "Customers can update their own repositories" ON project_repositories
   FOR UPDATE USING (
     customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -78,7 +76,7 @@ CREATE POLICY "Customers can update their own repositories" ON project_repositor
 CREATE POLICY "Customers can delete their own repositories" ON project_repositories
   FOR DELETE USING (
     customer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -89,6 +87,7 @@ ALTER publication supabase_realtime ADD TABLE project_repositories;
 CREATE OR REPLACE FUNCTION public.broadcast_project_repository_changes()
 RETURNS trigger
 SECURITY DEFINER
+SET search_path = public
 LANGUAGE plpgsql
 AS $$
 BEGIN

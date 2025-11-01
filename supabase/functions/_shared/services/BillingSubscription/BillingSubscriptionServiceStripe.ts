@@ -1,7 +1,6 @@
 import type Stripe from 'stripe'
 import type { BillingSubscriptionService } from './BillingSubscriptionService.ts'
 import type { Subscription } from '@types'
-import { subscribe } from "node:diagnostics_channel";
 
 /**
  * Stripe implementation of BillingSubscriptionService

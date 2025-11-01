@@ -3,7 +3,7 @@ import { Download, CheckCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 
-const Onboarding: React.FC = () => {
+const InstallExtension: React.FC = () => {
   const { authUser } = useAuthState();
   const [isWaitingForInstall, setIsWaitingForInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -39,7 +39,7 @@ const Onboarding: React.FC = () => {
 
   // Monitor for extension installation
   useEffect(() => {
-    console.debug(`[Onboarding] isWaitingForInstall ${(isWaitingForInstall) ? "Yes" : "No"}, extensionInstalledAt: ${authUser.profile?.extensionInstalledAt}`)
+    console.debug(`[InstallExtension] isWaitingForInstall ${(isWaitingForInstall) ? "Yes" : "No"}, extensionInstalledAt: ${authUser.profile?.extensionInstalledAt}`)
     if (isWaitingForInstall && authUser.profile?.extensionInstalledAt) {
       setIsWaitingForInstall(false);
       setIsInstalled(true);
@@ -50,7 +50,7 @@ const Onboarding: React.FC = () => {
   useEffect(() => {
     if (isInstalled) {
       const timer = setTimeout(() => {
-        navigate('/buy');
+        navigate('/github/connect');
       }, 2000);
 
       return () => clearTimeout(timer);
@@ -230,4 +230,4 @@ const Onboarding: React.FC = () => {
   );
 };
 
-export default Onboarding;
+export default InstallExtension;

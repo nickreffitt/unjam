@@ -31,20 +31,18 @@ CREATE INDEX repository_collaborators_github_username_idx ON repository_collabor
 ALTER TABLE repository_collaborators ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
--- Users can view collaborators for repositories they own
-CREATE POLICY "Users can view collaborators for their repositories" ON repository_collaborators
+-- Consolidated SELECT policy (combines repository owner + engineer collaborator)
+CREATE POLICY "Consolidated: View repository collaborators" ON repository_collaborators
   FOR SELECT USING (
+    -- Users can view collaborators for repositories they own
     repository_id IN (
       SELECT id FROM project_repositories
-      WHERE customer_id IN (SELECT id FROM profiles WHERE auth_id = auth.uid())
+      WHERE customer_id IN (SELECT id FROM profiles WHERE auth_id = (select auth.uid()))
     )
-  );
-
--- Engineers can view collaborator records where they are the engineer
-CREATE POLICY "Engineers can view their own collaborator records" ON repository_collaborators
-  FOR SELECT USING (
+    OR
+    -- Engineers can view collaborator records where they are the engineer
     engineer_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -53,7 +51,7 @@ CREATE POLICY "Users can insert collaborators for their repositories" ON reposit
   FOR INSERT WITH CHECK (
     repository_id IN (
       SELECT id FROM project_repositories
-      WHERE customer_id IN (SELECT id FROM profiles WHERE auth_id = auth.uid())
+      WHERE customer_id IN (SELECT id FROM profiles WHERE auth_id = (select auth.uid()))
     )
   );
 
@@ -62,7 +60,7 @@ CREATE POLICY "Users can update collaborators for their repositories" ON reposit
   FOR UPDATE USING (
     repository_id IN (
       SELECT id FROM project_repositories
-      WHERE customer_id IN (SELECT id FROM profiles WHERE auth_id = auth.uid())
+      WHERE customer_id IN (SELECT id FROM profiles WHERE auth_id = (select auth.uid()))
     )
   );
 
@@ -71,7 +69,7 @@ CREATE POLICY "Users can delete collaborators for their repositories" ON reposit
   FOR DELETE USING (
     repository_id IN (
       SELECT id FROM project_repositories
-      WHERE customer_id IN (SELECT id FROM profiles WHERE auth_id = auth.uid())
+      WHERE customer_id IN (SELECT id FROM profiles WHERE auth_id = (select auth.uid()))
     )
   );
 
@@ -83,6 +81,7 @@ ALTER publication supabase_realtime ADD TABLE repository_collaborators;
 CREATE OR REPLACE FUNCTION public.broadcast_repository_collaborator_changes()
 RETURNS trigger
 SECURITY DEFINER
+SET search_path = public
 LANGUAGE plpgsql
 AS $$
 DECLARE

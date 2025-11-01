@@ -30,46 +30,6 @@ export class AuthUserStoreLocal implements AuthUserStore {
   }
 
   /**
-   * Sign in user with magic link (simulated)
-   * @param email - User's email address
-   * @param _redirectUrl - URL to redirect to after clicking magic link (ignored in local implementation)
-   */
-  async signInWithMagicLink(email: string, _redirectUrl?: string): Promise<void> {
-    console.debug('AuthUserStoreLocal: Simulating magic link send to:', email);
-    // In local implementation, immediately simulate the user clicking the magic link
-    const fakeToken = `fake-token-${Date.now()}`;
-    await this.verifyMagicLink(fakeToken);
-  }
-
-  /**
-   * Verify a magic link token and sign in the user (simulated)
-   * @param tokenHash - The token hash from the magic link URL
-   * @returns Promise that resolves with the authenticated user
-   */
-  async verifyMagicLink(tokenHash: string): Promise<User> {
-    console.debug('AuthUserStoreLocal: Simulating magic link verification for token:', tokenHash);
-
-    // Check if we already have a user stored, reuse it instead of creating a new one
-    if (this.currentUser) {
-      console.debug('AuthUserStoreLocal: Reusing existing user for magic link verification');
-      this.authUserEventEmitter.emitUserSignedIn(this.currentUser);
-      return this.currentUser;
-    }
-
-    // Create a fake user for testing only if no user exists
-    const fakeUser: User = {
-      id: `test-user-${Date.now()}`,
-      email: 'test@example.com',
-      createdAt: new Date()
-    };
-
-    this.setCurrentUser(fakeUser);
-    this.authUserEventEmitter.emitUserSignedIn(fakeUser);
-
-    return fakeUser;
-  }
-
-  /**
    * Sign in user with Google OAuth for web applications (simulated)
    * @param _redirectUrl - URL to redirect to after OAuth completion (ignored in local implementation)
    * @returns Promise that resolves with the authenticated user

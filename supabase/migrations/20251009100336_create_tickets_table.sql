@@ -47,41 +47,38 @@ ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
 -- Create RLS policies
 -- All authenticated users can view all tickets
 CREATE POLICY "Authenticated users can view all tickets" ON tickets
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING ((select auth.role()) = 'authenticated');
 
 -- Users can create tickets (customers creating their own tickets)
 CREATE POLICY "Users can create tickets" ON tickets
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+  FOR INSERT WITH CHECK ((select auth.role()) = 'authenticated');
 
--- Users can update tickets they created (customers marking as complete)
-CREATE POLICY "Users can update tickets they created" ON tickets
+-- Consolidated UPDATE policy (combines ticket creator + ticket assignee + engineer claim)
+CREATE POLICY "Consolidated: Update tickets" ON tickets
   FOR UPDATE USING (
+    -- Users can update tickets they created (customers marking as complete)
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE profiles.auth_id = auth.uid()
+      WHERE profiles.auth_id = (select auth.uid())
       AND profiles.id = tickets.created_by
     )
-  );
-
--- Users can update tickets assigned to them (engineers working on tickets)
-CREATE POLICY "Users can update tickets assigned to them" ON tickets
-  FOR UPDATE USING (
+    OR
+    -- Users can update tickets assigned to them (engineers working on tickets)
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE profiles.auth_id = auth.uid()
+      WHERE profiles.auth_id = (select auth.uid())
       AND profiles.id = tickets.assigned_to
     )
-  );
-
--- Engineers can claim waiting tickets (assign themselves to unassigned tickets)
-CREATE POLICY "Engineers can claim waiting tickets" ON tickets
-  FOR UPDATE USING (
-    tickets.status = 'waiting'
-    AND tickets.assigned_to IS NULL
-    AND EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.auth_id = auth.uid()
-      AND profiles.type = 'engineer'
+    OR
+    -- Engineers can claim waiting tickets (assign themselves to unassigned tickets)
+    (
+      tickets.status = 'waiting'
+      AND tickets.assigned_to IS NULL
+      AND EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.auth_id = (select auth.uid())
+        AND profiles.type = 'engineer'
+      )
     )
   );
 
@@ -90,7 +87,7 @@ CREATE POLICY "Users can delete their own tickets" ON tickets
   FOR DELETE USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE profiles.auth_id = auth.uid()
+      WHERE profiles.auth_id = (select auth.uid())
       AND profiles.id = tickets.created_by
     )
   );
@@ -104,6 +101,7 @@ ALTER publication supabase_realtime ADD TABLE tickets;
 CREATE OR REPLACE FUNCTION public.broadcast_ticket_changes()
 RETURNS trigger
 SECURITY DEFINER
+SET search_path = public
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -198,7 +196,7 @@ USING (
       SELECT 1 FROM tickets
       WHERE tickets.id::text = REPLACE(realtime.topic(), 'ticket-changes-', '')
       AND tickets.created_by IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
     OR
@@ -207,7 +205,7 @@ USING (
       SELECT 1 FROM tickets
       WHERE tickets.id::text = REPLACE(realtime.topic(), 'ticket-changes-', '')
       AND tickets.assigned_to IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
   )

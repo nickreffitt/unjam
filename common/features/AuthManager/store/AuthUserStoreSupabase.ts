@@ -110,64 +110,6 @@ export class AuthUserStoreSupabase implements AuthUserStore {
   }
 
   /**
-   * Sign in user with magic link
-   */
-  async signInWithMagicLink(email: string, redirectUrl?: string): Promise<void> {
-    const redirectURL = redirectUrl || `${window.location.origin}/app/auth/verify`;
-    console.debug('AuthUserStoreSupabase: Signing in with magic link for:', email, ' with redirect URL:', redirectURL);
-    try {
-      const { error } = await this.supabaseClient.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: redirectURL,
-        },
-      });
-
-      if (error) {
-        console.error('AuthUserStoreSupabase: Magic link sign in failed:', error);
-        throw new Error(`Failed to send magic link: ${error.message}`);
-      }
-
-      console.debug('AuthUserStoreSupabase: Magic link sent successfully to:', email);
-    } catch (error) {
-      console.error('AuthUserStoreSupabase: Unexpected error during magic link sign in:', error);
-      throw error instanceof Error ? error : new Error('An unexpected error occurred during magic link sign in');
-    }
-  }
-
-  /**
-   * Verify a magic link token and sign in the user
-   */
-  async verifyMagicLink(tokenHash: string): Promise<User> {
-    console.debug('AuthUserStoreSupabase: Verifying magic link token');
-
-    try {
-      const { data, error } = await this.supabaseClient.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: 'email',
-      });
-
-      if (error) {
-        console.error('AuthUserStoreSupabase: Magic link verification failed:', error);
-        throw new Error(`Failed to verify magic link: ${error.message}`);
-      }
-
-      if (!data.user) {
-        throw new Error('User not found in verification response');
-      }
-
-      // Convert Supabase user to our User type
-      const user = this.mapSupabaseUserToUser(data.user);
-      console.debug('AuthUserStoreSupabase: Magic link verified successfully for user:', user);
-      return user;
-    } catch (error) {
-      console.error('AuthUserStoreSupabase: Unexpected error during magic link verification:', error);
-      throw error instanceof Error ? error : new Error('An unexpected error occurred during magic link verification');
-    }
-  }
-
-  /**
    * Sign in user with OTP (One-Time Password)
    */
   async signInWithOtp(email: string): Promise<void> {

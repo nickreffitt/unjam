@@ -36,12 +36,12 @@ CREATE POLICY "Users can view messages for their tickets" ON messages
       AND (
         -- User is the creator of the ticket
         tickets.created_by IN (
-          SELECT id FROM profiles WHERE auth_id = auth.uid()
+          SELECT id FROM profiles WHERE auth_id = (select auth.uid())
         )
         OR
         -- User is assigned to the ticket
         tickets.assigned_to IN (
-          SELECT id FROM profiles WHERE auth_id = auth.uid()
+          SELECT id FROM profiles WHERE auth_id = (select auth.uid())
         )
       )
     )
@@ -56,30 +56,28 @@ CREATE POLICY "Users can create messages for their tickets" ON messages
       AND (
         -- User is the creator of the ticket
         tickets.created_by IN (
-          SELECT id FROM profiles WHERE auth_id = auth.uid()
+          SELECT id FROM profiles WHERE auth_id = (select auth.uid())
         )
         OR
         -- User is assigned to the ticket
         tickets.assigned_to IN (
-          SELECT id FROM profiles WHERE auth_id = auth.uid()
+          SELECT id FROM profiles WHERE auth_id = (select auth.uid())
         )
       )
     )
   );
 
--- Users can update messages they sent (for marking as read)
-CREATE POLICY "Users can update messages they sent" ON messages
+-- Consolidated UPDATE policy (combines messages sent + messages received)
+CREATE POLICY "Consolidated: Update messages" ON messages
   FOR UPDATE USING (
+    -- Users can update messages they sent (for marking as read)
     sender_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
-  );
-
--- Users can update messages they received (for marking as read)
-CREATE POLICY "Users can update messages they received" ON messages
-  FOR UPDATE USING (
+    OR
+    -- Users can update messages they received (for marking as read)
     receiver_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -91,6 +89,7 @@ ALTER publication supabase_realtime ADD TABLE messages;
 CREATE OR REPLACE FUNCTION public.broadcast_message_changes()
 RETURNS trigger
 SECURITY DEFINER
+SET search_path = public
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -162,7 +161,7 @@ USING (
       SELECT 1 FROM tickets
       WHERE tickets.id::text = REPLACE(realtime.topic(), 'chat-', '')
       AND tickets.created_by IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
     OR
@@ -171,7 +170,7 @@ USING (
       SELECT 1 FROM tickets
       WHERE tickets.id::text = REPLACE(realtime.topic(), 'chat-', '')
       AND tickets.assigned_to IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
   )

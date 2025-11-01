@@ -7,6 +7,17 @@ create table if not exists public.ticket_queue_messages (
 
 comment on table public.ticket_queue_messages is 'Lookup table mapping tickets to their queue message IDs for cleanup when status changes';
 
+-- Enable RLS on ticket_queue_messages
+alter table public.ticket_queue_messages enable row level security;
+
+-- Restrictive policy to prevent direct access - table should only be accessed via SECURITY DEFINER trigger
+-- This policy explicitly denies all direct operations, ensuring all access goes through the trigger function
+create policy "No direct access - use trigger only"
+on public.ticket_queue_messages
+for all
+using (false)
+with check (false);
+
 -- Create trigger function to write to queue when ticket transitions to 'awaiting-confirmation' or 'pending-payment'
 create or replace function public.enqueue_ticket_payments()
 returns trigger

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Sidebar from '@dashboard/engineer/Sidebar/Sidebar';
 import NewTicketsList from '@dashboard/pages/engineer/NewTicketsList/NewTicketsList';
 import ActiveTicketsList from '@dashboard/pages/engineer/ActiveTicketsList/ActiveTicketsList';
@@ -9,7 +9,6 @@ import ActiveTicket from '@dashboard/pages/engineer/ActiveTicket/ActiveTicket';
 import CompletedTicket from '@dashboard/pages/engineer/CompletedTicket/CompletedTicket';
 import Settings from '@dashboard/pages/engineer/Settings';
 import SignIn from '@dashboard/SignIn/SignIn';
-import VerifyAuth from '@dashboard/VerifyAuth/VerifyAuth';
 import Logout from '@dashboard/Logout/Logout';
 import CreateProfile from '@dashboard/CreateProfile/CreateProfile';
 import { AuthManagerProvider, useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
@@ -19,7 +18,8 @@ import { TicketListManagerProvider } from '@dashboard/engineer/TicketList/contex
 import { ChatManagerProvider } from '@dashboard/engineer/ChatBox/contexts/ChatManagerContext';
 import { ScreenShareManagerProvider } from '@dashboard/engineer/ScreenShare/contexts/ScreenShareManagerContext';
 import { CodeShareManagerProvider } from '@dashboard/engineer/CodeShare/contexts/CodeShareManagerContext';
-import Onboarding from '@dashboard/pages/customer/Onboarding';
+import CustomerHome from '@dashboard/pages/customer/Home/Home';
+import InstallExtension from '@dashboard/pages/customer/InstallExtension';
 import BuyCredits from '@dashboard/pages/customer/BuyCredits';
 import CustomerSidebar from '@dashboard/customer/Sidebar/Sidebar';
 import { SubscriptionManagerProvider } from '@dashboard/customer/Subscription';
@@ -72,13 +72,13 @@ const ProtectedCustomerDashboard: React.FC = () => {
           <CustomerSidebar />
           <div className="unjam-flex-1 unjam-overflow-hidden">
             <Routes>
-              <Route path="onboarding" element={<Onboarding />} />
+              <Route path="onboarding" element={<InstallExtension />} />
               <Route path="buy" element={<BuyCredits />} />
               <Route path="buy/success" element={<CreditSuccess />} />
               <Route path="github/connect" element={<GithubConnect />} />
               <Route path="github/callback" element={<GithubCallback />} />
               <Route path="auth/logout" element={<Logout />} />
-              <Route path="*" element={<BuyCredits />} />
+              <Route path="*" element={<CustomerHome />} />
             </Routes>
           </div>
         </div>
@@ -128,7 +128,6 @@ const DashboardContent: React.FC = () => {
       return (
           <Routes>
             <Route path="auth" element={<SignIn />} />
-            <Route path="auth/verify" element={<VerifyAuth />} />
             <Route path="auth/complete-profile" element={<CreateProfile />} />
             <Route path="auth/logout" element={<Logout />} />
             <Route path="*" element={<SignIn />} />

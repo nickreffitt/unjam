@@ -26,14 +26,14 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ALTER TABLE billing_customers ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
--- Users can read their own billing customer record
+-- Service role can manage all billing customers (for webhook handlers)
+CREATE POLICY "Service role can manage all billing customers" ON billing_customers
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Regular users can view their own billing customer record
 CREATE POLICY "Users can view their own billing customer" ON billing_customers
   FOR SELECT USING (
     profile_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
-
--- Service role can manage all billing customers (for webhook handlers)
-CREATE POLICY "Service role can manage all billing customers" ON billing_customers
-  FOR ALL USING (auth.jwt()->>'role' = 'service_role');

@@ -30,12 +30,15 @@ CREATE INDEX profiles_type_idx ON profiles (type);
 
 -- Create updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$;
 
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -50,14 +53,14 @@ CREATE POLICY "Users can view all profiles" ON profiles
 
 -- Users can only create/update their own profile
 CREATE POLICY "Users can create their own profile" ON profiles
-  FOR INSERT WITH CHECK (auth.uid() = auth_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = auth_id);
 
 CREATE POLICY "Users can update their own profile" ON profiles
-  FOR UPDATE USING (auth.uid() = auth_id);
+  FOR UPDATE USING ((select auth.uid()) = auth_id);
 
 -- Only allow users to delete their own profile
 CREATE POLICY "Users can delete their own profile" ON profiles
-  FOR DELETE USING (auth.uid() = auth_id);
+  FOR DELETE USING ((select auth.uid()) = auth_id);
 
 -- Enable realtime for profiles table (for postgres_changes subscription)
 ALTER publication supabase_realtime ADD TABLE profiles;

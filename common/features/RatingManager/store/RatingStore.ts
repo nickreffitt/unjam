@@ -16,6 +16,13 @@ export interface RatingStore {
   getByTicketId(ticketId: string): Promise<Rating | undefined>;
 
   /**
+   * Gets ratings by multiple ticket IDs (batch fetch)
+   * @param ticketIds - Array of ticket IDs
+   * @returns Array of ratings for the specified tickets
+   */
+  getByTicketIds(ticketIds: string[]): Promise<Rating[]>;
+
+  /**
    * Gets all ratings created by a specific user
    * @param profileId - The profile ID of the user who created the ratings
    * @returns Array of ratings

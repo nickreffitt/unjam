@@ -47,12 +47,12 @@ CREATE POLICY "Users can view screenshare sessions for their tickets" ON screens
       AND (
         -- User is the creator of the ticket
         tickets.created_by IN (
-          SELECT id FROM profiles WHERE auth_id = auth.uid()
+          SELECT id FROM profiles WHERE auth_id = (select auth.uid())
         )
         OR
         -- User is assigned to the ticket
         tickets.assigned_to IN (
-          SELECT id FROM profiles WHERE auth_id = auth.uid()
+          SELECT id FROM profiles WHERE auth_id = (select auth.uid())
         )
       )
     )
@@ -67,12 +67,12 @@ CREATE POLICY "Users can create screenshare sessions for their tickets" ON scree
       AND (
         -- User is the creator of the ticket
         tickets.created_by IN (
-          SELECT id FROM profiles WHERE auth_id = auth.uid()
+          SELECT id FROM profiles WHERE auth_id = (select auth.uid())
         )
         OR
         -- User is assigned to the ticket
         tickets.assigned_to IN (
-          SELECT id FROM profiles WHERE auth_id = auth.uid()
+          SELECT id FROM profiles WHERE auth_id = (select auth.uid())
         )
       )
     )
@@ -80,11 +80,11 @@ CREATE POLICY "Users can create screenshare sessions for their tickets" ON scree
     -- User must be the publisher or subscriber of the session
     (
       publisher_id IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
       OR
       subscriber_id IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
   );
@@ -93,11 +93,11 @@ CREATE POLICY "Users can create screenshare sessions for their tickets" ON scree
 CREATE POLICY "Users can update screenshare sessions they're involved in" ON screenshare_sessions
   FOR UPDATE USING (
     publisher_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
     OR
     subscriber_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -105,11 +105,11 @@ CREATE POLICY "Users can update screenshare sessions they're involved in" ON scr
 CREATE POLICY "Users can delete screenshare sessions they're involved in" ON screenshare_sessions
   FOR DELETE USING (
     publisher_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
     OR
     subscriber_id IN (
-      SELECT id FROM profiles WHERE auth_id = auth.uid()
+      SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
 
@@ -121,6 +121,7 @@ ALTER publication supabase_realtime ADD TABLE screenshare_sessions;
 CREATE OR REPLACE FUNCTION public.broadcast_screenshare_session_changes()
 RETURNS trigger
 SECURITY DEFINER
+SET search_path = public
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -192,7 +193,7 @@ USING (
       SELECT 1 FROM tickets
       WHERE tickets.id::text = REPLACE(realtime.topic(), 'screenshare-sessions-', '')
       AND tickets.created_by IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
     OR
@@ -201,7 +202,7 @@ USING (
       SELECT 1 FROM tickets
       WHERE tickets.id::text = REPLACE(realtime.topic(), 'screenshare-sessions-', '')
       AND tickets.assigned_to IN (
-        SELECT id FROM profiles WHERE auth_id = auth.uid()
+        SELECT id FROM profiles WHERE auth_id = (select auth.uid())
       )
     )
   )

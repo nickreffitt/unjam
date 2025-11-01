@@ -70,6 +70,16 @@ export interface TicketStore {
   getActiveTicketByCustomer(customerId: string): Promise<Ticket | null>;
 
   /**
+   * Gets paginated tickets created by a specific customer
+   * Returns completed and auto-completed tickets only
+   * @param customerId - The ID of the customer
+   * @param size - Number of tickets to return (page size)
+   * @param offset - Number of tickets to skip (for pagination)
+   * @returns Array of tickets created by the customer
+   */
+  getCustomerTickets(customerId: string, size: number, offset?: number): Promise<Ticket[]>;
+
+  /**
    * Gets all tickets (mainly for testing purposes)
    * @returns All tickets in the store
    */
