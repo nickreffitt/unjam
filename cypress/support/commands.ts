@@ -30,7 +30,7 @@ declare global {
 
 Cypress.Commands.add('loginFakeUser', () => {
     // Visit the app root, which will redirect to auth (VITE_USE_LOCAL_AUTH=true is set in .env)
-    cy.visit('/app');
+    cy.visit('/');
 
     // Complete the engineer sign-up flow
     // 1. Enter test engineer's email
@@ -56,7 +56,7 @@ Cypress.Commands.add('loginFakeUser', () => {
     cy.contains('button', 'Complete Profile').click();
 
     // Wait for profile creation success and redirect
-    cy.url({ timeout: 15000 }).should('include', '/app/new');
+    cy.url({ timeout: 15000 }).should('include', '/new');
 });
 
 export {};

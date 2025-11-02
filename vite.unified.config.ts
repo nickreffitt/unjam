@@ -8,12 +8,19 @@ const customRoutingPlugin = (): Plugin => {
     name: 'custom-routing',
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
-        // Handle /ext route and sub-routes
-        if (req.url === '/ext' || req.url === '/ext/' || (req.url && req.url.startsWith('/ext/'))) {
+        // Handle /new-ticket route for customer support page
+        if (req.url === '/new-ticket' || req.url === '/new-ticket/' || (req.url && req.url.startsWith('/new-ticket/'))) {
           req.url = '/index.html'
         }
-        // Handle /app route and sub-routes
-        else if (req.url === '/app' || req.url === '/app/' || (req.url && req.url.startsWith('/app/'))) {
+        // Keep /ext for backward compatibility
+        else if (req.url === '/ext' || req.url === '/ext/' || (req.url && req.url.startsWith('/ext/'))) {
+          req.url = '/index.html'
+        }
+        // Handle root / and all dashboard routes
+        else if (req.url === '/' || req.url?.startsWith('/new') || req.url?.startsWith('/active') ||
+                 req.url?.startsWith('/completed') || req.url?.startsWith('/settings') ||
+                 req.url?.startsWith('/auth') || req.url?.startsWith('/onboarding') ||
+                 req.url?.startsWith('/buy') || req.url?.startsWith('/github')) {
           req.url = '/dashboard.html'
         }
         next()

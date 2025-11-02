@@ -69,7 +69,7 @@ describe('Dashboard - Ticket Lists', () => {
 
   it('displays empty state when new tickets table is toggled', () => {
     // given in the new tickets list
-    cy.visit('/app/new');
+    cy.visit('/new');
 
     // when new ticket table is toggled as empty state (check if toggle exists)
     cy.get('body').then(($body) => {
@@ -84,7 +84,7 @@ describe('Dashboard - Ticket Lists', () => {
 
   it('displays empty state when active tickets table is toggled', () => {
     // given in the active tickets list
-    cy.visit('/app/active');
+    cy.visit('/active');
 
     // when active ticket table is debug toggled as empty state (check if toggle exists)
     cy.get('body').then(($body) => {
@@ -111,7 +111,7 @@ describe('Dashboard - Ticket Lists', () => {
 
   it('displays empty state when completed tickets table is toggled', () => {
     // given in the completed tickets list
-    cy.visit('/app/completed');
+    cy.visit('/completed');
 
     // when completed tickets table is debug toggled as empty state (check if toggle exists)
     cy.get('body').then(($body) => {
