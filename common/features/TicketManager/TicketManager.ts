@@ -30,10 +30,16 @@ export class TicketManager {
   /**
    * Creates a new ticket (customer only)
    * @param problemDescription - Description of the problem from the customer
+   * @param consoleLogs - Optional array of captured console logs
+   * @param screenshot - Optional base64 encoded screenshot
    * @returns The created Ticket object
    * @throws Error if user is not a customer
    */
-  async createTicket(problemDescription: string): Promise<Ticket> {
+  async createTicket(
+    problemDescription: string,
+    consoleLogs?: import('@common/types').ConsoleLog[],
+    screenshot?: string
+  ): Promise<Ticket> {
     if (!isCustomerProfile(this.userProfile)) {
       throw new Error('Only customers can create tickets');
     }
@@ -50,7 +56,9 @@ export class TicketManager {
       problemDescription,
       createdBy: customerProfile,
       createdAt: new Date(),
-      elapsedTime: 0
+      elapsedTime: 0,
+      consoleLogs,
+      screenshot
     };
 
     return await this.ticketStore.create(newTicket);

@@ -144,6 +144,33 @@ export default defineBackground(() => {
   // Start listening for messages
   eventListener.startListening();
 
+  // Listen for messages from content script to capture screenshots
+  browser.runtime.onMessage.addListener(async (message, sender) => {
+    if (message.type === 'CAPTURE_SCREENSHOT') {
+      console.log('=== CAPTURE SCREENSHOT REQUEST ===');
+      console.debug('Background script: Capturing screenshot for tab:', sender.tab?.id);
+
+      try {
+        if (!sender.tab?.id) {
+          throw new Error('No tab ID available');
+        }
+
+        // Capture the visible tab
+        const screenshot = await browser.tabs.captureVisibleTab(sender.tab.windowId, {
+          format: 'png'
+        });
+
+        console.log('=== SCREENSHOT CAPTURED ===');
+        console.debug('Background script: Screenshot captured successfully');
+
+        return { success: true, screenshot };
+      } catch (error) {
+        console.error('Background script: Failed to capture screenshot:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    }
+  });
+
   console.log('=== LISTENER REGISTERED ===');
   console.debug('Background script: Listening for messages');
   console.debug('Background script: Build timestamp:', Date.now());

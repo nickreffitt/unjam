@@ -41,6 +41,13 @@ export interface EngineerProfile {
 
 export type UserProfile = CustomerProfile | EngineerProfile;
 
+export interface ConsoleLog {
+  level: 'log' | 'info' | 'warn' | 'error' | 'debug';
+  message: string;
+  timestamp: number;
+  args?: any[];
+}
+
 export interface Ticket {
   id: string;
   status: TicketStatus;
@@ -56,6 +63,8 @@ export interface Ticket {
   autoCompleteTimeoutAt?: Date;
   resolvedAt?: Date;
   elapsedTime: number; // in seconds
+  consoleLogs?: ConsoleLog[];
+  screenshot?: string; // Base64 encoded image
 }
 
 export interface TicketListItem {

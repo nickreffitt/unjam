@@ -3,6 +3,7 @@ import { type CustomerProfile, type Subscription } from '@common/types';
 import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
 import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
 import { useSubscriptionManager } from '@extension/shared/contexts/SubscriptionManagerContext';
+import { pageStateCaptureCoordinator } from '@extension/shared/pageStateCaptureCoordinator';
 
 interface TicketModalProps {
   isOpen: boolean;
@@ -77,8 +78,20 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
 
     setIsSubmitting(true);
     try {
-      // Use TicketManager to create the ticket
-      const ticket = await ticketManager.createTicket(description.trim());
+      // Capture page state (console logs + screenshot)
+      console.debug('Capturing page state...');
+      const pageState = await pageStateCaptureCoordinator.capturePageState();
+      console.debug('Page state captured:', {
+        consoleLogsCount: pageState.consoleLogs.length,
+        hasScreenshot: pageState.screenshot !== null
+      });
+
+      // Use TicketManager to create the ticket with captured data
+      const ticket = await ticketManager.createTicket(
+        description.trim(),
+        pageState.consoleLogs,
+        pageState.screenshot || undefined
+      );
 
       // Handle post-creation logic internally
       console.debug('Ticket created with ID:', ticket.id);

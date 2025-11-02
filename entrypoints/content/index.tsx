@@ -12,6 +12,7 @@ import { SubscriptionManagerProvider } from '@extension/shared/contexts/Subscrip
 import { RatingManagerProvider } from '@extension/contexts/RatingManagerContext';
 import { type CustomerProfile } from '@common/types';
 import { GitHubShareManagerProvider } from '@extension/GitHubShare/contexts/GitHubShareManagerContext';
+import { pageStateCaptureCoordinator } from '@extension/shared/pageStateCaptureCoordinator';
 
 let uiMounted = false;
 let rootInstance: ReactDOM.Root | null = null;
@@ -89,6 +90,14 @@ async function injectUI() {
   if (uiMounted) {
     console.info('[ContentScript] UI already mounted');
     return;
+  }
+
+  // Initialize page state capture (console logs and screenshot)
+  try {
+    await pageStateCaptureCoordinator.initialize();
+    console.info('[ContentScript] Page state capture initialized');
+  } catch (error) {
+    console.error('[ContentScript] Failed to initialize page state capture:', error);
   }
 
   // Create host element and attach shadow root
