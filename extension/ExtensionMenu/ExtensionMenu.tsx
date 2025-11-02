@@ -1,16 +1,17 @@
 import React from 'react';
-import { RotateCw, Eye, EyeOff, LogOut } from 'lucide-react';
+import { RotateCw, Eye, EyeOff, LogOut, User } from 'lucide-react';
 import { type CustomerProfile } from '@common/types';
 import { useExtensionAuthManager } from '@extension/shared/contexts/ExtensionAuthManagerContext';
 
 interface ExtensionMenuProps {
   onChangePosition: () => void;
   onToggleVisibility: () => void;
+  onEditProfile: () => void;
   isButtonVisible: boolean;
   customerProfile: CustomerProfile;
 }
 
-const ExtensionMenu: React.FC<ExtensionMenuProps> = ({ onChangePosition, onToggleVisibility, isButtonVisible, onCreateNewTicket, customerProfile }) => {
+const ExtensionMenu: React.FC<ExtensionMenuProps> = ({ onChangePosition, onToggleVisibility, onEditProfile, isButtonVisible, onCreateNewTicket, customerProfile }) => {
   const { signOut } = useExtensionAuthManager();
 
   const handleLogout = async () => {
@@ -41,6 +42,14 @@ const ExtensionMenu: React.FC<ExtensionMenuProps> = ({ onChangePosition, onToggl
 
         {/* Menu Actions */}
         <div className="unjam-w-full unjam-space-y-2">
+          <button
+            onClick={onEditProfile}
+            className="unjam-w-full unjam-flex unjam-justify-center unjam-items-center unjam-gap-2 unjam-py-2.5 unjam-px-4 unjam-border unjam-border-gray-300 unjam-rounded-md unjam-text-sm unjam-font-medium unjam-text-gray-700 unjam-bg-white hover:unjam-bg-gray-50 focus:unjam-outline-none unjam-transition-colors"
+          >
+            <User className="unjam-h-5 unjam-w-5" />
+            Edit Profile
+          </button>
+
           <button
             onClick={onToggleVisibility}
             className="unjam-w-full unjam-flex unjam-justify-center unjam-items-center unjam-gap-2 unjam-py-2.5 unjam-px-4 unjam-border unjam-border-gray-300 unjam-rounded-md unjam-text-sm unjam-font-medium unjam-text-gray-700 unjam-bg-white hover:unjam-bg-gray-50 focus:unjam-outline-none unjam-transition-colors"

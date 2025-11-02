@@ -211,6 +211,57 @@ export class AuthManager {
   }
 
   /**
+   * Update the current user's profile
+   * @param updates - Partial profile data to update (only name and githubUsername supported)
+   * @returns Promise that resolves with the updated user profile
+   * @throws Error if no user is signed in or profile update fails
+   */
+  async updateProfile(updates: { name?: string; githubUsername?: string }): Promise<UserProfile> {
+    console.debug('AuthManager: Updating profile with:', updates);
+
+    // Verify user is signed in
+    if (this.currentAuthUser.status !== 'signed-in') {
+      throw new Error('Cannot update profile: No user is signed in');
+    }
+
+    const { profile } = this.currentAuthUser;
+    if (!profile) {
+      throw new Error('No profile set');
+    }
+
+    // Validate updates
+    if (updates.name !== undefined && !updates.name.trim()) {
+      throw new Error('Name cannot be empty');
+    }
+
+    if (profile.type === 'engineer' && updates.githubUsername !== undefined && !updates.githubUsername.trim()) {
+      throw new Error('GitHub username cannot be empty for engineers');
+    }
+
+    // Build updated profile with only allowed fields
+    const updatedProfile: UserProfile = {
+      ...profile,
+      ...(updates.name !== undefined && { name: updates.name.trim() }),
+      ...(profile.type === 'engineer' && updates.githubUsername !== undefined && { githubUsername: updates.githubUsername.trim() }),
+    };
+
+    // Save updated profile to store
+    const savedProfile = await this.authProfileStore.update(profile.id, updatedProfile);
+
+    // Update current auth user state
+    this.currentAuthUser = {
+      ...this.currentAuthUser,
+      profile: savedProfile,
+    };
+
+    // Emit profile updated event
+    this.authEventEmitter.emitUserProfileUpdated(this.currentAuthUser);
+
+    console.debug('AuthManager: Profile updated successfully');
+    return savedProfile;
+  }
+
+  /**
    * Mark the extension as installed for the current user
    * Updates the user's profile with installation timestamp and version
    *
