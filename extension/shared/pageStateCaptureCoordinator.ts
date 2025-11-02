@@ -1,5 +1,4 @@
 import { type ConsoleLog } from '@common/types';
-import { consoleCaptureManager } from './consoleCapture';
 
 export interface PageState {
   consoleLogs: ConsoleLog[];
@@ -8,26 +7,40 @@ export interface PageState {
 
 /**
  * Coordinates capturing of page state including console logs and screenshot
+ * Uses Chrome Debugger API for console logs and Chrome Tabs API for screenshots
  */
 export class PageStateCaptureCoordinator {
-  private isInitialized: boolean = false;
-
   /**
    * Initializes the capture system
+   * No longer needs to inject scripts since we use Chrome Debugger API
    */
   async initialize(): Promise<void> {
-    if (this.isInitialized) {
-      return;
-    }
+    console.debug('[PageStateCaptureCoordinator] Initialized (using Chrome Debugger API)');
+  }
 
+  /**
+   * Captures console logs by sending a message to the background script
+   * @param durationMs - How long to capture console logs (default: 500ms)
+   */
+  private async captureConsoleLogs(durationMs: number = 500): Promise<ConsoleLog[]> {
     try {
-      // Inject console capture script
-      await consoleCaptureManager.inject();
-      this.isInitialized = true;
-      console.debug('[PageStateCaptureCoordinator] Initialized');
+      console.debug('[PageStateCaptureCoordinator] Requesting console logs from background');
+
+      const response = await browser.runtime.sendMessage({
+        type: 'CAPTURE_CONSOLE_LOGS',
+        durationMs
+      });
+
+      if (response.success) {
+        console.debug('[PageStateCaptureCoordinator] Console logs captured:', response.logs.length);
+        return response.logs;
+      } else {
+        console.error('[PageStateCaptureCoordinator] Console log capture failed:', response.error);
+        return [];
+      }
     } catch (error) {
-      console.error('[PageStateCaptureCoordinator] Failed to initialize:', error);
-      throw error;
+      console.error('[PageStateCaptureCoordinator] Failed to capture console logs:', error);
+      return [];
     }
   }
 
@@ -57,25 +70,16 @@ export class PageStateCaptureCoordinator {
 
   /**
    * Captures the full page state (console logs + screenshot)
-   * @param captureDurationMs - How long to capture console logs before taking screenshot (default: 500ms)
+   * @param captureDurationMs - How long to capture console logs (default: 500ms)
    */
   async capturePageState(captureDurationMs: number = 500): Promise<PageState> {
-    // Initialize if not already done
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
+    console.debug('[PageStateCaptureCoordinator] Capturing page state for', captureDurationMs, 'ms');
 
-    // Start capturing console logs
-    consoleCaptureManager.startCapture();
-    console.debug('[PageStateCaptureCoordinator] Started console capture');
-
-    // Wait for the specified duration to capture console activity
-    await new Promise(resolve => setTimeout(resolve, captureDurationMs));
-
-    // Capture screenshot and stop console capture in parallel
-    const [screenshot, consoleLogs] = await Promise.all([
-      this.captureScreenshot(),
-      Promise.resolve(consoleCaptureManager.stopCapture())
+    // Capture console logs and screenshot in parallel
+    // Note: Console log capture includes its own duration, screenshot is instant
+    const [consoleLogs, screenshot] = await Promise.all([
+      this.captureConsoleLogs(captureDurationMs),
+      this.captureScreenshot()
     ]);
 
     console.debug('[PageStateCaptureCoordinator] Captured page state:', {
@@ -87,34 +91,6 @@ export class PageStateCaptureCoordinator {
       consoleLogs,
       screenshot
     };
-  }
-
-  /**
-   * Starts capturing console logs immediately
-   * Useful when you want to start capturing before a user action
-   */
-  startConsoleCapture(): void {
-    if (!this.isInitialized) {
-      this.initialize().then(() => {
-        consoleCaptureManager.startCapture();
-      });
-    } else {
-      consoleCaptureManager.startCapture();
-    }
-  }
-
-  /**
-   * Stops capturing console logs and returns them
-   */
-  stopConsoleCapture(): ConsoleLog[] {
-    return consoleCaptureManager.stopCapture();
-  }
-
-  /**
-   * Clears all captured console logs
-   */
-  clearConsoleLogs(): void {
-    consoleCaptureManager.clearLogs();
   }
 }
 

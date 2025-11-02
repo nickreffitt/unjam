@@ -144,8 +144,9 @@ export default defineBackground(() => {
   // Start listening for messages
   eventListener.startListening();
 
-  // Listen for messages from content script to capture screenshots
+  // Listen for messages from content script to capture screenshots and console logs
   browser.runtime.onMessage.addListener(async (message, sender) => {
+    // Handle screenshot capture
     if (message.type === 'CAPTURE_SCREENSHOT') {
       console.log('=== CAPTURE SCREENSHOT REQUEST ===');
       console.debug('Background script: Capturing screenshot for tab:', sender.tab?.id);
@@ -167,6 +168,112 @@ export default defineBackground(() => {
       } catch (error) {
         console.error('Background script: Failed to capture screenshot:', error);
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    }
+
+    // Handle console log capture using Chrome Debugger API
+    if (message.type === 'CAPTURE_CONSOLE_LOGS') {
+      console.log('=== CAPTURE CONSOLE LOGS REQUEST ===');
+      const tabId = sender.tab?.id;
+      const durationMs = message.durationMs || 500;
+
+      if (!tabId) {
+        return { success: false, logs: [], error: 'No tab ID available' };
+      }
+
+      console.debug('Background script: Capturing console logs for tab:', tabId, 'duration:', durationMs, 'ms');
+
+      const logs: any[] = [];
+      let debuggerAttached = false;
+
+      try {
+        // Attach debugger to the tab
+        await new Promise<void>((resolve, reject) => {
+          browser.debugger.attach({ tabId }, '1.0', () => {
+            if (browser.runtime.lastError) {
+              reject(new Error(browser.runtime.lastError.message));
+            } else {
+              debuggerAttached = true;
+              resolve();
+            }
+          });
+        });
+
+        console.debug('Background script: Debugger attached to tab:', tabId);
+
+        // Create event listener for console messages
+        const eventListener = (
+          debuggeeId: chrome.debugger.Debuggee,
+          eventMessage: string,
+          params?: any
+        ) => {
+          if (debuggeeId.tabId !== tabId) {
+            return;
+          }
+
+          // Listen for Runtime.consoleAPICalled events
+          if (eventMessage === 'Runtime.consoleAPICalled' && params) {
+            const level = params.type;
+            const args = params.args || [];
+
+            // Convert console arguments to string
+            const messageText = args.map((arg: any) => {
+              if (arg.value !== undefined) {
+                return String(arg.value);
+              } else if (arg.description !== undefined) {
+                return arg.description;
+              } else if (arg.preview) {
+                return arg.preview.description || JSON.stringify(arg.preview);
+              }
+              return String(arg);
+            }).join(' ');
+
+            logs.push({
+              level: level === 'log' ? 'log' : level,
+              message: messageText,
+              timestamp: params.timestamp || Date.now(),
+              args: args.map((arg: any) => arg.value)
+            });
+          }
+        };
+
+        // Add event listener
+        browser.debugger.onEvent.addListener(eventListener);
+
+        // Enable Runtime domain to receive console messages
+        await browser.debugger.sendCommand({ tabId }, 'Runtime.enable');
+        console.debug('Background script: Runtime enabled, capturing for', durationMs, 'ms');
+
+        // Wait for the specified duration to capture logs
+        await new Promise(resolve => setTimeout(resolve, durationMs));
+
+        // Cleanup: remove listener, disable Runtime, detach debugger
+        browser.debugger.onEvent.removeListener(eventListener);
+        await browser.debugger.sendCommand({ tabId }, 'Runtime.disable');
+        await browser.debugger.detach({ tabId });
+        debuggerAttached = false;
+
+        console.log('=== CONSOLE LOGS CAPTURED ===');
+        console.debug('Background script: Captured', logs.length, 'console logs');
+
+        return { success: true, logs };
+      } catch (error) {
+        console.error('Background script: Failed to capture console logs:', error);
+
+        // Clean up debugger if still attached
+        if (debuggerAttached) {
+          try {
+            await browser.debugger.detach({ tabId });
+          } catch (detachError) {
+            console.error('Background script: Failed to detach debugger:', detachError);
+          }
+        }
+
+        return {
+          success: false,
+          logs: [],
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
       }
     }
   });
