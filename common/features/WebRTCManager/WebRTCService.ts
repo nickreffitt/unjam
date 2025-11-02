@@ -12,6 +12,7 @@ export interface WebRTCServiceConfig {
   signalingStore: WebRTCSignalingStore;
   signalChanges: WebRTCSignalingChanges;
   eventEmitter: WebRTCEventEmitter;
+  iceServerService: ICEServerService;
 }
 
 export class WebRTCService {
@@ -24,6 +25,7 @@ export class WebRTCService {
   private readonly eventEmitter: WebRTCEventEmitter;
   private readonly eventListener: WebRTCListener;
   private readonly signalChanges: WebRTCSignalingChanges;
+  private readonly iceServerService: ICEServerService;
 
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
@@ -41,6 +43,7 @@ export class WebRTCService {
     this.signalingStore = config.signalingStore;
     this.eventEmitter = config.eventEmitter;
     this.signalChanges = config.signalChanges;
+    this.iceServerService = config.iceServerService;
 
     // Create WebRTC listener to sync signaling store when cross-tab events are received
     this.eventListener = new WebRTCListener({
@@ -96,7 +99,7 @@ export class WebRTCService {
       this.setState('initializing');
 
       // Get ICE servers
-      const iceConfig = await ICEServerService.getICEServers();
+      const iceConfig = await this.iceServerService.getICEServers();
       if (iceConfig.error) {
         console.warn('WebRTCService: ICE server configuration warning', iceConfig.error);
       }

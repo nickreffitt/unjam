@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "server": "https://deno.land/std@0.168.0/http/server.ts",
+    "@types": "../../../common/types.ts"
+  }
+}

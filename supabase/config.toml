@@ -375,3 +375,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/ticket-payment/deno.json"
 entrypoint = "./functions/ticket-payment/index.ts"
+
+[functions.get-ice-servers]
+enabled = true
+verify_jwt = true
+import_map = "./functions/get-ice-servers/deno.json"
+entrypoint = "./functions/get-ice-servers/index.ts"

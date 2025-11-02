@@ -4,6 +4,7 @@ import { createWebRTCManager, type WebRTCSignalingStore, type WebRTCManager } fr
 import { type WebRTCEventEmitter, WebRTCListener } from '@common/features/WebRTCManager/events';
 import { type ScreenShareEventEmitter } from './events';
 import { type WebRTCSignalingChanges } from '../WebRTCManager/store';
+import type { ICEServerService } from '@common/features/WebRTCManager/ICEServerService';
 
 export class ScreenShareManager {
   private readonly ticketId: string;
@@ -14,6 +15,7 @@ export class ScreenShareManager {
   private readonly signalingStore: WebRTCSignalingStore;
   private readonly signalChanges: WebRTCSignalingChanges;
   private readonly signalEventEmitter: WebRTCEventEmitter;
+  private readonly iceServerService: ICEServerService;
 
   // WebRTC connection state - single manager per role
   private webrtcManager: WebRTCManager | null = null;
@@ -33,7 +35,8 @@ export class ScreenShareManager {
     eventEmitter: ScreenShareEventEmitter,
     signalingStore: WebRTCSignalingStore,
     signalChanges: WebRTCSignalingChanges,
-    signalEventEmitter: WebRTCEventEmitter
+    signalEventEmitter: WebRTCEventEmitter,
+    iceServerService: ICEServerService
   ) {
     this.ticketId = ticketId;
     this.requestStore = requestStore;
@@ -44,6 +47,7 @@ export class ScreenShareManager {
     this.signalingStore = signalingStore;
     this.signalChanges = signalChanges;
     this.signalEventEmitter = signalEventEmitter;
+    this.iceServerService = iceServerService;
 
     console.debug('ScreenShareManager: Constructor called for ticket', ticketId);
 
@@ -310,7 +314,8 @@ export class ScreenShareManager {
         true,       // isPublisher = true for customer
         this.signalingStore,
         this.signalChanges,
-        this.signalEventEmitter
+        this.signalEventEmitter,
+        this.iceServerService
       );
 
       this.isPublisher = true;
@@ -401,7 +406,8 @@ export class ScreenShareManager {
           false,               // isPublisher = false for engineer (subscriber)
           this.signalingStore,
           this.signalChanges,
-          this.signalEventEmitter
+          this.signalEventEmitter,
+          this.iceServerService
         );
 
         this.isPublisher = false;
