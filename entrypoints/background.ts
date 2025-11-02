@@ -144,6 +144,13 @@ export default defineBackground(() => {
   // Start listening for messages
   eventListener.startListening();
 
+  // Store for continuous console log capture per tab
+  const consoleCaptureState = new Map<number, {
+    logs: any[];
+    debuggerAttached: boolean;
+    eventListener: any;
+  }>();
+
   // Listen for messages from content script to capture screenshots and console logs
   browser.runtime.onMessage.addListener(async (message, sender) => {
     // Handle screenshot capture
@@ -171,9 +178,183 @@ export default defineBackground(() => {
       }
     }
 
-    // Handle console log capture using Chrome Debugger API
+    // Handle starting continuous console log capture
+    if (message.type === 'START_CONSOLE_CAPTURE') {
+      const tabId = sender.tab?.id;
+
+      if (!tabId) {
+        return { success: false, error: 'No tab ID available' };
+      }
+
+      // Don't start if already capturing for this tab
+      if (consoleCaptureState.has(tabId)) {
+        console.debug('Background script: Console capture already active for tab:', tabId);
+        return { success: true, message: 'Already capturing' };
+      }
+
+      console.log('=== START CONSOLE CAPTURE REQUEST ===');
+      console.debug('Background script: Starting continuous console capture for tab:', tabId);
+
+      const logs: any[] = [];
+      let debuggerAttached = false;
+
+      try {
+        // Attach debugger to the tab
+        await new Promise<void>((resolve, reject) => {
+          browser.debugger.attach({ tabId }, '1.0', () => {
+            if (browser.runtime.lastError) {
+              reject(new Error(browser.runtime.lastError.message));
+            } else {
+              debuggerAttached = true;
+              resolve();
+            }
+          });
+        });
+
+        console.debug('Background script: Debugger attached to tab:', tabId);
+
+        // Create event listener for console messages
+        const eventListener = (
+          debuggeeId: chrome.debugger.Debuggee,
+          eventMessage: string,
+          params?: any
+        ) => {
+          if (debuggeeId.tabId !== tabId) {
+            return;
+          }
+
+          // Listen for Runtime.consoleAPICalled events
+          if (eventMessage === 'Runtime.consoleAPICalled' && params) {
+            const level = params.type;
+            const args = params.args || [];
+
+            // Convert console arguments to string
+            const messageText = args.map((arg: any) => {
+              if (arg.value !== undefined) {
+                return String(arg.value);
+              } else if (arg.description !== undefined) {
+                return arg.description;
+              } else if (arg.preview) {
+                return arg.preview.description || JSON.stringify(arg.preview);
+              }
+              return String(arg);
+            }).join(' ');
+
+            logs.push({
+              level: level === 'log' ? 'log' : level,
+              message: messageText,
+              timestamp: params.timestamp || Date.now(),
+              args: args.map((arg: any) => arg.value)
+            });
+          }
+        };
+
+        // Add event listener
+        browser.debugger.onEvent.addListener(eventListener);
+
+        // Enable Runtime domain to receive console messages
+        await browser.debugger.sendCommand({ tabId }, 'Runtime.enable');
+        console.debug('Background script: Runtime enabled, capturing continuously');
+
+        // Store the capture state
+        consoleCaptureState.set(tabId, {
+          logs,
+          debuggerAttached: true,
+          eventListener
+        });
+
+        console.log('=== CONSOLE CAPTURE STARTED ===');
+        return { success: true };
+      } catch (error) {
+        console.error('Background script: Failed to start console capture:', error);
+
+        // Clean up debugger if still attached
+        if (debuggerAttached) {
+          try {
+            await browser.debugger.detach({ tabId });
+          } catch (detachError) {
+            console.error('Background script: Failed to detach debugger:', detachError);
+          }
+        }
+
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    }
+
+    // Handle getting accumulated console logs
+    if (message.type === 'GET_CONSOLE_LOGS') {
+      const tabId = sender.tab?.id;
+
+      if (!tabId) {
+        return { success: false, logs: [], error: 'No tab ID available' };
+      }
+
+      console.log('=== GET CONSOLE LOGS REQUEST ===');
+      console.debug('Background script: Getting console logs for tab:', tabId);
+
+      const captureState = consoleCaptureState.get(tabId);
+
+      if (!captureState) {
+        console.warn('Background script: No console capture active for tab:', tabId);
+        return { success: true, logs: [] };
+      }
+
+      console.debug('Background script: Returning', captureState.logs.length, 'console logs');
+      return { success: true, logs: [...captureState.logs] };
+    }
+
+    // Handle stopping console log capture
+    if (message.type === 'STOP_CONSOLE_CAPTURE') {
+      const tabId = sender.tab?.id;
+
+      if (!tabId) {
+        return { success: false, error: 'No tab ID available' };
+      }
+
+      console.log('=== STOP CONSOLE CAPTURE REQUEST ===');
+      console.debug('Background script: Stopping console capture for tab:', tabId);
+
+      const captureState = consoleCaptureState.get(tabId);
+
+      if (!captureState) {
+        console.warn('Background script: No console capture active for tab:', tabId);
+        return { success: true };
+      }
+
+      try {
+        // Remove event listener
+        if (captureState.eventListener) {
+          browser.debugger.onEvent.removeListener(captureState.eventListener);
+        }
+
+        // Disable Runtime and detach debugger
+        if (captureState.debuggerAttached) {
+          await browser.debugger.sendCommand({ tabId }, 'Runtime.disable');
+          await browser.debugger.detach({ tabId });
+        }
+
+        // Remove from state
+        consoleCaptureState.delete(tabId);
+
+        console.log('=== CONSOLE CAPTURE STOPPED ===');
+        return { success: true };
+      } catch (error) {
+        console.error('Background script: Failed to stop console capture:', error);
+        // Still remove from state even if cleanup failed
+        consoleCaptureState.delete(tabId);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    }
+
+    // Handle legacy console log capture (for backwards compatibility)
     if (message.type === 'CAPTURE_CONSOLE_LOGS') {
-      console.log('=== CAPTURE CONSOLE LOGS REQUEST ===');
+      console.log('=== CAPTURE CONSOLE LOGS REQUEST (LEGACY) ===');
       const tabId = sender.tab?.id;
       const durationMs = message.durationMs || 500;
 
@@ -275,6 +456,28 @@ export default defineBackground(() => {
           error: error instanceof Error ? error.message : 'Unknown error'
         };
       }
+    }
+  });
+
+  // Clean up console capture when tabs are closed
+  browser.tabs.onRemoved.addListener((tabId) => {
+    const captureState = consoleCaptureState.get(tabId);
+    if (captureState) {
+      console.debug('Background script: Tab closed, cleaning up console capture for tab:', tabId);
+
+      // Remove event listener
+      if (captureState.eventListener) {
+        browser.debugger.onEvent.removeListener(captureState.eventListener);
+      }
+
+      // Try to detach debugger (may fail if tab is already closed)
+      if (captureState.debuggerAttached) {
+        browser.debugger.detach({ tabId }).catch(() => {
+          // Ignore errors - tab is already closed
+        });
+      }
+
+      consoleCaptureState.delete(tabId);
     }
   });
 

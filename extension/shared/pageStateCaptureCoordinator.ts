@@ -10,36 +10,55 @@ export interface PageState {
  * Uses Chrome Debugger API for console logs and Chrome Tabs API for screenshots
  */
 export class PageStateCaptureCoordinator {
+  private isCapturing: boolean = false;
+
   /**
-   * Initializes the capture system
-   * No longer needs to inject scripts since we use Chrome Debugger API
+   * Initializes the capture system and starts continuous console log capture
    */
   async initialize(): Promise<void> {
-    console.debug('[PageStateCaptureCoordinator] Initialized (using Chrome Debugger API)');
-  }
+    if (this.isCapturing) {
+      console.debug('[PageStateCaptureCoordinator] Already capturing');
+      return;
+    }
 
-  /**
-   * Captures console logs by sending a message to the background script
-   * @param durationMs - How long to capture console logs (default: 500ms)
-   */
-  private async captureConsoleLogs(durationMs: number = 500): Promise<ConsoleLog[]> {
     try {
-      console.debug('[PageStateCaptureCoordinator] Requesting console logs from background');
+      console.debug('[PageStateCaptureCoordinator] Starting continuous console capture');
 
       const response = await browser.runtime.sendMessage({
-        type: 'CAPTURE_CONSOLE_LOGS',
-        durationMs
+        type: 'START_CONSOLE_CAPTURE'
       });
 
       if (response.success) {
-        console.debug('[PageStateCaptureCoordinator] Console logs captured:', response.logs.length);
+        this.isCapturing = true;
+        console.debug('[PageStateCaptureCoordinator] Console capture started successfully');
+      } else {
+        console.error('[PageStateCaptureCoordinator] Failed to start console capture:', response.error);
+      }
+    } catch (error) {
+      console.error('[PageStateCaptureCoordinator] Failed to initialize console capture:', error);
+    }
+  }
+
+  /**
+   * Gets accumulated console logs from the background script
+   */
+  private async getConsoleLogs(): Promise<ConsoleLog[]> {
+    try {
+      console.debug('[PageStateCaptureCoordinator] Getting accumulated console logs');
+
+      const response = await browser.runtime.sendMessage({
+        type: 'GET_CONSOLE_LOGS'
+      });
+
+      if (response.success) {
+        console.debug('[PageStateCaptureCoordinator] Got', response.logs.length, 'console logs');
         return response.logs;
       } else {
-        console.error('[PageStateCaptureCoordinator] Console log capture failed:', response.error);
+        console.error('[PageStateCaptureCoordinator] Failed to get console logs:', response.error);
         return [];
       }
     } catch (error) {
-      console.error('[PageStateCaptureCoordinator] Failed to capture console logs:', error);
+      console.error('[PageStateCaptureCoordinator] Failed to get console logs:', error);
       return [];
     }
   }
@@ -69,16 +88,15 @@ export class PageStateCaptureCoordinator {
   }
 
   /**
-   * Captures the full page state (console logs + screenshot)
-   * @param captureDurationMs - How long to capture console logs (default: 500ms)
+   * Captures the full page state (accumulated console logs + screenshot)
+   * Console logs are captured continuously from the moment initialize() was called
    */
-  async capturePageState(captureDurationMs: number = 500): Promise<PageState> {
-    console.debug('[PageStateCaptureCoordinator] Capturing page state for', captureDurationMs, 'ms');
+  async capturePageState(): Promise<PageState> {
+    console.debug('[PageStateCaptureCoordinator] Capturing page state');
 
-    // Capture console logs and screenshot in parallel
-    // Note: Console log capture includes its own duration, screenshot is instant
+    // Get accumulated console logs and capture screenshot in parallel
     const [consoleLogs, screenshot] = await Promise.all([
-      this.captureConsoleLogs(captureDurationMs),
+      this.getConsoleLogs(),
       this.captureScreenshot()
     ]);
 
@@ -91,6 +109,32 @@ export class PageStateCaptureCoordinator {
       consoleLogs,
       screenshot
     };
+  }
+
+  /**
+   * Stops console log capture
+   */
+  async stopCapture(): Promise<void> {
+    if (!this.isCapturing) {
+      return;
+    }
+
+    try {
+      console.debug('[PageStateCaptureCoordinator] Stopping console capture');
+
+      const response = await browser.runtime.sendMessage({
+        type: 'STOP_CONSOLE_CAPTURE'
+      });
+
+      if (response.success) {
+        this.isCapturing = false;
+        console.debug('[PageStateCaptureCoordinator] Console capture stopped');
+      } else {
+        console.error('[PageStateCaptureCoordinator] Failed to stop console capture:', response.error);
+      }
+    } catch (error) {
+      console.error('[PageStateCaptureCoordinator] Failed to stop console capture:', error);
+    }
   }
 }
 
