@@ -2,14 +2,6 @@ import { serve } from "server"
 
 console.debug("Get ICE Servers function loaded")
 
-const METERED_API_URL = 'https://unjam.metered.live/api/v1/turn/credentials';
-
-const FALLBACK_STUN_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun.relay.metered.ca:80' },
-];
-
 export const handler = async (request: Request): Promise<Response> => {
   const origin = request.headers.get('Origin')
   // Allow all origins for WebRTC functionality (both dashboard and extension need access)
@@ -46,21 +38,22 @@ export const handler = async (request: Request): Promise<Response> => {
       )
     }
 
-    // Get API key from environment
+    // Get API key and URL from environment
     const apiKey = Deno.env.get('METERED_CA_API_KEY')
+    const apiUrl = Deno.env.get('METERED_CA_URL')
 
-    if (!apiKey) {
-      console.warn('[get-ice-servers] No API key found, returning fallback STUN servers')
+    if (!apiKey || !apiUrl) {
+      console.error('[get-ice-servers] Missing API key or URL')
       return new Response(
-        JSON.stringify({ iceServers: FALLBACK_STUN_SERVERS }),
-        { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        JSON.stringify({ error: 'Missing API key or URL configuration' }),
+        { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
 
     // Fetch TURN credentials from Metered.ca
     console.debug('[get-ice-servers] Fetching TURN credentials from Metered.ca')
 
-    const response = await fetch(`${METERED_API_URL}?apiKey=${apiKey}`, {
+    const response = await fetch(`${apiUrl}?apiKey=${apiKey}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -71,18 +64,10 @@ export const handler = async (request: Request): Promise<Response> => {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
-    const turnServers = await response.json()
-
-    // Combine STUN servers with TURN servers from API
-    const iceServers = [
-      ...FALLBACK_STUN_SERVERS,
-      ...turnServers,
-    ]
+    const iceServers = await response.json()
 
     console.debug('[get-ice-servers] Successfully fetched ICE servers', {
-      stunServers: FALLBACK_STUN_SERVERS.length,
-      turnServers: turnServers.length,
-      total: iceServers.length,
+      serverCount: iceServers.length,
     })
 
     return new Response(
@@ -92,12 +77,11 @@ export const handler = async (request: Request): Promise<Response> => {
 
   } catch (err) {
     const error = err as Error
-    console.error('[get-ice-servers] Error fetching TURN servers, returning fallback STUN servers:', error.message)
+    console.error('[get-ice-servers] Error fetching TURN servers:', error.message)
 
-    // Return fallback STUN servers on error
     return new Response(
-      JSON.stringify({ iceServers: FALLBACK_STUN_SERVERS }),
-      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
     )
   }
 }
