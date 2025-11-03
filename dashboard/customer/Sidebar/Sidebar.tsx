@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, CreditCard, ArrowDownToLine, Github, Check, Home } from 'lucide-react';
+import { LogOut, CreditCard, ArrowDownToLine, Github, Check, Home, Settings } from 'lucide-react';
 import { useOnboardingState } from '../OnboardingStatus/hooks/useOnboardingState';
 
 const Sidebar: React.FC = () => {
@@ -19,6 +19,12 @@ const Sidebar: React.FC = () => {
     path: '/',
     label: 'Home',
     icon: Home
+  };
+
+  const settingsItem = {
+    path: '/settings',
+    label: 'Settings',
+    icon: Settings
   };
 
   const getStartedItems = [
@@ -83,7 +89,7 @@ const Sidebar: React.FC = () => {
         </ul>
 
         {/* Get Started section */}
-        <div className="unjam-mt-6 unjam-pt-6 unjam-border-t unjam-border-gray-200">
+        <div className="unjam-mt-6 unjam-pt-3">
           <h2 className="unjam-px-2 unjam-mb-2 unjam-text-xs unjam-font-semibold unjam-text-gray-500 unjam-uppercase unjam-tracking-wider">
             Get Started
           </h2>
@@ -107,6 +113,21 @@ const Sidebar: React.FC = () => {
               </li>
             ))}
           </ul>
+        </div>
+
+        {/* Settings link */}
+        <div className="unjam-mt-6 unjam-pt-6 unjam-border-t unjam-border-gray-200">
+          <Link
+            to={settingsItem.path}
+            className={`unjam-flex unjam-items-center unjam-space-x-3 unjam-px-4 unjam-py-3 unjam-rounded-lg unjam-transition-colors unjam-text-sm ${
+              isActivePath(settingsItem.path)
+                ? 'unjam-bg-blue-50 unjam-text-blue-700 unjam-border unjam-border-blue-200'
+                : 'unjam-text-gray-700 hover:unjam-bg-gray-50 hover:unjam-text-gray-900'
+            }`}
+          >
+            <settingsItem.icon size={18} />
+            <span className="unjam-font-medium">{settingsItem.label}</span>
+          </Link>
         </div>
 
         {/* Logout at bottom */}

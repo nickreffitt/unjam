@@ -7,7 +7,8 @@ import CompletedTicketsList from '@dashboard/pages/engineer/CompletedTicketsList
 import TicketPreview from '@dashboard/pages/engineer/TicketPreview/TicketPreview';
 import ActiveTicket from '@dashboard/pages/engineer/ActiveTicket/ActiveTicket';
 import CompletedTicket from '@dashboard/pages/engineer/CompletedTicket/CompletedTicket';
-import Settings from '@dashboard/pages/engineer/Settings';
+import EngineerSettings from '@dashboard/pages/engineer/Settings';
+import CustomerSettings from '@dashboard/pages/customer/Settings/Settings';
 import SignIn from '@dashboard/SignIn/SignIn';
 import Logout from '@dashboard/Logout/Logout';
 import CreateProfile from '@dashboard/CreateProfile/CreateProfile';
@@ -30,7 +31,7 @@ import { BillingAccountManagerProvider } from './engineer/BillingAccount';
 import { GithubConnectManagerProvider } from './customer/GithubConnect';
 
 
-const ProtectedEngineerDashboard: React.FC = () => {
+const ProtectedEngineerDashboard: React.FC = React.memo(() => {
   return (
     <BillingAccountManagerProvider>
       <TicketManagerProvider>
@@ -48,7 +49,7 @@ const ProtectedEngineerDashboard: React.FC = () => {
                       <Route path="active/:ticketId" element={<ActiveTicket />} />
                       <Route path="completed" element={<CompletedTicketsList />} />
                       <Route path="completed/:ticketId" element={<CompletedTicket />} />
-                      <Route path="settings" element={<Settings />} />
+                      <Route path="settings" element={<EngineerSettings />} />
                       <Route path="auth/logout" element={<Logout />} />
                       <Route path="*" element={<NewTicketsList />} />
                     </Routes>
@@ -61,10 +62,10 @@ const ProtectedEngineerDashboard: React.FC = () => {
       </TicketManagerProvider>
     </BillingAccountManagerProvider>
   );
-};
+});
 
 
-const ProtectedCustomerDashboard: React.FC = () => {
+const ProtectedCustomerDashboard: React.FC = React.memo(() => {
   return (
     <SubscriptionManagerProvider>
       <GithubConnectManagerProvider>
@@ -77,6 +78,7 @@ const ProtectedCustomerDashboard: React.FC = () => {
               <Route path="buy/success" element={<CreditSuccess />} />
               <Route path="github/connect" element={<GithubConnect />} />
               <Route path="github/callback" element={<GithubCallback />} />
+              <Route path="settings" element={<CustomerSettings />} />
               <Route path="auth/logout" element={<Logout />} />
               <Route path="*" element={<CustomerHome />} />
             </Routes>
@@ -85,7 +87,7 @@ const ProtectedCustomerDashboard: React.FC = () => {
       </GithubConnectManagerProvider>
     </SubscriptionManagerProvider>
   );
-};
+});
 
 const DashboardContent: React.FC = () => {
   const { authUser, isLoading } = useAuthState();

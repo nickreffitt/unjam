@@ -27,7 +27,7 @@ const BillingAccount: React.FC = () => {
   if (error) {
     return (
       <div className="unjam-h-full unjam-overflow-y-auto unjam-p-4">
-        <div className="unjam-max-w-6xl unjam-mx-auto unjam-text-center">
+        <div className="unjam-max-w-2xl unjam-mx-auto unjam-text-center">
           <div className="unjam-bg-red-50 unjam-border unjam-border-red-200 unjam-rounded-lg unjam-p-4">
             <p className="unjam-text-red-600">{error}</p>
           </div>
@@ -68,7 +68,7 @@ const BillingAccount: React.FC = () => {
 
   return (
     <div className="unjam-h-full unjam-overflow-y-auto unjam-p-4">
-      <div className="unjam-max-w-6xl unjam-mx-auto">
+      <div className="unjam-max-w-2xl unjam-mx-auto">
         <div className="unjam-bg-white unjam-rounded-lg unjam-shadow unjam-p-6">
           <h2 className="unjam-text-2xl unjam-font-bold unjam-mb-4">Billing Account</h2>
 

@@ -253,6 +253,59 @@ export class AuthManager {
   }
 
   /**
+   * Update the current user's profile
+   * For engineers: can update name and githubUsername
+   * For customers: can update name only
+   *
+   * @param updatedProfile - The updated profile object
+   * @returns Promise that resolves with the updated user profile
+   * @throws Error if no user is signed in, profile validation fails, or update fails
+   */
+  async updateProfile(updatedProfile: UserProfile): Promise<UserProfile> {
+    console.debug('AuthManager: Updating profile with:', updatedProfile);
+
+    // Verify user is signed in
+    if (this.currentAuthUser.status !== 'signed-in') {
+      throw new Error('Cannot update profile: No user is signed in');
+    }
+
+    const { profile: currentProfile } = this.currentAuthUser;
+    if (!currentProfile) {
+      throw new Error('No profile set');
+    }
+
+    // Validate profile ID matches current user
+    if (updatedProfile.id !== currentProfile.id) {
+      throw new Error('Cannot update profile: Profile ID mismatch');
+    }
+
+    // Validate profile type matches current user
+    if (updatedProfile.type !== currentProfile.type) {
+      throw new Error('Cannot update profile: Profile type cannot be changed');
+    }
+
+    // Validate engineer-specific fields
+    if (currentProfile.type === 'customer' && 'githubUsername' in updatedProfile) {
+      throw new Error('Cannot update profile: Customer profiles cannot have githubUsername');
+    }
+
+    // Save updated profile to store
+    await this.authProfileStore.update(updatedProfile.id, updatedProfile);
+
+    // Update current auth user state
+    this.currentAuthUser = {
+      ...this.currentAuthUser,
+      profile: updatedProfile,
+    };
+
+    // Emit profile updated event
+    this.authEventEmitter.emitUserProfileUpdated(this.currentAuthUser);
+
+    console.debug('AuthManager: Profile updated successfully');
+    return updatedProfile;
+  }
+
+  /**
    * Starts listening to profile changes for the current user
    * Called whenever a user profile becomes available
    */

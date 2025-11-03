@@ -33,13 +33,14 @@ export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProvid
   const engineerProfile = authUser.profile as EngineerProfile;
 
   // Initialize BillingAccountManager with dependencies
+  // Only recreate if profile ID changes (not on every profile update)
   const billingAccountManager = useMemo(() => {
     const billingAccountStore = new BillingAccountStoreSupabase(supabaseClient);
     billingAccountStoreRef.current = billingAccountStore;
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
     const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
     return new BillingAccountManager(billingAccountStore, apiManager, engineerProfile);
-  }, [engineerProfile, supabaseClient, supabaseUrl]);
+  }, [engineerProfile.id, supabaseClient, supabaseUrl]);
 
   // Start listening to Postgres changes on mount, stop on unmount
   useEffect(() => {
@@ -57,7 +58,7 @@ export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProvid
   const contextValue: BillingAccountManagerContextType = useMemo(() => ({
     engineerProfile,
     billingAccountManager
-  }), [engineerProfile, billingAccountManager]);
+  }), [engineerProfile.id, billingAccountManager]);
 
   return (
     <BillingAccountManagerContext.Provider value={contextValue}>

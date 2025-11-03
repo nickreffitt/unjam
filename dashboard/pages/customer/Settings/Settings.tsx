@@ -1,6 +1,5 @@
 import React from 'react';
-import BillingAccount from '@dashboard/engineer/BillingAccount';
-import UpdateProfile from '@dashboard/engineer/UpdateProfile';
+import UpdateProfile from '@dashboard/customer/UpdateProfile';
 
 const Settings: React.FC = () => {
   return (
@@ -11,7 +10,6 @@ const Settings: React.FC = () => {
       <div className="unjam-flex-1 unjam-overflow-y-auto">
         <div className="unjam-space-y-6 unjam-p-4">
           <UpdateProfile />
-          <BillingAccount />
         </div>
       </div>
     </div>
