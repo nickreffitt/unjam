@@ -7,6 +7,7 @@ import { AuthEventEmitterExtension } from '@common/features/AuthManager/events/A
 import { AuthUserListenerExtension } from '@common/features/AuthManager/events/AuthUserListenerExtension';
 import { createClient } from '@supabase/supabase-js';
 import { AuthChangesSupabase } from '@common/features/AuthManager/store/AuthChangesSupabase';
+import { ConsoleLogCaptureManager } from '@common/features/ConsoleLogCaptureManager';
 
 export default defineBackground(() => {
   console.log('=== BACKGROUND SCRIPT STARTED ===');
@@ -41,6 +42,10 @@ export default defineBackground(() => {
 
   // Create event emitter to send messages back to popup/content
   const extensionEventEmitter = new ExtensionEventEmitter();
+
+  // Create console log capture manager
+  const consoleLogCaptureManager = new ConsoleLogCaptureManager();
+  console.debug('Background script: ConsoleLogCaptureManager initialized');
 
   // Helper function to save and emit current session
   const saveAndEmitSession = async (session: any) => {
@@ -136,6 +141,48 @@ export default defineBackground(() => {
         console.debug('Background script: User signed out successfully');
       } catch (error) {
         console.error('Background script: Failed to sign out:', error);
+        throw error;
+      }
+    },
+    onGetPreviewUrl: async (currentUrl: string) => {
+      console.log('=== GET PREVIEW URL ===', currentUrl);
+      console.debug('Background script: Getting preview URL for:', currentUrl);
+
+      try {
+        const previewUrl = await consoleLogCaptureManager.getPreviewUrl(currentUrl);
+        console.log('=== PREVIEW URL RETRIEVED ===', previewUrl);
+        console.debug('Background script: Preview URL retrieved successfully');
+        return previewUrl;
+      } catch (error) {
+        console.error('Background script: Failed to get preview URL:', error);
+        return null;
+      }
+    },
+    onStartConsoleCapture: async (previewUrl: string) => {
+      console.log('=== START CONSOLE CAPTURE ===', previewUrl);
+      console.debug('Background script: Starting console log capture for preview URL:', previewUrl);
+
+      try {
+        await consoleLogCaptureManager.startCapture(previewUrl);
+        console.log('=== CONSOLE CAPTURE STARTED ===');
+        console.debug('Background script: Console log capture started successfully');
+      } catch (error) {
+        console.error('Background script: Failed to start console capture:', error);
+        throw error;
+      }
+    },
+    onStopConsoleCapture: async () => {
+      console.log('=== STOP CONSOLE CAPTURE ===');
+      console.debug('Background script: Stopping console log capture');
+
+      try {
+        const logs = consoleLogCaptureManager.getConsoleLogs();
+        await consoleLogCaptureManager.stopCapture();
+        console.log('=== CONSOLE CAPTURE STOPPED ===', `Captured ${logs.length} logs`);
+        console.debug('Background script: Console log capture stopped, logs:', logs);
+        return logs;
+      } catch (error) {
+        console.error('Background script: Failed to stop console capture:', error);
         throw error;
       }
     }

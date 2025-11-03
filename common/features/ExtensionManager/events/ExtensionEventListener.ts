@@ -1,5 +1,5 @@
 import { browser, type Browser } from 'wxt/browser';
-import { type UserProfile } from '@common/types';
+import { type UserProfile, type ConsoleLog } from '@common/types';
 import type { Session } from '@supabase/supabase-js';
 
 /**
@@ -58,6 +58,25 @@ export interface ExtensionEventListenerCallbacks {
    * @param session - The Supabase session object
    */
   onSupabaseSession?(session: Session | null): void | Promise<void>;
+
+  /**
+   * Called when content script requests to extract the preview URL
+   * @param currentUrl - The URL of the page where the user is working
+   * @returns The preview URL or null if not found
+   */
+  onGetPreviewUrl?(currentUrl: string): string | null | Promise<string | null>;
+
+  /**
+   * Called when content script requests to start console log capture
+   * @param previewUrl - The preview URL to capture logs from
+   */
+  onStartConsoleCapture?(previewUrl: string): void | Promise<void>;
+
+  /**
+   * Called when content script requests to stop console log capture and retrieve logs
+   * @returns Array of captured console logs
+   */
+  onStopConsoleCapture?(): ConsoleLog[] | Promise<ConsoleLog[]>;
 }
 
 /**
@@ -133,7 +152,7 @@ export class ExtensionEventListener {
   /**
    * Processes incoming messages
    */
-  private async processMessage(message: unknown): Promise<{ success: boolean; user?: UserProfile | null; error?: string }> {
+  private async processMessage(message: unknown): Promise<{ success: boolean; user?: UserProfile | null; logs?: ConsoleLog[]; previewUrl?: string | null; error?: string }> {
     try {
       const messageData = message as {
         type?: string;
@@ -141,6 +160,8 @@ export class ExtensionEventListener {
         token?: string;
         session?: Session | null;
         error?: string;
+        currentUrl?: string;
+        previewUrl?: string;
       };
 
       console.debug('ExtensionEventListener: Received message', messageData.type);
@@ -229,6 +250,42 @@ export class ExtensionEventListener {
             }
           }
           return { success: true };
+
+        case 'getPreviewUrl':
+          if (this.callbacks.onGetPreviewUrl && messageData.currentUrl) {
+            try {
+              const previewUrl = await this.callbacks.onGetPreviewUrl(messageData.currentUrl);
+              return { success: true, previewUrl };
+            } catch (error) {
+              console.error('ExtensionEventListener: Error in onGetPreviewUrl:', error);
+              return { success: false, error: String(error) };
+            }
+          }
+          break;
+
+        case 'startConsoleCapture':
+          if (this.callbacks.onStartConsoleCapture && messageData.previewUrl) {
+            try {
+              await this.callbacks.onStartConsoleCapture(messageData.previewUrl);
+              return { success: true };
+            } catch (error) {
+              console.error('ExtensionEventListener: Error in onStartConsoleCapture:', error);
+              return { success: false, error: String(error) };
+            }
+          }
+          break;
+
+        case 'stopConsoleCapture':
+          if (this.callbacks.onStopConsoleCapture) {
+            try {
+              const logs = await this.callbacks.onStopConsoleCapture();
+              return { success: true, logs };
+            } catch (error) {
+              console.error('ExtensionEventListener: Error in onStopConsoleCapture:', error);
+              return { success: false, error: String(error) };
+            }
+          }
+          break;
 
         default:
           console.debug('ExtensionEventListener: Unknown message type:', messageData.type);

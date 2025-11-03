@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { type CustomerProfile, type Subscription } from '@common/types';
+import { type CustomerProfile, type Subscription, type ConsoleLog } from '@common/types';
 import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
 import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
 import { useSubscriptionManager } from '@extension/shared/contexts/SubscriptionManagerContext';
+import { useConsoleLogCapture } from '@extension/Ticket/hooks/useConsoleLogCapture';
 
 interface TicketModalProps {
   isOpen: boolean;
@@ -26,6 +27,9 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
 
   // Use SubscriptionManager
   const { subscriptionManager } = useSubscriptionManager();
+
+  // Use console log capture hook
+  const { captureState, startCapture, stopCapture, resetCapture } = useConsoleLogCapture();
 
   // Fetch subscription and credit balance when modal opens
   useEffect(() => {
@@ -57,6 +61,13 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
     fetchSubscriptionData();
   }, [isOpen, customerProfile.id, subscriptionManager]);
 
+  // Reset capture state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      resetCapture();
+    }
+  }, [isOpen, resetCapture]);
+
 
   if (!isOpen) return null;
 
@@ -77,8 +88,12 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
 
     setIsSubmitting(true);
     try {
-      // Use TicketManager to create the ticket
-      const ticket = await ticketManager.createTicket(description.trim());
+      // Get captured logs if available
+      const capturedLogs = captureState.status === 'completed' ? captureState.logs : [];
+      console.debug('TicketModal: Creating ticket with console logs:', capturedLogs.length);
+
+      // Use TicketManager to create the ticket with console logs
+      const ticket = await ticketManager.createTicket(description.trim(), capturedLogs);
 
       // Handle post-creation logic internally
       console.debug('Ticket created with ID:', ticket.id);
@@ -209,6 +224,53 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
                     <span className="unjam-text-orange-600"> ({pendingCredits} pending)</span>
                   )}
                 </div>
+              </div>
+
+              {/* Console Log Capture Button */}
+              <div className="unjam-mb-4">
+                {captureState.status === 'idle' && (
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('TicketModal: Capture Logs button clicked');
+                      console.log('TicketModal: captureState:', captureState);
+                      console.log('TicketModal: window.location.href:', window.location.href);
+                      await startCapture();
+                      // Wait for 3 seconds (CAPTURE_TIMEOUT_MS) then stop
+                      setTimeout(async () => {
+                        await stopCapture();
+                      }, 3000);
+                    }}
+                    className="unjam-px-4 unjam-py-2 unjam-text-sm unjam-font-medium unjam-text-white unjam-bg-purple-600 unjam-rounded-md hover:unjam-bg-purple-700 unjam-transition-colors"
+                    disabled={isSubmitting}
+                  >
+                    Capture Logs
+                  </button>
+                )}
+                {(captureState.status === 'fetching-url' || captureState.status === 'capturing') && (
+                  <button
+                    type="button"
+                    disabled
+                    className="unjam-px-4 unjam-py-2 unjam-text-sm unjam-font-medium unjam-text-white unjam-bg-purple-400 unjam-rounded-md unjam-cursor-not-allowed"
+                  >
+                    Capturing...
+                  </button>
+                )}
+                {captureState.status === 'completed' && (
+                  <div className="unjam-text-sm unjam-text-gray-700">
+                    <span className="unjam-font-medium">Logs captured:</span> {captureState.totalLogs} total
+                    {captureState.errorLogs > 0 && (
+                      <span className="unjam-text-red-600"> ({captureState.errorLogs} errors)</span>
+                    )}
+                  </div>
+                )}
+                {captureState.status === 'error' && (
+                  <div className="unjam-text-sm unjam-text-red-600">
+                    <span className="unjam-font-medium">Error:</span> {captureState.message}
+                  </div>
+                )}
               </div>
 
               {/* Footer */}

@@ -1,6 +1,7 @@
 import {
   type Ticket,
-  type UserProfile
+  type UserProfile,
+  type ConsoleLog
 } from '@common/types';
 import { isCustomerProfile, isEngineerProfile } from '@common/util';
 import { type TicketStore, type TicketChanges } from '@common/features/TicketManager/store';
@@ -30,16 +31,27 @@ export class TicketManager {
   /**
    * Creates a new ticket (customer only)
    * @param problemDescription - Description of the problem from the customer
+   * @param consoleLogs - Optional console logs captured from the preview page
    * @returns The created Ticket object
    * @throws Error if user is not a customer
    */
-  async createTicket(problemDescription: string): Promise<Ticket> {
+  async createTicket(problemDescription: string, consoleLogs?: ConsoleLog[]): Promise<Ticket> {
     if (!isCustomerProfile(this.userProfile)) {
       throw new Error('Only customers can create tickets');
     }
 
     // Now TypeScript knows this.userProfile is CustomerProfile
     const customerProfile = this.userProfile;
+
+    // Log captured console logs for debugging
+    if (consoleLogs && consoleLogs.length > 0) {
+      console.log('TicketManager: Console logs captured:', consoleLogs.length);
+      consoleLogs.forEach((log, index) => {
+        console.log(`[${index + 1}] ${log.type}:`, log.message);
+      });
+    } else {
+      console.log('TicketManager: No console logs captured');
+    }
 
     // Create new ticket using the store
     const newTicket: Ticket = {
@@ -50,7 +62,8 @@ export class TicketManager {
       problemDescription,
       createdBy: customerProfile,
       createdAt: new Date(),
-      elapsedTime: 0
+      elapsedTime: 0,
+      consoleLogs
     };
 
     return await this.ticketStore.create(newTicket);
