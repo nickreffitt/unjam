@@ -34,7 +34,7 @@ const TicketPreviewContent: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="unjam-h-screen unjam-overflow-y-auto">
       {/* Error Display */}
       {claimError && (
         <div className="unjam-mt-8 unjam-mb-6 unjam-bg-red-50 unjam-border unjam-border-red-200 unjam-rounded-lg unjam-p-4 unjam-max-w-6xl unjam-mx-auto unjam-px-8">

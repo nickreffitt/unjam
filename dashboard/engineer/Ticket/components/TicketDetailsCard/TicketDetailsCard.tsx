@@ -1,6 +1,7 @@
 import React from 'react';
 import { type Ticket } from '@common/types';
 import { formatDate, getStatusDisplay } from '@dashboard/shared/utils/ticketFormatters';
+import { Terminal, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
 interface TicketDetailsCardProps {
   ticket: Ticket;
@@ -66,6 +67,66 @@ const TicketDetailsCard: React.FC<TicketDetailsCardProps> = ({
           </pre>
         </div>
       </div>
+
+      {/* Console Logs Section */}
+      {ticket.consoleLogs && ticket.consoleLogs.length > 0 && (
+        <div className="unjam-mt-6">
+          <div className="unjam-flex unjam-items-center unjam-gap-2 unjam-mb-4">
+            <Terminal size={20} className="unjam-text-gray-700" />
+            <h3 className="unjam-text-lg unjam-font-medium unjam-text-gray-900">Console Logs</h3>
+            <span className="unjam-text-sm unjam-text-gray-500">({ticket.consoleLogs.length})</span>
+          </div>
+          <div className="unjam-bg-gray-900 unjam-rounded-lg unjam-p-4 unjam-max-h-96 unjam-overflow-y-auto unjam-font-mono unjam-text-sm">
+            {ticket.consoleLogs.map((log, index) => {
+              const getLogIcon = () => {
+                switch (log.type) {
+                  case 'error':
+                    return <AlertCircle size={14} className="unjam-text-red-400 unjam-flex-shrink-0" />;
+                  case 'warn':
+                    return <AlertTriangle size={14} className="unjam-text-yellow-400 unjam-flex-shrink-0" />;
+                  case 'info':
+                    return <Info size={14} className="unjam-text-blue-400 unjam-flex-shrink-0" />;
+                  default:
+                    return <Terminal size={14} className="unjam-text-gray-400 unjam-flex-shrink-0" />;
+                }
+              };
+
+              const getLogColor = () => {
+                switch (log.type) {
+                  case 'error':
+                    return 'unjam-text-red-400';
+                  case 'warn':
+                    return 'unjam-text-yellow-400';
+                  case 'info':
+                    return 'unjam-text-blue-400';
+                  case 'debug':
+                    return 'unjam-text-purple-400';
+                  default:
+                    return 'unjam-text-gray-300';
+                }
+              };
+
+              const timestamp = new Date(log.timestamp).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              });
+
+              return (
+                <div key={index} className="unjam-flex unjam-gap-3 unjam-py-2 unjam-border-b unjam-border-gray-800 last:unjam-border-0">
+                  <span className="unjam-text-gray-500 unjam-flex-shrink-0 unjam-w-20">{timestamp}</span>
+                  {getLogIcon()}
+                  <span className={`unjam-flex-shrink-0 unjam-uppercase unjam-w-14 ${getLogColor()}`}>
+                    {log.type}
+                  </span>
+                  <span className="unjam-text-gray-300 unjam-break-all">{log.message}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

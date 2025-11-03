@@ -62,6 +62,7 @@ export class TicketSupabaseRowMapper {
       autoCompleteTimeoutAt: row.auto_complete_timeout_at ? new Date(row.auto_complete_timeout_at) : undefined,
       resolvedAt: row.resolved_at ? new Date(row.resolved_at) : undefined,
       elapsedTime,
+      consoleLogs: row.console_logs || undefined,
     };
   }
 
@@ -84,6 +85,7 @@ export class TicketSupabaseRowMapper {
       marked_as_fixed_at: ticket.markedAsFixedAt?.toISOString() || null,
       auto_complete_timeout_at: ticket.autoCompleteTimeoutAt?.toISOString() || null,
       resolved_at: ticket.resolvedAt?.toISOString() || null,
+      console_logs: ticket.consoleLogs || null,
     };
   }
 }

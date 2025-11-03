@@ -22,7 +22,8 @@ export default defineConfig({
       'storage',
       'activeTab',
       'scripting',
-      'tabs'
+      'tabs',
+      'debugger'
     ],
     host_permissions: [
       'http://localhost/*',

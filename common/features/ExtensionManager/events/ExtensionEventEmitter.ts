@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { type UserProfile } from '@common/types';
+import { type UserProfile, type ConsoleLog } from '@common/types';
 import type { Session } from '@supabase/supabase-js';
 
 /**
@@ -114,6 +114,46 @@ export class ExtensionEventEmitter {
       session,
       timestamp: Date.now()
     });
+  }
+
+  /**
+   * Requests to extract the preview URL from the current page
+   * @param currentUrl - The URL of the page where the user is working
+   * @returns Promise that resolves with the preview URL or null if not found
+   */
+  async getPreviewUrl(currentUrl: string): Promise<string | null> {
+    const response = await this.sendMessage({
+      type: 'getPreviewUrl',
+      currentUrl,
+      timestamp: Date.now()
+    });
+
+    return response?.previewUrl || null;
+  }
+
+  /**
+   * Requests to start console log capture from the background script
+   * @param previewUrl - The preview URL to capture logs from
+   */
+  async emitStartConsoleCapture(previewUrl: string): Promise<void> {
+    await this.sendMessage({
+      type: 'startConsoleCapture',
+      previewUrl,
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Requests to stop console log capture and retrieve captured logs
+   * @returns Promise that resolves with the captured console logs
+   */
+  async emitStopConsoleCapture(): Promise<ConsoleLog[]> {
+    const response = await this.sendMessage({
+      type: 'stopConsoleCapture',
+      timestamp: Date.now()
+    });
+
+    return response?.logs || [];
   }
 
   /**
