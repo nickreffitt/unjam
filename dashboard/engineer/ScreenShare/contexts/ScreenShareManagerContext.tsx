@@ -6,6 +6,8 @@ import { ScreenShareEventEmitter } from '@common/features/ScreenShareManager/eve
 import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
 import { ScreenShareSessionStoreSupabase } from '@common/features/ScreenShareManager/store/ScreenShareSessionStoreSupabase';
 import { WebRTCSignalingChangesSupabase, WebRTCSignalingStoreSupabase } from '@common/features/WebRTCManager/store';
+import { ApiManager } from '@common/features/ApiManager';
+import { ICEServerService } from '@common/features/WebRTCManager/ICEServerService';
 
 interface ScreenShareManagerContextType {
   createScreenShareManager: (ticketId: string) => ScreenShareManager;
@@ -23,7 +25,7 @@ interface ScreenShareManagerProviderProps {
 export const ScreenShareManagerProvider: React.FC<ScreenShareManagerProviderProps> = ({ children }) => {
   // Cache managers per ticketId to ensure all hooks share the same instance
   const managersCache = useMemo(() => new Map<string, ScreenShareManager>(), []);
-  const { supabaseClient } = useSupabase()
+  const { supabaseClient, supabaseUrl } = useSupabase()
 
   // Create shared store instances that all managers will use
   const eventEmitter = useMemo(() => new ScreenShareEventEmitter(), []);
@@ -32,6 +34,14 @@ export const ScreenShareManagerProvider: React.FC<ScreenShareManagerProviderProp
   const requestStore = useMemo(() => new ScreenShareRequestStoreSupabase(supabaseClient, eventEmitter), []);
   const sessionStore = useMemo(() => new ScreenShareSessionStoreSupabase(supabaseClient, eventEmitter), []);
   const signalingStore = useMemo(() => new WebRTCSignalingStoreSupabase(supabaseClient, webRTCEventEmitter), []);
+
+  // Create ApiManager and ICEServerService for WebRTC
+  const apiManager = useMemo(() => {
+    const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
+    return new ApiManager(supabaseClient, edgeFunctionUrl);
+  }, [supabaseClient, supabaseUrl]);
+
+  const iceServerService = useMemo(() => new ICEServerService(apiManager), [apiManager]);
 
   const contextValue = useMemo(() => {
     const createScreenShareManager = (ticketId: string) => {
@@ -46,7 +56,7 @@ export const ScreenShareManagerProvider: React.FC<ScreenShareManagerProviderProp
       const signalChanges = new WebRTCSignalingChangesSupabase(ticketId, supabaseClient, webRTCEventEmitter)
 
       // Create new manager with shared stores
-      const manager = new ScreenShareManager(ticketId, requestStore, sessionStore, requestChanges, sessionChanges, eventEmitter, signalingStore, signalChanges, webRTCEventEmitter);
+      const manager = new ScreenShareManager(ticketId, requestStore, sessionStore, requestChanges, sessionChanges, eventEmitter, signalingStore, signalChanges, webRTCEventEmitter, iceServerService);
       managersCache.set(ticketId, manager);
       return manager;
     };
@@ -60,7 +70,7 @@ export const ScreenShareManagerProvider: React.FC<ScreenShareManagerProviderProp
     };
 
     return { createScreenShareManager, createRequestStore, createSessionStore, clearManagerCache };
-  }, [managersCache, supabaseClient, eventEmitter, webRTCEventEmitter, requestStore, sessionStore, signalingStore]);
+  }, [managersCache, supabaseClient, eventEmitter, webRTCEventEmitter, requestStore, sessionStore, signalingStore, iceServerService]);
 
   return (
     <ScreenShareManagerContext.Provider value={contextValue}>

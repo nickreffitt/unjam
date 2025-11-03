@@ -2,6 +2,7 @@ import type { UserProfile, WebRTCState } from '@common/types';
 import type { WebRTCSignalingChanges, WebRTCSignalingStore } from '@common/features/WebRTCManager/store';
 import type { WebRTCService } from './WebRTCService';
 import { type WebRTCEventEmitter } from './events';
+import type { ICEServerService } from './ICEServerService';
 
 export class WebRTCManager {
   private readonly sessionId: string;
@@ -175,7 +176,8 @@ export async function createWebRTCManager(
   isPublisher: boolean,
   signalingStore: WebRTCSignalingStore,
   signalChanges: WebRTCSignalingChanges,
-  eventEmitter: WebRTCEventEmitter
+  eventEmitter: WebRTCEventEmitter,
+  iceServerService: ICEServerService
 ): Promise<WebRTCManager> {
   // Dynamically import WebRTCService to avoid circular dependencies
   const { WebRTCService } = await import('./WebRTCService');
@@ -189,7 +191,8 @@ export async function createWebRTCManager(
     isPublisher,
     signalingStore,
     signalChanges,
-    eventEmitter
+    eventEmitter,
+    iceServerService
   });
 
   // Create and return WebRTCManager with injected service

@@ -1,24 +1,44 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ICEServerService } from './ICEServerService';
-
-// Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+import type { ApiManager } from '@common/features/ApiManager';
 
 describe('ICEServerService', () => {
+  let mockApiManager: ApiManager;
+  let iceServerService: ICEServerService;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Create mock ApiManager
+    mockApiManager = {
+      getICEServers: vi.fn(),
+    } as unknown as ApiManager;
+
+    // Create ICEServerService instance with mock
+    iceServerService = new ICEServerService(mockApiManager);
   });
 
   afterEach(() => {
     vi.resetAllMocks();
   });
 
+  describe('constructor', () => {
+    it('should require apiManager parameter', () => {
+      // when creating without apiManager
+      // then should throw error
+      expect(() => new ICEServerService(null as any)).toThrow('ICEServerService: apiManager is required');
+    });
+
+    it('should initialize with valid apiManager', () => {
+      // when creating with valid apiManager
+      const service = new ICEServerService(mockApiManager);
+
+      // then should create instance successfully
+      expect(service).toBeInstanceOf(ICEServerService);
+    });
+  });
+
   describe('getICEServers', () => {
     it('should return STUN and TURN servers when API call succeeds', async () => {
-      // given successful API response and API key available
-      const getAPIKeySpy = vi.spyOn(ICEServerService as any, 'getAPIKey').mockReturnValue('test-api-key');
-
+      // given successful API response with TURN servers
       const mockTurnServers = [
         {
           urls: 'turn:standard.relay.metered.ca:80',
@@ -27,87 +47,53 @@ describe('ICEServerService', () => {
         },
       ];
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTurnServers,
-      });
-
-      // when getting ICE servers
-      const result = await ICEServerService.getICEServers();
-
-      // then should return combined STUN and TURN servers
-      expect(result.error).toBeUndefined();
-      expect(result.iceServers).toEqual(
-        expect.arrayContaining([
-          ...ICEServerService.getFallbackSTUNServers().iceServers,
+      const mockResponse = {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun.relay.metered.ca:80' },
           ...mockTurnServers,
-        ])
-      );
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://unjam.metered.live/api/v1/turn/credentials?apiKey=test-api-key',
-        expect.objectContaining({
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        })
-      );
+        ],
+      };
 
-      getAPIKeySpy.mockRestore();
-    });
-
-    it('should return fallback STUN servers when API key is missing', async () => {
-      // given missing API key
-      const getAPIKeySpy = vi.spyOn(ICEServerService as any, 'getAPIKey').mockReturnValue(undefined);
+      vi.mocked(mockApiManager.getICEServers).mockResolvedValueOnce(mockResponse);
 
       // when getting ICE servers
-      const result = await ICEServerService.getICEServers();
+      const result = await iceServerService.getICEServers();
 
-      // then should return fallback STUN servers with warning
-      expect(result.error).toBeDefined();
-      expect(result.error!.type).toBe('configuration');
-      expect(result.error!.message).toContain('API key not configured');
-      expect(result.iceServers).toEqual(ICEServerService.getFallbackSTUNServers().iceServers);
-      expect(mockFetch).not.toHaveBeenCalled();
-
-      getAPIKeySpy.mockRestore();
+      // then should return ICE servers from API
+      expect(result.error).toBeUndefined();
+      expect(result.iceServers).toEqual(mockResponse.iceServers);
+      expect(mockApiManager.getICEServers).toHaveBeenCalledTimes(1);
     });
 
     it('should return fallback STUN servers when API call fails', async () => {
-      // given failed API response
-      const getAPIKeySpy = vi.spyOn(ICEServerService as any, 'getAPIKey').mockReturnValue('test-api-key');
-
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-      });
+      // given API call fails
+      vi.mocked(mockApiManager.getICEServers).mockRejectedValueOnce(new Error('API error'));
 
       // when getting ICE servers
-      const result = await ICEServerService.getICEServers();
+      const result = await iceServerService.getICEServers();
 
       // then should return fallback STUN servers with error
       expect(result.error).toBeDefined();
       expect(result.error!.type).toBe('configuration');
-      expect(result.error!.message).toContain('Failed to fetch TURN servers');
+      expect(result.error!.message).toContain('Failed to fetch ICE servers');
+      expect(result.error!.details).toBe('API error');
       expect(result.iceServers).toEqual(ICEServerService.getFallbackSTUNServers().iceServers);
-
-      getAPIKeySpy.mockRestore();
     });
 
-    it('should return fallback STUN servers when fetch throws exception', async () => {
-      // given fetch throws an error
-      const getAPIKeySpy = vi.spyOn(ICEServerService as any, 'getAPIKey').mockReturnValue('test-api-key');
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    it('should return fallback STUN servers when API throws exception', async () => {
+      // given API throws an error
+      vi.mocked(mockApiManager.getICEServers).mockRejectedValueOnce(new Error('Network error'));
 
       // when getting ICE servers
-      const result = await ICEServerService.getICEServers();
+      const result = await iceServerService.getICEServers();
 
       // then should return fallback STUN servers with error
       expect(result.error).toBeDefined();
       expect(result.error!.type).toBe('configuration');
       expect(result.error!.details).toBe('Network error');
       expect(result.iceServers).toEqual(ICEServerService.getFallbackSTUNServers().iceServers);
-
-      getAPIKeySpy.mockRestore();
     });
   });
 

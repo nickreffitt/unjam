@@ -6,6 +6,8 @@ import { ScreenShareEventEmitter } from '@common/features/ScreenShareManager/eve
 import { useSupabase } from '@extension/shared/contexts/SupabaseContext';
 import { ScreenShareSessionStoreSupabase } from '@common/features/ScreenShareManager/store/ScreenShareSessionStoreSupabase';
 import { WebRTCSignalingChangesSupabase, WebRTCSignalingStoreSupabase } from '@common/features/WebRTCManager/store';
+import { ApiManager } from '@common/features/ApiManager';
+import { ICEServerService } from '@common/features/WebRTCManager/ICEServerService';
 
 interface ScreenShareManagerContextType {
   createScreenShareManager: (ticketId: string) => ScreenShareManager;
@@ -20,7 +22,7 @@ interface ScreenShareManagerProviderProps {
 }
 
 export const ScreenShareManagerProvider: React.FC<ScreenShareManagerProviderProps> = ({ children }) => {
-  const { supabaseClient } = useSupabase();
+  const { supabaseClient, supabaseUrl } = useSupabase();
 
   // Create singleton store instances that are shared across all managers
   // Since there's only one active ticket at a time, we can share the same stores
@@ -31,7 +33,12 @@ export const ScreenShareManagerProvider: React.FC<ScreenShareManagerProviderProp
     const sharedRequestStore = new ScreenShareRequestStoreSupabase(supabaseClient, eventEmitter);
     const sharedSessionStore = new ScreenShareSessionStoreSupabase(supabaseClient, eventEmitter);
     const sharedSignalingStore = new WebRTCSignalingStoreSupabase(supabaseClient, webRTCEventEmitter);
-    
+
+    // Create ApiManager and ICEServerService for WebRTC
+    const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
+    const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
+    const iceServerService = new ICEServerService(apiManager);
+
     // Cache manager instances per ticket ID to prevent disposing active WebRTC connections
     const managerCache = new Map<string, ScreenShareManager>();
 
@@ -58,7 +65,7 @@ export const ScreenShareManagerProvider: React.FC<ScreenShareManagerProviderProp
 
       // Create new manager and cache it
       console.debug('ScreenShareManagerContext: Creating new manager for ticket:', ticketId);
-      manager = new ScreenShareManager(ticketId, sharedRequestStore, sharedSessionStore, requestChanges, sessionChanges, eventEmitter, sharedSignalingStore, signalChanges, webRTCEventEmitter);
+      manager = new ScreenShareManager(ticketId, sharedRequestStore, sharedSessionStore, requestChanges, sessionChanges, eventEmitter, sharedSignalingStore, signalChanges, webRTCEventEmitter, iceServerService);
       managerCache.set(ticketId, manager);
       return manager;
     };
@@ -68,7 +75,7 @@ export const ScreenShareManagerProvider: React.FC<ScreenShareManagerProviderProp
       createScreenShareRequestStore,
       createScreenShareSessionStore
     };
-  }, []);
+  }, [supabaseClient, supabaseUrl]);
 
   return (
     <ScreenShareManagerContext.Provider value={contextValue}>

@@ -1,6 +1,10 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
 import type { EngineerProfile, CreditBalanceResponse, CreditTransferResponse } from '@common/types';
 
+export interface ICEServersResponse {
+  iceServers: RTCIceServer[];
+}
+
 /**
  * ApiManager handles communication with the backend API
  * Wraps edge function calls with proper authentication and error handling
@@ -152,6 +156,31 @@ export class ApiManager {
     } catch (err) {
       const error = err as Error;
       console.error('[ApiManager] Error fetching credit balance:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches ICE servers (STUN/TURN) for WebRTC connections
+   * @returns The ICE servers configuration
+   * @throws Error if the request fails
+   */
+  async getICEServers(): Promise<ICEServersResponse> {
+    console.info(`[ApiManager] Fetching ICE servers`);
+
+    try {
+      const response = await this.makeAuthenticatedGetRequest<ICEServersResponse>(
+        'get-ice-servers',
+        {},
+        'Failed to fetch ICE servers'
+      );
+
+      console.info(`[ApiManager] Successfully fetched ICE servers: ${response.iceServers.length} servers`);
+      return response;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error fetching ICE servers:', error.message);
       throw error;
     }
   }

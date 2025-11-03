@@ -44,6 +44,7 @@ describe('WebRTCService', () => {
   let mockSignalingStore: any;
   let mockEventEmitter: any;
   let mockSignalChanges: any;
+  let mockICEServerService: any;
   let mockLocalUser: UserProfile;
   let mockRemoteUser: UserProfile;
   let config: WebRTCServiceConfig;
@@ -64,15 +65,18 @@ describe('WebRTCService', () => {
     // Ensure the constructor returns our mock
     (global.RTCPeerConnection as any).mockImplementation(() => mockPeerConnection);
 
-    // Mock ICEServerService methods
-    vi.spyOn(ICEServerService, 'getICEServers').mockResolvedValue({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'turn:turn.example.com:3478', username: 'test', credential: 'pass' },
-      ],
-      // No error property means success
-    });
+    // Create mock ICEServerService instance
+    mockICEServerService = {
+      getICEServers: vi.fn().mockResolvedValue({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'turn:turn.example.com:3478', username: 'test', credential: 'pass' },
+        ],
+        // No error property means success
+      }),
+    };
 
+    // Mock static createPeerConnectionConfig method
     vi.spyOn(ICEServerService, 'createPeerConnectionConfig').mockReturnValue({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -131,6 +135,7 @@ describe('WebRTCService', () => {
       signalingStore: mockSignalingStore,
       signalChanges: mockSignalChanges,
       eventEmitter: mockEventEmitter,
+      iceServerService: mockICEServerService,
     };
 
     service = new WebRTCService(config);

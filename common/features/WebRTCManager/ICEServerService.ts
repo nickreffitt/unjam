@@ -1,84 +1,50 @@
 import type { WebRTCError } from '@common/types';
+import type { ApiManager } from '@common/features/ApiManager';
 
 export interface ICEServerConfig {
   iceServers: RTCIceServer[];
   error?: WebRTCError;
 }
 
-const METERED_CA_API_KEY = "e5ec91e096e1929045c176428e4833021910";
-
 export class ICEServerService {
-  private static readonly API_URL = 'https://unjam.metered.live/api/v1/turn/credentials';
+  private apiManager: ApiManager;
   private static readonly FALLBACK_STUN_SERVERS: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun.relay.metered.ca:80' },
   ];
 
-  /**
-   * Gets the API key from environment variables
-   * This method can be mocked in tests
-   */
-  private static getAPIKey(): string | undefined {
-    return METERED_CA_API_KEY;
+  constructor(apiManager: ApiManager) {
+    if (!apiManager) {
+      throw new Error('ICEServerService: apiManager is required');
+    }
+    this.apiManager = apiManager;
   }
 
   /**
-   * Fetches ICE servers including STUN and TURN servers from Metered.ca
+   * Fetches ICE servers including STUN and TURN servers from edge function
    * @returns Promise with ICE server configuration
    */
-  static async getICEServers(): Promise<ICEServerConfig> {
+  async getICEServers(): Promise<ICEServerConfig> {
     try {
-      const apiKey = this.getAPIKey();
+      console.debug('ICEServerService: Fetching ICE servers from edge function');
 
-      if (!apiKey) {
-        console.warn('ICEServerService: No API key found, using fallback STUN servers');
-        return {
-          iceServers: this.FALLBACK_STUN_SERVERS,
-          error: {
-            type: 'configuration',
-            message: 'API key not configured, using fallback STUN servers',
-          },
-        };
-      }
-
-      console.debug('ICEServerService: Fetching TURN credentials from Metered.ca');
-
-      const response = await fetch(`${this.API_URL}?apiKey=${apiKey}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const turnServers = await response.json();
-
-      // Combine STUN servers with TURN servers from API
-      const iceServers: RTCIceServer[] = [
-        ...this.FALLBACK_STUN_SERVERS,
-        ...turnServers,
-      ];
+      const response = await this.apiManager.getICEServers();
 
       console.debug('ICEServerService: Successfully fetched ICE servers', {
-        stunServers: this.FALLBACK_STUN_SERVERS.length,
-        turnServers: turnServers.length,
-        total: iceServers.length,
+        total: response.iceServers.length,
       });
 
-      return { iceServers };
+      return { iceServers: response.iceServers };
 
     } catch (error) {
-      console.error('ICEServerService: Failed to fetch TURN servers, using fallback STUN servers', error);
+      console.error('ICEServerService: Failed to fetch ICE servers, using fallback STUN servers', error);
 
       return {
-        iceServers: this.FALLBACK_STUN_SERVERS,
+        iceServers: ICEServerService.FALLBACK_STUN_SERVERS,
         error: {
           type: 'configuration',
-          message: 'Failed to fetch TURN servers, using fallback STUN servers',
+          message: 'Failed to fetch ICE servers, using fallback STUN servers',
           details: error instanceof Error ? error.message : error,
         },
       };
