@@ -33,14 +33,26 @@ const ExtensionMenu: React.FC<ExtensionMenuProps> = ({ onChangePosition, onToggl
             </h2>
           </div>
           {customerProfile && (
-            <p className="unjam-mt-3 unjam-text-sm unjam-text-gray-600">
-              Welcome back {customerProfile.name}!
-            </p>
+            <>
+              <p className="unjam-mt-3 unjam-text-sm unjam-text-gray-600">
+                Welcome back {customerProfile.name}!
+              </p>
+              <p className="unjam-mt-2 unjam-text-xs unjam-text-gray-500">
+                Open your favourite Web AI editor, or click Open Unjam below to get help on an empty page
+              </p>
+            </>
           )}
         </div>
 
         {/* Menu Actions */}
         <div className="unjam-w-full unjam-space-y-2">
+          <button
+            onClick={() => window.open(`${import.meta.env.VITE_APP_URL}/new-ticket`, '_blank')}
+            className="unjam-w-full unjam-flex unjam-justify-center unjam-items-center unjam-gap-2 unjam-py-2.5 unjam-px-4 unjam-rounded-md unjam-text-sm unjam-font-medium unjam-text-white unjam-bg-blue-600 hover:unjam-bg-blue-700 focus:unjam-outline-none unjam-transition-colors"
+          >
+            Open Unjam
+          </button>
+
           <button
             onClick={onToggleVisibility}
             className="unjam-w-full unjam-flex unjam-justify-center unjam-items-center unjam-gap-2 unjam-py-2.5 unjam-px-4 unjam-border unjam-border-gray-300 unjam-rounded-md unjam-text-sm unjam-font-medium unjam-text-gray-700 unjam-bg-white hover:unjam-bg-gray-50 focus:unjam-outline-none unjam-transition-colors"
