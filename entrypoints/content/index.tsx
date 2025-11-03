@@ -18,8 +18,7 @@ let rootInstance: ReactDOM.Root | null = null;
 
 // URL patterns that should trigger injection
 const URL_PATTERNS = [
-  /^http:\/\/localhost:5175\//,
-  /^https:\/\/unjam\.nickreffitt\.com\//,
+  new RegExp(`^${import.meta.env.VITE_APP_URL}/new-ticket`),
   /^https:\/\/lovable\.dev\/projects\/.+/,
   /^https:\/\/replit\.com\/@.+\/.+/,
   /^https:\/\/app\.base44\.com\/apps\/.+/,
