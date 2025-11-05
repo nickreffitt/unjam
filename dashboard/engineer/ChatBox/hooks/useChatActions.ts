@@ -115,7 +115,10 @@ export const useChatActions = (
       typingExpiryRef.current = new Date(Date.now() + 6000);
       // Scroll to show the typing indicator
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const messagesContainer = messagesEndRef.current?.parentElement;
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
       }, 100); // Small delay to allow DOM update
     }
   }, [setIsTyping, setTypingUser, typingExpiryRef, messagesEndRef]);

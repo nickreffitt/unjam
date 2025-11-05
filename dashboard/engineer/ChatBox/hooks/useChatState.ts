@@ -107,7 +107,10 @@ export const useChatState = (
       typingExpiryRef.current = new Date(Date.now() + 6000);
       // Scroll to show the typing indicator
       setTimeout(() => {
-        messagesEndRefRef.current.current?.scrollIntoView({ behavior: 'smooth' });
+        const messagesContainer = messagesEndRefRef.current.current?.parentElement;
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
       }, 100); // Small delay to allow DOM update
     }
   }, []); // Empty dependency array - stable callback
@@ -123,7 +126,10 @@ export const useChatState = (
   useChatListener(chatListenerCallbacks);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRefRef.current.current?.scrollIntoView({ behavior: 'smooth' });
+    const messagesContainer = messagesEndRefRef.current.current?.parentElement;
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
   }, []); // Empty dependency array - stable callback like TicketList
 
   // Check typing expiry every second
