@@ -42,7 +42,7 @@ This project follows a consistent naming pattern for billing-related code:
 
 **Engineer Payouts (Marketplace Model):**
 - ✅ **Stripe Connect Express**: Engineers onboard via Express Connect accounts for quick setup
-- ✅ **Fixed Payout**: Engineers receive a configurable fixed amount per ticket (default: $3.50)
+- ✅ **Fixed Payout**: Engineers receive a configurable fixed amount per ticket (default: $20)
 - ✅ **Separate Transfers**: Unjam transfers funds to engineer accounts when tickets complete
 - ✅ **Platform Revenue**: Unjam retains the difference between credit value and engineer payout
 
@@ -59,12 +59,17 @@ This project follows a consistent naming pattern for billing-related code:
 │                                                                  │
 │ 2. Create Stripe Product                                        │
 │    - Name: "Unjam Support Credits"                              │
-│    - Metadata: { credit_price: "1000" } // $10 per credit      │
+│    - Metadata: varies by plan (see pricing tiers below)         │
 │                                                                  │
 │ 3. Create Metered Price                                         │
 │    - Link to Meter: "ticket_completed"                          │
-│    - Unit Amount: 1000 (cents) // $10 per ticket               │
+│    - Unit Amount: varies by plan                                │
 │    - Currency: USD                                              │
+│                                                                  │
+│ Pricing Tiers:                                                  │
+│    - 1 credit plan: $50/month ($50 per credit)                  │
+│    - 5 credit plan: $199/month ($39.80 per credit)              │
+│    - 10 credit plan: $349/month ($34.90 per credit)             │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -107,14 +112,14 @@ This project follows a consistent naming pattern for billing-related code:
 │                                                                  │
 │ 4. Pay engineer via Stripe Connect                             │
 │    ├─ Fetch engineer's payout amount from Connect account      │
-│    │   • Default: $3.50 (350 cents)                            │
+│    │   • Default: $20 (2000 cents)                             │
 │    │   • Configurable per engineer in account metadata         │
 │    ├─ Create Stripe Transfer:                                  │
-│    │   • amount: 350 (engineer's fixed payout)                 │
+│    │   • amount: 2000 (engineer's fixed payout)                │
 │    │   • destination: engineer.stripeConnectAccountId          │
 │    │   • metadata: ticket_id, engineer_id, customer_id         │
 │    └─ Unjam retains difference as platform revenue 💰          │
-│        • Example: $7 credit value - $3.50 payout = $3.50 profit│
+│        • Example: $7 credit value - $20 payout = -$13 loss     │
 │                                                                  │
 │ 5. Usage tracked but NOT billed yet ⏳                          │
 │    - Stripe accumulates meter events                            │
@@ -127,13 +132,13 @@ This project follows a consistent naming pattern for billing-related code:
 │                  BILLING CYCLE END (Monthly)                     │
 ├─────────────────────────────────────────────────────────────────┤
 │ 1. Stripe aggregates all meter events                           │
-│    - Example: Customer completed 8 tickets                      │
-│    - Total usage: 8 tickets × $10 = $80                         │
+│    - Example: Customer completed 8 tickets (10 credit plan)    │
+│    - Total usage: 8 tickets × $34.90 = $279.20                 │
 │                                                                  │
 │ 2. Invoice generated                                            │
-│    ├─ Subscription line item: $100 (base fee for 10 credits)   │
-│    ├─ Metered usage line item: $80 (8 tickets completed)       │
-│    └─ Total due: $180 (base + usage)                           │
+│    ├─ Subscription line item: $349 (base fee for 10 credits)   │
+│    ├─ Metered usage line item: $279.20 (8 tickets)             │
+│    └─ Total due: $628.20 (base + usage)                        │
 │                                                                  │
 │ 3. Customer pays invoice                                        │
 │    ├─ Webhook: invoice.payment_succeeded                        │
@@ -146,8 +151,8 @@ This project follows a consistent naming pattern for billing-related code:
 │    - No overage charges possible (UI enforced)                 │
 │                                                                  │
 │ NOTE: In this model, customers pay for both:                    │
-│  • Base subscription ($100 for credit allocation)               │
-│  • Actual usage ($80 for 8 tickets used)                        │
+│  • Base subscription ($349 for 10 credit allocation)            │
+│  • Actual usage ($279.20 for 8 tickets used)                    │
 │ This differs from prepaid credit grants where usage is          │
 │ automatically deducted from prepaid balance.                     │
 └─────────────────────────────────────────────────────────────────┘
@@ -157,7 +162,7 @@ This project follows a consistent naming pattern for billing-related code:
 ├─────────────────────────────────────────────────────────────────┤
 │ UPGRADE (Immediate Effect)                                      │
 │ ─────────────────────────────────────────────────────────────   │
-│ Example: Starter ($50, 5 credits) → Popular ($100, 10 credits) │
+│ Example: 5 credit ($199) → 10 credit ($349)                    │
 │                                                                  │
 │ 1. Customer initiates upgrade via UI                            │
 │    - Stripe API called with proration_behavior: 'always_invoice'│
@@ -165,26 +170,26 @@ This project follows a consistent naming pattern for billing-related code:
 │ 2. Stripe immediately switches plan                             │
 │    ├─ Webhook: customer.subscription.updated                    │
 │    ├─ BillingEventHandler updates subscription in database      │
-│    │   • Old creditPrice: 500 ($5 per credit)                  │
-│    │   • New creditPrice: 1000 ($10 per credit)                │
-│    │   • Old planName: "Starter"                               │
-│    │   • New planName: "Popular"                               │
+│    │   • Old creditPrice: 3980 ($39.80 per credit)             │
+│    │   • New creditPrice: 3490 ($34.90 per credit)             │
+│    │   • Old planName: "5 Credits"                             │
+│    │   • New planName: "10 Credits"                            │
 │    └─ No credit grant operations needed ✅                     │
 │                                                                  │
 │ 3. Stripe creates prorated invoice                              │
-│    - Prorated refund for unused Starter time: -$25             │
-│    - Full charge for Popular plan: +$100                       │
-│    - Metered usage up to upgrade: charged at Starter rate      │
-│    - Total due: ~$75 + usage                                    │
+│    - Prorated refund for unused 5 credit time                   │
+│    - Full charge for 10 credit plan: +$349                      │
+│    - Metered usage up to upgrade: charged at old rate           │
+│    - Total due: prorated amount + usage                         │
 │                                                                  │
 │ 4. Invoice paid                                                 │
 │    ├─ Webhook: invoice.payment_succeeded                        │
-│    └─ Customer now has 10 credits available (Popular plan)     │
+│    └─ Customer now has 10 credits available                     │
 │        • Credit allocation updated via subscription metadata    │
 │                                                                  │
 │ DOWNGRADE (End of Period)                                       │
 │ ─────────────────────────────────────────────────────────────   │
-│ Example: Popular ($100, 10 credits) → Starter ($50, 5 credits) │
+│ Example: 10 credit ($349) → 5 credit ($199)                    │
 │                                                                  │
 │ 1. Customer initiates downgrade via UI                          │
 │    - Stripe API: billing_cycle_anchor: 'unchanged'              │
@@ -373,7 +378,7 @@ async onboardEngineer(engineerId: string, email: string): Promise<string> {
     email,
     metadata: {
       engineer_id: engineerId,
-      payout_amount: '350', // $3.50 default, configurable per engineer
+      payout_amount: '2000', // $20 default, configurable per engineer
       payout_currency: 'usd'
     },
     capabilities: {
@@ -398,11 +403,11 @@ async payEngineer(
 ): Promise<{ transferId: string; platformProfit: number }> {
   // 1. Fetch engineer's Connect account to get payout amount
   const account = await this.stripe.accounts.retrieve(engineerConnectAccountId);
-  const payoutAmount = parseInt(account.metadata.payout_amount || '350');
+  const payoutAmount = parseInt(account.metadata.payout_amount || '2000');
 
   // 2. Create transfer to engineer's Connect account
   const transfer = await this.stripe.transfers.create({
-    amount: payoutAmount, // e.g., 350 = $3.50
+    amount: payoutAmount, // e.g., 2000 = $20
     currency: 'usd',
     destination: engineerConnectAccountId,
     metadata: {
@@ -415,7 +420,7 @@ async payEngineer(
 
   // 3. Calculate platform profit
   const platformProfit = creditValue - payoutAmount;
-  // Example: 700 - 350 = 350 ($3.50 profit)
+  // Example: 700 - 2000 = -1300 (-$13 loss)
 
   return {
     transferId: transfer.id,
@@ -473,23 +478,23 @@ async markAsComplete(ticketId: string): Promise<void> {
 #### Scenario 1: Usage Within Limit (Marketplace Economics)
 ```
 Month 1:
-- Subscription: $100/month for 10 credit allocation ($10/credit value)
+- Subscription: $349/month for 10 credit allocation ($34.90/credit value)
 - Usage: 8 tickets completed
 - Available credits: 10 - 8 = 2 remaining
 
 Engineer Payouts (Immediate via Stripe Connect):
-- 8 tickets × $3.50 = $28 transferred to engineers
+- 8 tickets × $20 = $160 transferred to engineers
 - Paid from Unjam's Stripe balance
 
 Invoice at Month End:
-- Subscription base: $100 (for 10 credit allocation)
-- Metered usage: 8 tickets × $10 = $80
-- Total customer pays: $180
+- Subscription base: $349 (for 10 credit allocation)
+- Metered usage: 8 tickets × $34.90 = $279.20
+- Total customer pays: $628.20
 
 Platform Revenue Breakdown:
-- Customer paid: $180 total
-- Engineer costs: $28
-- Unjam profit: $180 - $28 = $152 💰
+- Customer paid: $628.20 total
+- Engineer costs: $160
+- Unjam profit: $628.20 - $160 = $468.20 💰
 
 Month 2 Start:
 - Fresh 10 credit allocation
@@ -499,22 +504,22 @@ Month 2 Start:
 #### Scenario 2: Credit Limit Reached (No Overage)
 ```
 Month 1:
-- Subscription: $100/month for 10 credit allocation
+- Subscription: $349/month for 10 credit allocation
 - Usage: 10 tickets completed
 - Available credits: 10 - 10 = 0 remaining
 
 Engineer Payouts:
-- 10 tickets × $3.50 = $35 transferred to engineers
+- 10 tickets × $20 = $200 transferred to engineers
 
 Invoice at Month End:
-- Subscription base: $100
-- Metered usage: 10 tickets × $10 = $100
-- Total customer pays: $200
+- Subscription base: $349
+- Metered usage: 10 tickets × $34.90 = $349
+- Total customer pays: $698
 
 Platform Revenue Breakdown:
-- Customer paid: $200 total
-- Engineer costs: $35
-- Unjam profit: $200 - $35 = $165 💰
+- Customer paid: $698 total
+- Engineer costs: $200
+- Unjam profit: $698 - $200 = $498 💰
 
 What if customer tries ticket #11?
 - UI prevents ticket creation when availableCredits = 0
@@ -525,22 +530,22 @@ What if customer tries ticket #11?
 #### Scenario 3: Minimal Usage
 ```
 Month 1:
-- Subscription: $100/month for 10 credit allocation
+- Subscription: $349/month for 10 credit allocation
 - Usage: 2 tickets completed
 - Available credits: 10 - 2 = 8 unused
 
 Engineer Payouts:
-- 2 tickets × $3.50 = $7 transferred to engineers
+- 2 tickets × $20 = $40 transferred to engineers
 
 Invoice at Month End:
-- Subscription base: $100
-- Metered usage: 2 tickets × $10 = $20
-- Total customer pays: $120
+- Subscription base: $349
+- Metered usage: 2 tickets × $34.90 = $69.80
+- Total customer pays: $418.80
 
 Platform Revenue Breakdown:
-- Customer paid: $120 total
-- Engineer costs: $7
-- Unjam profit: $120 - $7 = $113 💰
+- Customer paid: $418.80 total
+- Engineer costs: $40
+- Unjam profit: $418.80 - $40 = $378.80 💰
 
 Month 2 Start:
 - Fresh 10 credit allocation (unused credits from Month 1 don't carry over)
@@ -556,51 +561,53 @@ Platform Economics:
 ### Upgrade Scenario (Mid-Cycle)
 ```
 Starting State (Sept 15th):
-- Current plan: Starter ($50/month, 5 credits)
+- Current plan: 1 credit ($50/month)
 - Subscription started: Sept 1st
-- Current credits: $50 (expires Sept 30th)
-- Credits used so far: 2 tickets ($20)
-- Remaining credits: $30
+- Current credits: 1 (expires Sept 30th)
+- Credits used so far: 0 tickets
+- Remaining credits: 1
 
-Customer upgrades to Popular ($100/month, 10 credits):
+Customer upgrades to 5 credit ($199/month):
 
 Immediate Effects:
 1. Stripe fires customer.subscription.updated webhook
 2. BillingEventHandler detects upgrade:
-   - Old creditPrice: 500, New creditPrice: 1000
-   - Old planName: "Starter", New planName: "Popular"
-3. Old $50 credit grant VOIDED ❌ (loses $30 unused credits)
+   - Old creditPrice: 5000 ($50 per credit)
+   - New creditPrice: 3980 ($39.80 per credit)
+   - Old planName: "1 Credit"
+   - New planName: "5 Credits"
+3. Old credit allocation updated ✅
 4. Prorated invoice created:
-   - Refund unused Starter time: -$25 (15 days)
-   - Charge for Popular plan: +$100
-   - Total due: $75
+   - Refund unused 1 credit time: -$25 (15 days)
+   - Charge for 5 credit plan: +$199
+   - Total due: $174
 5. Invoice paid immediately
-6. NEW $100 credit grant created ✅
+6. Credit allocation updated ✅
    - Expires: Sept 30th (unchanged period end)
-   - Full 10 credits available immediately
+   - Full 5 credits available immediately
 
 Result:
-- Customer has 10 fresh credits
-- Paid $125 total for September ($50 initial + $75 upgrade)
-- Next renewal: Sept 30th for $100
+- Customer has 5 credits available
+- Paid $224 total for September ($50 initial + $174 upgrade)
+- Next renewal: Sept 30th for $199
 ```
 
 ### Downgrade Scenario (Mid-Cycle)
 ```
 Starting State (Sept 15th):
-- Current plan: Popular ($100/month, 10 credits)
+- Current plan: 10 credit ($349/month)
 - Subscription started: Sept 1st
-- Current credits: $100 (expires Sept 30th)
-- Credits used so far: 3 tickets ($30)
-- Remaining credits: $70
+- Current credits: 10 (expires Sept 30th)
+- Credits used so far: 3 tickets
+- Remaining credits: 7
 
-Customer downgrades to Starter ($50/month, 5 credits):
+Customer downgrades to 5 credit ($199/month):
 
 Immediate Effects:
 1. Stripe updates subscription with schedule_at: current_period_end
 2. Webhook: customer.subscription.updated
 3. BillingEventHandler updates database
-4. NO upgrade detected (creditPrice decreased: 1000 → 500)
+4. NO upgrade detected (creditPrice increased: 3490 → 3980)
 5. NO credit changes ⏸️
 
 Until Sept 30th:
@@ -609,26 +616,26 @@ Until Sept 30th:
 - Full access maintained
 
 On Sept 30th (Period End):
-1. Popular credits expire ($70 if unused lost) ❌
-2. Invoice for Starter plan: $50
+1. 10 credit allocation expires (7 if unused lost) ❌
+2. Invoice for 5 credit plan: $199
 3. Invoice paid → invoice.payment_succeeded
-4. NEW $50 credit grant (5 credits) ✅
+4. NEW 5 credit allocation ✅
    - Expires: Oct 30th
 
 Result:
 - Customer retains full access until Sept 30th
 - Unused credits lost (no refund)
 - Starts fresh with 5 credits on Oct 1st
-- Total paid in Sept: $100 (original charge only)
+- Total paid in Sept: $349 (original charge only)
 ```
 
 ### Cancellation Scenario
 ```
 Starting State (Sept 15th):
-- Current plan: Popular ($100/month, 10 credits)
-- Current credits: $100 (expires Sept 30th)
-- Credits used: 4 tickets ($40)
-- Remaining: $60
+- Current plan: 10 credit ($349/month)
+- Current credits: 10 (expires Sept 30th)
+- Credits used: 4 tickets
+- Remaining: 6
 
 Customer cancels subscription:
 
@@ -649,7 +656,7 @@ Until Sept 30th:
 - Full feature access maintained
 
 On Sept 30th:
-1. Credits expire ($60 if unused) ❌
+1. Credits expire (6 if unused) ❌
 2. Webhook: customer.subscription.deleted
 3. Subscription removed from database
 4. Access revoked
@@ -681,11 +688,14 @@ Result:
 6. ✅ **Better for Customers**: They don't lose money on unused credits
 
 **Example Profit Margins:**
-- Starter Plan: $35/month base, 5 credit allocation at $7 each
-  - Full usage (5 tickets): $35 + $35 = $70 revenue, $17.50 engineer cost = $52.50 profit
-  - Low usage (2 tickets): $35 + $14 = $49 revenue, $7 engineer cost = $42 profit
-- Enterprise Plan: $245/month base, 35 credit allocation at $7 each
-  - Full usage (35 tickets): $245 + $245 = $490 revenue, $122.50 engineer cost = $367.50 profit
+- 1 Credit Plan: $50/month base, 1 credit allocation at $50 each
+  - Full usage (1 ticket): $50 + $50 = $100 revenue, $20 engineer cost = $80 profit
+- 5 Credit Plan: $199/month base, 5 credit allocation at $39.80 each
+  - Full usage (5 tickets): $199 + $199 = $398 revenue, $100 engineer cost = $298 profit
+  - Low usage (2 tickets): $199 + $79.60 = $278.60 revenue, $40 engineer cost = $238.60 profit
+- 10 Credit Plan: $349/month base, 10 credit allocation at $34.90 each
+  - Full usage (10 tickets): $349 + $349 = $698 revenue, $200 engineer cost = $498 profit
+  - Low usage (5 tickets): $349 + $174.50 = $523.50 revenue, $100 engineer cost = $423.50 profit
 
 ## Database Schema Requirements
 
@@ -732,7 +742,7 @@ CREATE TABLE engineers (
   email TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   stripe_connect_account_id TEXT UNIQUE, -- Express Connect account
-  payout_amount INTEGER NOT NULL DEFAULT 350, -- $3.50 in cents, configurable
+  payout_amount INTEGER NOT NULL DEFAULT 2000, -- $20 in cents, configurable
   onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

@@ -3,9 +3,9 @@ import type { BillingEngineerPayoutService, CreateTransferParams, TransferResult
 
 /**
  * Default payout amount for engineers (in cents)
- * $3.50 per ticket
+ * $20 per ticket
  */
-const DEFAULT_PAYOUT_AMOUNT = 350
+const DEFAULT_PAYOUT_AMOUNT = 2000
 
 /**
  * Stripe implementation of BillingEngineerPayoutService
@@ -78,7 +78,7 @@ export class BillingEngineerPayoutServiceStripe implements BillingEngineerPayout
    * Reads from Connect account metadata with fallback to default
    *
    * @param connectAccountId - Engineer's Stripe Connect account ID
-   * @returns Payout amount in cents (defaults to 350 = $3.50)
+   * @returns Payout amount in cents (defaults to 2000 = $20)
    */
   async fetchPayoutAmount(connectAccountId: string): Promise<number> {
     console.info(`[BillingEngineerPayoutServiceStripe] Fetching payout amount for account: ${connectAccountId}`)
