@@ -24,7 +24,6 @@ const BuyCredits: React.FC = () => {
             stripePricingTableId={stripeTableId}
             stripePublishableKey={stripePublishableKey}
             clientReferenceId={userProfile.authId}
-            customerEmail={userProfile.email}
           />
 
           {/* Footer */}

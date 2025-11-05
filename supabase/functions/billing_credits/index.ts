@@ -3,11 +3,13 @@ import { BillingCreditsHandler } from './BillingCreditsHandler.ts'
 import { createClient } from "supabase";
 import Stripe from "stripe";
 import { BillingCustomerStoreSupabase } from "@stores/BillingCustomer/index.ts";
+import { ProfileStoreSupabase } from "@stores/Profile/index.ts";
 import { TicketStoreSupabase } from "@stores/Ticket/index.ts";
 import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts";
 import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
-import type { CreditBalanceRequest } from "@types";
-import { getExtensionCorsOrigin } from "../_shared/config/cors.ts";
+import { BillingCustomerServiceStripe } from "@services/BillingCustomer/index.ts";
+import type { CreditBalanceRequest, CustomerSessionRequest } from "@types";
+import { getExtensionCorsOrigin } from "@config/cors.ts";
 
 console.debug("Billing Credits function loaded")
 
@@ -55,18 +57,22 @@ export const handler = async (request: Request): Promise<Response> => {
 
     // Initialize stores
     const customerStore = new BillingCustomerStoreSupabase(supabase)
+    const profileStore = new ProfileStoreSupabase(supabase)
     const ticketStore = new TicketStoreSupabase(supabase)
 
     // Initialize services
     const creditsService = new BillingCreditsServiceStripe(stripe) // Uses 'ticket_completed' meter by default
     const subscriptionService = new BillingSubscriptionServiceStripe(stripe)
+    const customerService = new BillingCustomerServiceStripe(stripe)
 
     // Initialize handler with all dependencies
     const billingCreditsHandler = new BillingCreditsHandler(
       customerStore,
+      profileStore,
       subscriptionService,
       creditsService,
-      ticketStore,
+      customerService,
+      ticketStore
     )
 
     // Handle GET request - fetch credit balance
@@ -84,6 +90,28 @@ export const handler = async (request: Request): Promise<Response> => {
 
       const balanceRequest: CreditBalanceRequest = { profile_id: profileId }
       const response = await billingCreditsHandler.fetchCreditBalance(balanceRequest)
+
+      return new Response(
+        JSON.stringify(response),
+        { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+      )
+    }
+
+    // Handle POST request - create customer session
+    if (request.method === 'POST') {
+      const body = await request.json()
+      const { profile_id } = body
+
+      if (!profile_id) {
+        console.error('[billing-credits] Missing profile_id in POST request')
+        return new Response(
+          JSON.stringify({ error: 'profile_id is required' }),
+          { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+
+      const sessionRequest: CustomerSessionRequest = { profile_id }
+      const response = await billingCreditsHandler.createCustomerSession(sessionRequest)
 
       return new Response(
         JSON.stringify(response),

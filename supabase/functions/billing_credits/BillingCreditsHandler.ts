@@ -1,24 +1,32 @@
 import type { BillingCreditsService } from '@services/BillingCredits/index.ts'
 import type { BillingSubscriptionService } from '@services/BillingSubscription/index.ts'
+import type { BillingCustomerService } from '@services/BillingCustomer/index.ts'
 import { type BillingCustomerStore } from "@stores/BillingCustomer/index.ts";
+import { type ProfileStore } from "@stores/Profile/index.ts";
 import { type TicketStore, type TicketBillingInfo } from "@stores/Ticket/index.ts";
-import type { CreditBalanceRequest, CreditBalanceResponse, CreditTransferRequest, CreditTransferResponse } from '@types';
+import type { CreditBalanceRequest, CreditBalanceResponse, CustomerSessionRequest, CustomerSessionResponse } from '@types';
 
 export class BillingCreditsHandler {
   private readonly customerStore: BillingCustomerStore
+  private readonly profileStore: ProfileStore
   private readonly subscriptionService: BillingSubscriptionService
   private readonly creditsService: BillingCreditsService
+  private readonly customerService: BillingCustomerService
   private readonly ticketStore: TicketStore
 
   constructor(
     customerStore: BillingCustomerStore,
+    profileStore: ProfileStore,
     subscriptionService: BillingSubscriptionService,
     creditsService: BillingCreditsService,
-    ticketStore: TicketStore,
+    customerService: BillingCustomerService,
+    ticketStore: TicketStore
   ) {
     this.customerStore = customerStore
+    this.profileStore = profileStore
     this.subscriptionService = subscriptionService
     this.creditsService = creditsService
+    this.customerService = customerService
     this.ticketStore = ticketStore
   }
 
@@ -127,5 +135,50 @@ export class BillingCreditsHandler {
     const credits = Math.min(Math.ceil(elapsedHours), 2)
 
     return credits
+  }
+
+  /**
+   * Creates a Stripe Customer Session for use with the pricing table
+   * If the profile doesn't have a Stripe customer, creates one first
+   * @param request - Contains the profile_id
+   * @returns CustomerSessionResponse with client_secret
+   */
+  async createCustomerSession(request: CustomerSessionRequest): Promise<CustomerSessionResponse> {
+    const { profile_id } = request
+
+    console.info(`[BillingCreditsHandler] Creating customer session for profile: ${profile_id}`)
+
+    // 1. Check if Stripe Customer exists for this profile
+    let customerId = await this.customerStore.getByProfileId(profile_id)
+
+    // 2. If no customer exists, create one
+    if (!customerId) {
+      console.info(`[BillingCreditsHandler] No Stripe customer found, creating new customer for profile: ${profile_id}`)
+
+      // Fetch profile email via ProfileStore
+      const email = await this.profileStore.getEmailByProfileId(profile_id)
+
+      if (!email) {
+        console.error(`[BillingCreditsHandler] Profile not found or missing email for profile: ${profile_id}`)
+        throw new Error('Profile not found or missing email')
+      }
+
+      // Create Stripe customer
+      const customer = await this.customerService.createCustomer(profile_id, email)
+
+      customerId = customer.id
+      console.info(`[BillingCreditsHandler] Created new Stripe customer: ${customerId}`)
+    }
+
+    // 3. Create Customer Session via service
+    console.info(`[BillingCreditsHandler] Creating customer session for Stripe customer: ${customerId}`)
+
+    const clientSecret = await this.customerService.createCustomerSession(customerId)
+
+    console.info(`[BillingCreditsHandler] Successfully created customer session`)
+
+    return {
+      client_secret: clientSecret
+    }
   }
 }
