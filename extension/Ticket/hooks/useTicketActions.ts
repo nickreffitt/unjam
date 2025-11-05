@@ -7,6 +7,7 @@ export interface UseTicketActionsReturn {
   handleMarkFixed: () => void;
   handleConfirmFixed: () => Promise<void>;
   handleMarkStillBroken: () => Promise<void>;
+  handleCancelTicket: () => Promise<void>;
 }
 
 export const useTicketActions = (
@@ -62,10 +63,30 @@ export const useTicketActions = (
     }
   }, [activeTicket, ticketManager, setActiveTicket]);
 
+  const handleCancelTicket = useCallback(async (): Promise<void> => {
+    if (activeTicket) {
+      try {
+        const updatedTicket = await ticketManager.cancelTicket(activeTicket.id);
+        // Manually update context for same-tab updates (storage events only work cross-tab)
+        setActiveTicket(updatedTicket);
+        // Hide the ticket box after cancellation
+        if (setIsTicketVisible) {
+          setIsTicketVisible(false);
+        }
+        console.debug('Customer cancelled ticket');
+      } catch (error) {
+        console.error('Failed to cancel ticket:', error);
+        // Re-throw so UI can handle the error
+        throw error;
+      }
+    }
+  }, [activeTicket, ticketManager, setActiveTicket, setIsTicketVisible]);
+
   return {
     handleCreateTicket,
     handleMarkFixed,
     handleConfirmFixed,
-    handleMarkStillBroken
+    handleMarkStillBroken,
+    handleCancelTicket
   };
 };
