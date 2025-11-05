@@ -360,6 +360,14 @@ export interface CreditTransferResponse {
   success: boolean;
 }
 
+export interface CustomerSessionRequest {
+  profile_id: string;
+}
+
+export interface CustomerSessionResponse {
+  client_secret: string;
+}
+
 export type EngineerTransferStatus = 'pending' | 'completed' | 'failed';
 
 export interface EngineerTransfer {

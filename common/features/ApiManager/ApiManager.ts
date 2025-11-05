@@ -1,5 +1,5 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
-import type { EngineerProfile, CreditBalanceResponse, CreditTransferResponse } from '@common/types';
+import type { EngineerProfile, CreditBalanceResponse, CustomerSessionResponse } from '@common/types';
 
 export interface ICEServersResponse {
   iceServers: RTCIceServer[];
@@ -34,7 +34,7 @@ export class ApiManager {
     console.info(`[ApiManager] Creating billing portal link for profile: ${profileId}`);
 
     try {
-      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+      const { url } = await this.makeAuthenticatedPostRequest<{ url: string }>(
         'billing-links',
         {
           link_type: 'create_portal',
@@ -73,7 +73,7 @@ export class ApiManager {
     }
 
     try {
-      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+      const { url } = await this.makeAuthenticatedPostRequest<{ url: string }>(
         'billing-links',
         {
           link_type: 'create_engineer_account',
@@ -109,7 +109,7 @@ export class ApiManager {
     console.info(`[ApiManager] Creating engineer login link for profile: ${engineerId}`);
 
     try {
-      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+      const { url } = await this.makeAuthenticatedPostRequest<{ url: string }>(
         'billing-links',
         {
           link_type: 'create_engineer_login',
@@ -161,6 +161,33 @@ export class ApiManager {
   }
 
   /**
+   * Creates a Stripe Customer Session for the given profile
+   * Used to enable existing customers to use the pricing table with pre-populated data
+   * @param profileId - The user profile ID
+   * @returns The customer session client secret
+   * @throws Error if the request fails
+   */
+  async createCustomerSession(profileId: string): Promise<CustomerSessionResponse> {
+    console.info(`[ApiManager] Creating customer session for profile: ${profileId}`);
+
+    try {
+      const sessionResponse = await this.makeAuthenticatedPostRequest<CustomerSessionResponse>(
+        'billing_credits',
+        { profile_id: profileId },
+        'Failed to create customer session'
+      );
+
+      console.info(`[ApiManager] Successfully created customer session`);
+      return sessionResponse;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error creating customer session:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Fetches ICE servers (STUN/TURN) for WebRTC connections
    * @returns The ICE servers configuration
    * @throws Error if the request fails
@@ -194,7 +221,7 @@ export class ApiManager {
    * @returns The response data
    * @throws Error if authentication fails or request fails
    */
-  private async makeAuthenticatedRequest<T>(
+  private async makeAuthenticatedPostRequest<T>(
     endpoint: string,
     body: unknown,
     errorContext: string
