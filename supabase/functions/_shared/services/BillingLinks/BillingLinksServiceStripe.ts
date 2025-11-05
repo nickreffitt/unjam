@@ -45,8 +45,8 @@ export class BillingLinksServiceStripe implements BillingLinksService {
       const appUrl = (host) ? host : Deno.env.get('APP_URL')
       const accountLink = await this.stripe.accountLinks.create({
         account: engineerAccount.id,
-        refresh_url: `${appUrl}/engineer/onboarding`,
-        return_url: `${appUrl}/engineer/dashboard`,
+        refresh_url: `${appUrl}/settings`,
+        return_url: `${appUrl}/settings`,
         type: 'account_onboarding',
       })
 

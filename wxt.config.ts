@@ -39,6 +39,12 @@ export default defineConfig({
       default_title: 'Unjam'
     },
     options_page: 'options.html',
+    web_accessible_resources: [
+      {
+        resources: ['platform-guides/*'],
+        matches: ['<all_urls>']
+      }
+    ],
   },
 
   vite: () => ({

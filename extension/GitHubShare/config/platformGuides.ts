@@ -53,14 +53,23 @@ export const PLATFORM_GUIDES: PlatformGuide[] = [
     },
     slides: [
       {
-        title: 'Find your GitHub repository',
+        title: 'Connect Github',
         description: 'Lovable stores your code in a GitHub repository',
         steps: [
-          'Click the Settings icon in the top-right corner',
-          'Select "Project Settings" from the dropdown',
-          'Find the "GitHub Repository" section',
-          'Copy the repository URL (e.g., https://github.com/username/repo-name)'
-        ]
+          'Click the Github icon in the top-right corner',
+          'Click the "Connect Github" button in the popup',
+        ],
+        image: '/platform-guides/lovable-guide-1.png'
+      },
+      {
+        title: 'Connect Project',
+        description: 'Lovable stores your code in a GitHub repository',
+        steps: [
+          'Click Connect Project',
+          'Select the organisation you want it to be added to (usually your Github account)',
+          'In the popup, click "Transfer anyway"'
+        ],
+        image: '/platform-guides/lovable-guide-2.png'
       }
     ]
   },

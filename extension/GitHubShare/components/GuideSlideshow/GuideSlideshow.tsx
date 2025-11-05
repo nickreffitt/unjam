@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type GuideSlide } from '@common/types';
+import { browser } from 'wxt/browser';
 
 interface GuideSlideshowProps {
   slides: GuideSlide[];
@@ -9,6 +10,14 @@ interface GuideSlideshowProps {
 
 const GuideSlideshow: React.FC<GuideSlideshowProps> = ({ slides, platformName }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Convert extension-relative paths to full extension URLs
+  const getImageUrl = (imagePath: string | undefined): string | undefined => {
+    if (!imagePath) return undefined;
+    // Remove leading slash and convert to extension URL
+    const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+    return browser.runtime.getURL(cleanPath);
+  };
 
   const handlePrevious = () => {
     setCurrentSlide((prev) => Math.max(0, prev - 1));
@@ -31,7 +40,7 @@ const GuideSlideshow: React.FC<GuideSlideshowProps> = ({ slides, platformName })
         {slide.image && (
           <div className="unjam-flex-shrink-0 unjam-w-64">
             <img
-              src={slide.image}
+              src={getImageUrl(slide.image)}
               alt={slide.title}
               className="unjam-w-full unjam-h-full unjam-object-cover"
             />
