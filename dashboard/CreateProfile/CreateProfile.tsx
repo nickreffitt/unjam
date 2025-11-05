@@ -51,9 +51,13 @@ const CreateProfile: React.FC = () => {
       console.debug('Profile created successfully:', newProfile);
       setProfileCreated(true);
 
-      // Redirect to dashboard after successful profile creation
+      // Redirect based on user type after successful profile creation
       setTimeout(() => {
-        navigate('/new', { replace: true });
+        if (newProfile.type === 'customer') {
+          navigate('/buy', { replace: true });
+        } else {
+          navigate('/new', { replace: true });
+        }
       }, 1500);
     } catch (error) {
       console.error('Profile creation failed:', error);
