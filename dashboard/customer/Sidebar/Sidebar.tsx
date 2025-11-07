@@ -6,12 +6,10 @@ import { useOnboardingState } from '../OnboardingStatus/hooks/useOnboardingState
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const {
-    subscription,
     extensionInstalled,
     githubIntegration
   } = useOnboardingState();
 
-  const hasActiveSubscription = subscription !== null;
   const hasExtensionInstalled = extensionInstalled;
   const hasGithubConnected = githubIntegration !== null;
 
@@ -30,7 +28,7 @@ const Sidebar: React.FC = () => {
   const getStartedItems = [
     {
       path: '/buy',
-      label: hasActiveSubscription ? 'Manage Plan' : 'Choose Plan',
+      label: 'Buy Credits',
       icon: CreditCard,
       completed: false
     },

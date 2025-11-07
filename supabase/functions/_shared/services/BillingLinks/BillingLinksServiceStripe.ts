@@ -76,4 +76,38 @@ export class BillingLinksServiceStripe implements BillingLinksService {
       throw new Error(`Failed to create engineer login link: ${error.message}`)
     }
   }
+
+  /**
+   * Creates a Stripe Checkout Session for one-time credit purchases
+   * Sessions are attached to existing customers to prevent duplicates
+   */
+  async createCheckoutSession(customerId: string, priceId: string, host: string | null): Promise<string> {
+    console.info(`[BillingLinksServiceStripe] Creating checkout session for customer: ${customerId}, price: ${priceId}`)
+    try {
+      const appUrl = (host) ? host : Deno.env.get('APP_URL')
+
+      const session = await this.stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: 'payment',
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1
+          }
+        ],
+        invoice_creation: {
+          enabled: true
+        },
+        success_url: `${appUrl}/buy?success=true`,
+        cancel_url: `${appUrl}/buy?canceled=true`
+      })
+
+      console.info(`[BillingLinksServiceStripe] Successfully created checkout session: ${session.id}`)
+      return session.url || ''
+    } catch (err) {
+      const error = err as Error
+      console.error(`[BillingLinksServiceStripe] Failed to create checkout session: ${error.message}`)
+      throw new Error(`Failed to create checkout session: ${error.message}`)
+    }
+  }
 }

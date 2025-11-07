@@ -20,18 +20,18 @@ const Subscription: React.FC<SubscriptionProps> = ({
   const [customerSessionSecret, setCustomerSessionSecret] = useState<string | undefined>(undefined);
   const [sessionLoading, setSessionLoading] = useState(false);
 
-  // Fetch customer session when showing pricing table
+  // Fetch subscription checkout session when showing pricing table
   useEffect(() => {
-    const fetchCustomerSession = async () => {
+    const fetchSubscriptionCheckoutSession = async () => {
       if (!hasActiveSubscription && stripePricingTableId && stripePublishableKey) {
         try {
           setSessionLoading(true);
-          console.info('[Subscription] Fetching customer session for profile:', userProfile.id);
-          const clientSecret = await subscriptionManager.createCustomerSession(userProfile.id);
+          console.info('[Subscription] Fetching subscription checkout session for profile:', userProfile.id);
+          const clientSecret = await subscriptionManager.createSubscriptionCheckoutSession(userProfile.id);
           setCustomerSessionSecret(clientSecret);
-          console.info('[Subscription] Successfully fetched customer session');
+          console.info('[Subscription] Successfully fetched subscription checkout session');
         } catch (err) {
-          console.error('[Subscription] Error fetching customer session:', err);
+          console.error('[Subscription] Error fetching subscription checkout session:', err);
           // Don't fail the entire component - pricing table can work without customer session
           setCustomerSessionSecret(undefined);
         } finally {
@@ -40,7 +40,7 @@ const Subscription: React.FC<SubscriptionProps> = ({
       }
     };
 
-    fetchCustomerSession();
+    fetchSubscriptionCheckoutSession();
   }, [hasActiveSubscription, stripePricingTableId, stripePublishableKey, subscriptionManager, userProfile.id]);
 
   if (isLoading || sessionLoading) {

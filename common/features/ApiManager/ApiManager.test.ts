@@ -189,12 +189,12 @@ describe('ApiManager', () => {
     });
   });
 
-  describe('createCustomerSession', () => {
+  describe('createSubscriptionCheckoutSession', () => {
     const profileId = 'profile-123';
     const mockAccessToken = 'mock-access-token';
     const mockClientSecret = 'cus_session_test_secret123';
 
-    it('should successfully create customer session', async () => {
+    it('should successfully create subscription checkout session', async () => {
       // Given a valid session and successful API response
       vi.mocked(mockSupabaseClient.auth.getSession).mockResolvedValue({
         data: {
@@ -211,15 +211,15 @@ describe('ApiManager', () => {
         json: async () => ({ client_secret: mockClientSecret })
       } as Response);
 
-      // When creating a customer session
-      const response = await apiManager.createCustomerSession(profileId);
+      // When creating a subscription checkout session
+      const response = await apiManager.createSubscriptionCheckoutSession(profileId);
 
       // Then it should return the client secret
       expect(response.client_secret).toBe(mockClientSecret);
 
       // And it should call the edge function with correct parameters
       expect(global.fetch).toHaveBeenCalledWith(
-        `${edgeFunctionUrl}/billing_credits`,
+        `${edgeFunctionUrl}/billing_credits/subscription_checkout`,
         {
           method: 'POST',
           headers: {
@@ -240,9 +240,9 @@ describe('ApiManager', () => {
         error: null
       });
 
-      // When creating a customer session
+      // When creating a subscription checkout session
       // Then it should throw an error
-      await expect(apiManager.createCustomerSession(profileId))
+      await expect(apiManager.createSubscriptionCheckoutSession(profileId))
         .rejects.toThrow('No active session found. Please sign in.');
     });
 
@@ -264,9 +264,9 @@ describe('ApiManager', () => {
         json: async () => ({ error: 'Profile not found or missing email' })
       } as Response);
 
-      // When creating a customer session
+      // When creating a subscription checkout session
       // Then it should throw the error from the API
-      await expect(apiManager.createCustomerSession(profileId))
+      await expect(apiManager.createSubscriptionCheckoutSession(profileId))
         .rejects.toThrow('Profile not found or missing email');
     });
   });

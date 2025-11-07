@@ -12,6 +12,7 @@ import { SubscriptionManagerProvider } from '@extension/shared/contexts/Subscrip
 import { RatingManagerProvider } from '@extension/contexts/RatingManagerContext';
 import { type CustomerProfile } from '@common/types';
 import { GitHubShareManagerProvider } from '@extension/GitHubShare/contexts/GitHubShareManagerContext';
+import { BillingManagerProvider } from '@extension/shared/contexts/BillingManagerContext';
 
 let uiMounted = false;
 let rootInstance: ReactDOM.Root | null = null;
@@ -67,17 +68,19 @@ const ContentApp = () => {
     <SupabaseProvider>
       <UserProfileProvider customerProfile={customerProfile}>
         <SubscriptionManagerProvider>
-          <TicketManagerProvider>
-            <RatingManagerProvider>
-              <ChatManagerProvider>
-                <ScreenShareManagerProvider>
-                  <GitHubShareManagerProvider>
-                    <ExtensionContainer />
-                  </GitHubShareManagerProvider>
-                </ScreenShareManagerProvider>
-              </ChatManagerProvider>
-            </RatingManagerProvider>
-          </TicketManagerProvider>
+          <BillingManagerProvider>
+            <TicketManagerProvider>
+              <RatingManagerProvider>
+                <ChatManagerProvider>
+                  <ScreenShareManagerProvider>
+                    <GitHubShareManagerProvider>
+                      <ExtensionContainer />
+                    </GitHubShareManagerProvider>
+                  </ScreenShareManagerProvider>
+                </ChatManagerProvider>
+              </RatingManagerProvider>
+            </TicketManagerProvider>
+          </BillingManagerProvider>
         </SubscriptionManagerProvider>
       </UserProfileProvider>
     </SupabaseProvider>
@@ -134,7 +137,7 @@ function handleUrlChange() {
 
 export default {
   matches: [
-    'http://localhost:5175/*',
+    'http://localhost/*',
     'https://app.unj.am/*',
     'https://lovable.dev/*',
     'https://replit.com/*',

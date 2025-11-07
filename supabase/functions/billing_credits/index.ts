@@ -8,7 +8,9 @@ import { TicketStoreSupabase } from "@stores/Ticket/index.ts";
 import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts";
 import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
 import { BillingCustomerServiceStripe } from "@services/BillingCustomer/index.ts";
-import type { CreditBalanceRequest, CustomerSessionRequest } from "@types";
+import { BillingLinksServiceStripe } from "@services/BillingLinks/index.ts";
+import { BillingProductServiceStripe } from "@services/BillingProduct/index.ts";
+import type { CreditBalanceRequest, CustomerSessionRequest, ProductsRequest, CheckoutSessionRequest } from "@types";
 import { getExtensionCorsOrigin } from "@config/cors.ts";
 
 console.debug("Billing Credits function loaded")
@@ -64,6 +66,8 @@ export const handler = async (request: Request): Promise<Response> => {
     const creditsService = new BillingCreditsServiceStripe(stripe) // Uses 'ticket_completed' meter by default
     const subscriptionService = new BillingSubscriptionServiceStripe(stripe)
     const customerService = new BillingCustomerServiceStripe(stripe)
+    const linksService = new BillingLinksServiceStripe(stripe)
+    const productService = new BillingProductServiceStripe(stripe)
 
     // Initialize handler with all dependencies
     const billingCreditsHandler = new BillingCreditsHandler(
@@ -72,50 +76,108 @@ export const handler = async (request: Request): Promise<Response> => {
       subscriptionService,
       creditsService,
       customerService,
+      productService,
+      linksService,
       ticketStore
     )
 
-    // Handle GET request - fetch credit balance
+    // Handle GET request
     if (request.method === 'GET') {
       const url = new URL(request.url)
-      const profileId = url.searchParams.get('profile_id')
+      const path = url.pathname
 
-      if (!profileId) {
-        console.error('[billing-credits] Missing profile_id in GET request')
+      // GET /billing_credits/products - fetch products
+      if (path.endsWith('/products')) {
+        console.info('[billing-credits] Fetching products')
+        const productsRequest: ProductsRequest = {}
+        const response = await billingCreditsHandler.fetchProducts(productsRequest)
+
         return new Response(
-          JSON.stringify({ error: 'profile_id is required' }),
-          { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+          JSON.stringify(response),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
         )
       }
 
-      const balanceRequest: CreditBalanceRequest = { profile_id: profileId }
-      const response = await billingCreditsHandler.fetchCreditBalance(balanceRequest)
+      // GET /billing_credits/credit_balance?profile_id=... - fetch credit balance
+      if (path.endsWith('/credit_balance')) {
+        const profileId = url.searchParams.get('profile_id')
 
+        if (!profileId) {
+          console.error('[billing-credits] Missing profile_id in credit_balance request')
+          return new Response(
+            JSON.stringify({ error: 'profile_id is required' }),
+            { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+          )
+        }
+
+        const balanceRequest: CreditBalanceRequest = { profile_id: profileId }
+        const response = await billingCreditsHandler.fetchCreditBalance(balanceRequest)
+
+        return new Response(
+          JSON.stringify(response),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+
+      // No matching GET endpoint
       return new Response(
-        JSON.stringify(response),
-        { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        JSON.stringify({ error: 'Not found' }),
+        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
 
-    // Handle POST request - create customer session
+    // Handle POST request
     if (request.method === 'POST') {
+      const url = new URL(request.url)
+      const path = url.pathname
       const body = await request.json()
-      const { profile_id } = body
 
-      if (!profile_id) {
-        console.error('[billing-credits] Missing profile_id in POST request')
+      // POST /billing_credits/product_checkout - create checkout session for one-time credit purchase
+      if (path.endsWith('/product_checkout')) {
+        const { profile_id, price_id } = body
+
+        if (!profile_id || !price_id) {
+          console.error('[billing-credits] Missing profile_id or price_id in product_checkout request')
+          return new Response(
+            JSON.stringify({ error: 'profile_id and price_id are required' }),
+            { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+          )
+        }
+
+        const checkoutRequest: CheckoutSessionRequest = { profile_id, price_id }
+        const response = await billingCreditsHandler.createCheckoutSession(checkoutRequest, origin)
+
         return new Response(
-          JSON.stringify({ error: 'profile_id is required' }),
-          { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+          JSON.stringify(response),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
         )
       }
 
-      const sessionRequest: CustomerSessionRequest = { profile_id }
-      const response = await billingCreditsHandler.createCustomerSession(sessionRequest)
+      // POST /billing_credits/subscription_checkout - create customer session for subscription pricing table
+      if (path.endsWith('/subscription_checkout')) {
+        const { profile_id } = body
 
+        if (!profile_id) {
+          console.error('[billing-credits] Missing profile_id in subscription_checkout request')
+          return new Response(
+            JSON.stringify({ error: 'profile_id is required' }),
+            { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+          )
+        }
+
+        const sessionRequest: CustomerSessionRequest = { profile_id }
+        const response = await billingCreditsHandler.createCustomerSession(sessionRequest)
+
+        return new Response(
+          JSON.stringify(response),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+
+      // No matching POST endpoint
       return new Response(
-        JSON.stringify(response),
-        { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        JSON.stringify({ error: 'Not found' }),
+        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
       )
     }
 

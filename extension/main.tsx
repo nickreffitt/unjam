@@ -5,6 +5,7 @@ import { TicketManagerProvider } from '@extension/Ticket/contexts/TicketManagerC
 import { ChatManagerProvider } from '@extension/ChatBox/contexts/ChatManagerContext'
 import { ScreenShareManagerProvider } from '@extension/ScreenShare/contexts/ScreenShareManagerContext'
 import { SubscriptionManagerProvider } from '@extension/shared/contexts/SubscriptionManagerContext'
+import { BillingManagerProvider } from '@extension/shared/contexts/BillingManagerContext'
 import { RatingManagerProvider } from '@extension/contexts/RatingManagerContext'
 import { GitHubShareManagerProvider } from '@extension/GitHubShare/contexts/GitHubShareManagerContext'
 
@@ -12,17 +13,19 @@ import { GitHubShareManagerProvider } from '@extension/GitHubShare/contexts/GitH
 const App = () => {
   return (
       <SubscriptionManagerProvider>
-        <TicketManagerProvider>
-          <RatingManagerProvider>
-            <ChatManagerProvider>
-              <ScreenShareManagerProvider>
-                <GitHubShareManagerProvider>
-                  <CustomerExtension />
-                </GitHubShareManagerProvider>
-              </ScreenShareManagerProvider>
-            </ChatManagerProvider>
-          </RatingManagerProvider>
-        </TicketManagerProvider>
+        <BillingManagerProvider>
+          <TicketManagerProvider>
+            <RatingManagerProvider>
+              <ChatManagerProvider>
+                <ScreenShareManagerProvider>
+                  <GitHubShareManagerProvider>
+                    <CustomerExtension />
+                  </GitHubShareManagerProvider>
+                </ScreenShareManagerProvider>
+              </ChatManagerProvider>
+            </RatingManagerProvider>
+          </TicketManagerProvider>
+        </BillingManagerProvider>
       </SubscriptionManagerProvider>
   );
 };

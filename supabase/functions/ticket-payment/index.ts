@@ -7,7 +7,7 @@ import { BillingCustomerStoreSupabase } from "@stores/BillingCustomer/index.ts";
 import { BillingEngineerStoreSupabase } from "@stores/BillingEngineer/index.ts";
 import { BillingEngineerTransferStoreSupabase } from "@stores/BillingEngineerTransfer/index.ts";
 import { TicketStoreSupabase } from "@stores/Ticket/index.ts";
-import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts";
+import { BillingInvoiceServiceStripe } from "@services/BillingInvoice/index.ts";
 import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
 import { BillingMeterServiceStripe } from "@services/BillingMeter/index.ts";
 import { BillingEngineerPayoutServiceStripe } from "@services/BillingEngineerPayout/index.ts";
@@ -62,7 +62,7 @@ export const handler = async (request: Request): Promise<Response> => {
     const ticketStore = new TicketStoreSupabase(supabase)
 
     // Initialize services
-    const subscriptionService = new BillingSubscriptionServiceStripe(stripe)
+    const invoiceService = new BillingInvoiceServiceStripe(stripe)
     const creditsService = new BillingCreditsServiceStripe(stripe)
     const meterService = new BillingMeterServiceStripe(stripe)
     const payoutService = new BillingEngineerPayoutServiceStripe(stripe)
@@ -73,7 +73,7 @@ export const handler = async (request: Request): Promise<Response> => {
       engineerStore,
       transferStore,
       ticketStore,
-      subscriptionService,
+      invoiceService,
       creditsService,
       meterService,
       payoutService

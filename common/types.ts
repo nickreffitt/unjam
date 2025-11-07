@@ -368,6 +368,35 @@ export interface CustomerSessionResponse {
   client_secret: string;
 }
 
+export interface ProductInfo {
+  id: string;
+  name: string;
+  description: string;
+  priceId: string; // Stripe price ID for creating checkout sessions
+  price: number; // Price in cents
+  currency: string;
+  creditPrice: number; // Value from metadata in cents (e.g., 5000 = $50)
+  marketingFeatures: string[];
+  isMostPopular: boolean; // Flag from metadata to highlight popular products
+}
+
+export interface ProductsRequest {
+  // Reserved for future filtering options
+}
+
+export interface ProductsResponse {
+  products: ProductInfo[];
+}
+
+export interface CheckoutSessionRequest {
+  profile_id: string;
+  price_id: string;
+}
+
+export interface CheckoutSessionResponse {
+  checkout_url: string;
+}
+
 export type EngineerTransferStatus = 'pending' | 'completed' | 'failed';
 
 export interface EngineerTransfer {

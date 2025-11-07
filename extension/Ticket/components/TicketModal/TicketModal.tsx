@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { type CustomerProfile, type Subscription, type ConsoleLog } from '@common/types';
+import { type CustomerProfile } from '@common/types';
 import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
 import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
-import { useSubscriptionManager } from '@extension/shared/contexts/SubscriptionManagerContext';
+import { useBillingManager } from '@extension/shared/contexts/BillingManagerContext';
 import { useConsoleLogCapture } from '@extension/Ticket/hooks/useConsoleLogCapture';
 
 interface TicketModalProps {
@@ -14,10 +14,9 @@ interface TicketModalProps {
 const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProfile }) => {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [pendingCredits, setPendingCredits] = useState<number | null>(null);
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
+  const [isLoadingCredits, setIsLoadingCredits] = useState(true);
 
   // Use shared TicketManager from context
   const { ticketManager } = useTicketManager();
@@ -26,40 +25,32 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
   const { setActiveTicket, setIsTicketVisible } = useTicketState();
 
   // Use SubscriptionManager
-  const { subscriptionManager } = useSubscriptionManager();
+
+  // Use BillingManager
+  const { billingManager } = useBillingManager();
 
   // Use console log capture hook
   const { captureState, startCapture, stopCapture, resetCapture } = useConsoleLogCapture();
 
-  // Fetch subscription and credit balance when modal opens
+  // Fetch credit balance when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
-    const fetchSubscriptionData = async () => {
-      setIsLoadingSubscription(true);
+    const fetchCreditData = async () => {
+      setIsLoadingCredits(true);
       try {
-        // Fetch subscription
-        const activeSubscription = await subscriptionManager.getActiveSubscriptionForProfile(customerProfile.id);
-        setSubscription(activeSubscription);
-
-        // If subscription exists, fetch credit balance
-        if (activeSubscription) {
-          const balance = await subscriptionManager.getCreditBalanceForProfile(customerProfile.id);
-          setCreditBalance(balance.creditBalance);
-          setPendingCredits(balance.pendingCredits)
-        } else {
-          setCreditBalance(null);
-          setPendingCredits(null);
-        }
+        const balance = await billingManager.getCreditBalanceForProfile(customerProfile.id);
+        setCreditBalance(balance.creditBalance);
+        setPendingCredits(balance.pendingCredits)
       } catch (error) {
         console.error('Failed to fetch subscription data:', error);
       } finally {
-        setIsLoadingSubscription(false);
+        setIsLoadingCredits(false);
       }
     };
 
-    fetchSubscriptionData();
-  }, [isOpen, customerProfile.id, subscriptionManager]);
+    fetchCreditData();
+  }, [isOpen, customerProfile.id, billingManager]);
 
   // Reset capture state when modal closes
   useEffect(() => {
@@ -161,20 +152,9 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose, customerProf
 
         {/* Content */}
         <div className="unjam-p-6">
-          {isLoadingSubscription ? (
+          {isLoadingCredits ? (
             <div className="unjam-text-center unjam-py-8">
-              <p className="unjam-text-gray-600">Loading subscription...</p>
-            </div>
-          ) : !subscription ? (
-            <div className="unjam-text-center unjam-py-8">
-              <p className="unjam-text-gray-800 unjam-font-medium unjam-mb-2">No Active Subscription</p>
-              <p className="unjam-text-gray-600 unjam-mb-4">You need an active subscription to create tickets.</p>
-              <button
-                onClick={handleGoToDashboard}
-                className="unjam-px-4 unjam-py-2 unjam-text-sm unjam-font-medium unjam-text-white unjam-bg-blue-600 unjam-rounded-md hover:unjam-bg-blue-700 unjam-transition-colors"
-              >
-                Go to Dashboard
-              </button>
+              <p className="unjam-text-gray-600">Loading...</p>
             </div>
           ) : availableCredits === 0 ? (
             <div className="unjam-text-center unjam-py-8">

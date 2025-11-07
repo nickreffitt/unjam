@@ -3,9 +3,9 @@ import type { BillingEngineerPayoutService, CreateTransferParams, TransferResult
 
 /**
  * Default payout amount for engineers (in cents)
- * $3.50 per ticket
+ * $20 per ticket
  */
-const DEFAULT_PAYOUT_AMOUNT = 350
+const DEFAULT_PAYOUT_AMOUNT = 2000
 
 /**
  * Stripe implementation of BillingEngineerPayoutService

@@ -1,4 +1,4 @@
-import type { EngineerAccount } from '@types.ts'
+import type { EngineerAccount } from '@types'
 
 /**
  * Service for generating billing portal links
@@ -26,4 +26,14 @@ export interface BillingLinksService {
    * @returns The login link URL
    */
   createEngineerLoginLink(engineerAccount: EngineerAccount): Promise<string>
+
+  /**
+   * Creates a Stripe Checkout Session for one-time credit purchases
+   * Sessions are attached to existing customers to prevent duplicates
+   * @param customerId - The Stripe customer ID to attach the session to
+   * @param priceId - The Stripe price ID for the product being purchased
+   * @param host - The origin host to use in redirect URLs
+   * @returns The checkout session URL (expires in 24 hours)
+   */
+  createCheckoutSession(customerId: string, priceId: string, host: string | null): Promise<string>
 }
