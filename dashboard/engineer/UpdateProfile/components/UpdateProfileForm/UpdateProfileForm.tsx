@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useUpdateProfileState } from '../../hooks/useUpdateProfileState';
 import { useUpdateProfileActions } from '../../hooks/useUpdateProfileActions';
+import CountryDropdown from '@dashboard/shared/components/CountryDropdown/CountryDropdown';
 
 const UpdateProfileForm: React.FC = () => {
   const { profile, isLoading: isLoadingProfile } = useUpdateProfileState();
@@ -10,12 +11,14 @@ const UpdateProfileForm: React.FC = () => {
   const [githubUsername, setGithubUsername] = useState(
     profile?.type === 'engineer' ? profile.githubUsername || '' : ''
   );
+  const [country, setCountry] = useState(profile?.country || '');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Update form when profile loads
   React.useEffect(() => {
     if (profile) {
       setName(profile.name);
+      setCountry(profile.country || '');
       if (profile.type === 'engineer') {
         setGithubUsername(profile.githubUsername || '');
       }
@@ -33,6 +36,7 @@ const UpdateProfileForm: React.FC = () => {
     const updatedProfile = {
       ...profile,
       name,
+      country,
       ...(profile.type === 'engineer' && { githubUsername }),
     };
 
@@ -46,6 +50,7 @@ const UpdateProfileForm: React.FC = () => {
   const hasChanges = () => {
     if (!profile) return false;
     if (name !== profile.name) return true;
+    if (country !== (profile.country || '')) return true;
     if (profile.type === 'engineer' && githubUsername !== (profile.githubUsername || '')) {
       return true;
     }
@@ -91,6 +96,26 @@ const UpdateProfileForm: React.FC = () => {
             placeholder="Enter your name"
           />
         </div>
+
+        {/* Country Field - Only for Engineers */}
+        {profile.type === 'engineer' && (
+          <div>
+            <label
+              htmlFor="country"
+              className="unjam-block unjam-text-sm unjam-font-medium unjam-text-gray-700 unjam-mb-1"
+            >
+              Country
+            </label>
+            <CountryDropdown
+              value={country}
+              onChange={(countryCode) => setCountry(countryCode)}
+              placeholder="Select your country"
+            />
+            <p className="unjam-mt-2 unjam-text-sm unjam-text-gray-500">
+              Your country determines which payout options are available to you
+            </p>
+          </div>
+        )}
 
         {/* GitHub Username Field - Only for Engineers */}
         {profile.type === 'engineer' && (

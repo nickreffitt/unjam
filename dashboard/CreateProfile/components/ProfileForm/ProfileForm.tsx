@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Code, Users } from 'lucide-react';
 import { type UserType } from '@common/types';
 import { type ProfileFormData } from '../../hooks/useCreateProfileActions';
+import CountryDropdown from '@dashboard/shared/components/CountryDropdown/CountryDropdown';
 
 interface ProfileFormProps {
   onSubmit: (profileData: ProfileFormData) => void;
@@ -19,6 +20,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   const [name, setName] = useState('');
   const [userType, setUserType] = useState<UserType>('customer');
   const [githubUsername, setGithubUsername] = useState('');
+  const [country, setCountry] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +29,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
       name,
       userType,
       ...(userType === 'engineer' && { githubUsername }),
+      ...(userType === 'engineer' && { country }),
     };
 
     onSubmit(profileData);
@@ -97,6 +100,24 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
           />
         </div>
       </div>
+
+      {/* Country Selection (only for engineers) */}
+      {userType === 'engineer' && (
+        <div>
+          <label htmlFor="country" className="unjam-block unjam-text-sm unjam-font-medium unjam-text-gray-700 unjam-mb-1">
+            Country
+          </label>
+          <CountryDropdown
+            value={country}
+            onChange={(countryCode) => setCountry(countryCode)}
+            placeholder="Select your country"
+            required={userType === 'engineer'}
+          />
+          <p className="unjam-mt-2 unjam-text-sm unjam-text-gray-500">
+            Your country determines which payout options are available to you
+          </p>
+        </div>
+      )}
 
       {/* GitHub Username (only for engineers) */}
       {userType === 'engineer' && (

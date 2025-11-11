@@ -2,11 +2,41 @@ import type { BillingCreditsService } from '@services/BillingCredits/index.ts'
 import type { BillingSubscriptionService } from '@services/BillingSubscription/index.ts'
 import type { BillingMeterService } from '@services/BillingMeter/index.ts'
 import type { BillingEngineerPayoutService } from '@services/BillingEngineerPayout/index.ts'
+import type { BillingBalanceService } from '@services/BillingBalance/index.ts'
 import { type BillingCustomerStore } from "@stores/BillingCustomer/index.ts";
 import { type BillingEngineerStore } from "@stores/BillingEngineer/index.ts";
 import { type BillingEngineerTransferStore } from "@stores/BillingEngineerTransfer/index.ts";
 import { type TicketStore } from "@stores/Ticket/index.ts";
 import type { CreditTransferResponse } from '@types';
+
+/**
+ * Result when transfer is completed successfully
+ */
+interface TransferCompletedResult {
+  status: 'completed';
+  transferId: string;
+  amount: number;
+  platformProfit: number;
+}
+
+/**
+ * Result when transfer is pending due to insufficient funds
+ */
+interface TransferPendingResult {
+  status: 'pending_funds';
+}
+
+/**
+ * Result when there are insufficient funds (both available and pending)
+ */
+interface TransferInsufficientFundsResult {
+  status: 'insufficient_funds';
+}
+
+/**
+ * Union type for transfer operation results
+ */
+type TransferOperationResult = TransferCompletedResult | TransferPendingResult | TransferInsufficientFundsResult;
 
 export class PaymentHandler {
   private readonly customerStore: BillingCustomerStore
@@ -17,6 +47,7 @@ export class PaymentHandler {
   private readonly creditsService: BillingCreditsService
   private readonly meterService: BillingMeterService
   private readonly payoutService: BillingEngineerPayoutService
+  private readonly balanceService: BillingBalanceService
 
   constructor(
     customerStore: BillingCustomerStore,
@@ -27,6 +58,7 @@ export class PaymentHandler {
     creditsService: BillingCreditsService,
     meterService: BillingMeterService,
     payoutService: BillingEngineerPayoutService,
+    balanceService: BillingBalanceService,
   ) {
     this.customerStore = customerStore
     this.engineerStore = engineerStore
@@ -36,6 +68,7 @@ export class PaymentHandler {
     this.creditsService = creditsService
     this.meterService = meterService
     this.payoutService = payoutService
+    this.balanceService = balanceService
   }
 
   async processPayment(ticketId: string, customerId: string): Promise<CreditTransferResponse> {
@@ -56,6 +89,11 @@ export class PaymentHandler {
 
       if (existingTransfer.status === 'failed') {
         throw new Error(`Transfer previously failed: ${existingTransfer.errorMessage}`)
+      }
+
+      if (existingTransfer.status === 'pending_funds') {
+        console.info(`[PaymentHandler] Transfer waiting for funds to become available`)
+        throw new Error('Transfer is waiting for funds to become available')
       }
 
       // Status is 'pending' - this shouldn't happen but treat as in-progress
@@ -97,6 +135,60 @@ export class PaymentHandler {
         creditValue
       })
 
+      // Check if there are insufficient funds entirely
+      if (transferResult.status === 'insufficient_funds') {
+        // STEP 5a: Update audit record (status: 'failed')
+        console.error(`[PaymentHandler] Step 5a: Updating audit record to failed - insufficient funds`)
+
+        // Fetch payout amount for the transfer record
+        const payoutAmount = await this.payoutService.fetchPayoutAmount(engineerAccount.id)
+        const platformProfit = creditValue - payoutAmount
+
+        await this.transferStore.update(transferRecord.id, {
+          stripeTransferId: null,
+          amount: payoutAmount,
+          platformProfit,
+          status: 'failed',
+          errorMessage: 'Insufficient funds (both available and pending balance). Manual triage required.'
+        })
+
+        // STEP 6a: Update ticket status to 'payment-failed'
+        console.error(`[PaymentHandler] Step 6a: Updating ticket status to payment-failed`)
+
+        await this.ticketStore.updateStatus(ticketId, 'payment-failed')
+
+        console.error(`❌ [PaymentHandler] Payment failed for ticket ${ticketId} - insufficient funds. Customer support triage required.`)
+
+        throw new Error('Insufficient funds for transfer. Manual triage required.')
+      }
+
+      // Check if transfer is pending due to insufficient available funds (but pending will cover)
+      if (transferResult.status === 'pending_funds') {
+        // STEP 5b: Update audit record (status: 'pending_funds')
+        console.info(`[PaymentHandler] Step 5b: Updating audit record to pending_funds`)
+
+        // Fetch payout amount for the transfer record
+        const payoutAmount = await this.payoutService.fetchPayoutAmount(engineerAccount.id)
+        const platformProfit = creditValue - payoutAmount
+
+        await this.transferStore.update(transferRecord.id, {
+          stripeTransferId: null,
+          amount: payoutAmount,
+          platformProfit,
+          status: 'pending_funds'
+        })
+
+        // STEP 6b: Update ticket status to 'pending-payment' to clearly indicate payment is pending
+        console.info(`[PaymentHandler] Step 6b: Updating ticket status to pending-payment`)
+
+        await this.ticketStore.updateStatus(ticketId, 'pending-payment')
+
+        console.info(`⚠️ [PaymentHandler] Payment pending for ticket ${ticketId} - waiting for funds to clear`)
+
+        return { success: true }
+      }
+
+      // TypeScript now knows transferResult is TransferCompletedResult
       // STEP 5: Update audit record (status: 'completed')
       console.info(`[PaymentHandler] Step 5: Updating audit record to completed`)
 
@@ -104,7 +196,8 @@ export class PaymentHandler {
         stripeTransferId: transferResult.transferId,
         amount: transferResult.amount,
         platformProfit: transferResult.platformProfit,
-        status: 'completed'
+        status: 'completed',
+        availableForTransferAt: new Date()
       })
 
       // STEP 6: Update ticket status to 'completed'
@@ -199,6 +292,7 @@ export class PaymentHandler {
 
   /**
    * Executes the transfer operations (meter event + Stripe transfer)
+   * Checks available balance before attempting transfer
    * @private
    */
   private async executeTransferOperations(params: {
@@ -209,7 +303,7 @@ export class PaymentHandler {
     engineerAccountId: string
     customerId: string
     creditValue: number
-  }): Promise<{ transferId: string; amount: number; platformProfit: number }> {
+  }): Promise<TransferOperationResult> {
     // STEP 3: Record meter event to Stripe (deduct customer credit)
     console.info(`[PaymentHandler] Recording meter event to Stripe`)
 
@@ -220,6 +314,36 @@ export class PaymentHandler {
     })
 
     console.info(`✅ [PaymentHandler] Meter event recorded: ${params.creditsUsed} credits`)
+
+    // STEP 3.5: Fetch payout amount to check balance requirement
+    console.info(`[PaymentHandler] Fetching payout amount for engineer`)
+
+    const payoutAmount = await this.payoutService.fetchPayoutAmount(params.engineerAccountId)
+
+    console.info(`[PaymentHandler] Payout amount: ${payoutAmount} cents ($${(payoutAmount / 100).toFixed(2)})`)
+
+    // STEP 3.6: Check if sufficient balance is available
+    console.info(`[PaymentHandler] Checking Stripe available balance`)
+
+    const balanceInfo = await this.balanceService.getBalance()
+
+    // Check for three scenarios:
+    // 1. Insufficient funds entirely (both available and pending)
+    if (balanceInfo.available < payoutAmount &&
+        balanceInfo.pending < payoutAmount) {
+      console.error(`❌ [PaymentHandler] Insufficient funds. Available: $${(balanceInfo.available / 100).toFixed(2)}, Pending: $${(balanceInfo.pending / 100).toFixed(2)}, Required: $${(payoutAmount / 100).toFixed(2)}. Manual triage required.`)
+      return { status: 'insufficient_funds' }
+    }
+
+    // 2. Funds will be available once pending clears
+    if (balanceInfo.available < payoutAmount &&
+        balanceInfo.pending >= payoutAmount) {
+      console.warn(`⚠️ [PaymentHandler] Insufficient available balance, but pending funds will cover it. Available: $${(balanceInfo.available / 100).toFixed(2)}, Pending: $${(balanceInfo.pending / 100).toFixed(2)}. Transfer marked as pending_funds.`)
+      return { status: 'pending_funds' }
+    }
+
+    // 3. Sufficient available balance - proceed with transfer
+    console.info(`✅ [PaymentHandler] Sufficient balance available. Available: $${(balanceInfo.available / 100).toFixed(2)}`)
 
     // STEP 4: Transfer funds to engineer via Stripe Connect
     console.info(`[PaymentHandler] Creating transfer to engineer`)
@@ -234,7 +358,12 @@ export class PaymentHandler {
 
     console.info(`✅ [PaymentHandler] Transfer created: ${transferResult.transferId}, amount: ${transferResult.amount}, profit: ${transferResult.platformProfit}`)
 
-    return transferResult
+    return {
+      status: 'completed',
+      transferId: transferResult.transferId,
+      amount: transferResult.amount,
+      platformProfit: transferResult.platformProfit
+    }
   }
 
 }

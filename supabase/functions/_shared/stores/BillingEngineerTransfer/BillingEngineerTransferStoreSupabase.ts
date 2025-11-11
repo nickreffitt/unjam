@@ -167,14 +167,14 @@ export class BillingEngineerTransferStoreSupabase implements BillingEngineerTran
    * @param status - The transfer status to filter by
    * @returns Array of transfers with the given status
    */
-  async fetchByStatus(status: 'pending' | 'completed' | 'failed'): Promise<EngineerTransfer[]> {
+  async fetchByStatus(status: 'pending' | 'pending_funds' | 'completed' | 'failed'): Promise<EngineerTransfer[]> {
     console.info(`[BillingEngineerTransferStoreSupabase] Fetching transfers with status: ${status}`)
 
     const { data, error } = await this.supabase
       .from('engineer_transfers')
       .select('*')
       .eq('status', status)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
 
     if (error) {
       console.error(`[BillingEngineerTransferStoreSupabase] Error fetching transfers by status:`, error)

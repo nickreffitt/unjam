@@ -10,6 +10,7 @@ CREATE TABLE profiles (
   email TEXT,
   github_username TEXT,
   specialties TEXT[] DEFAULT '{}',
+  country TEXT,
   extension_installed_at TIMESTAMP WITH TIME ZONE,
   extension_installed_version TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -27,6 +28,9 @@ CREATE INDEX profiles_email_idx ON profiles (email);
 
 -- Create index on type for faster filtering
 CREATE INDEX profiles_type_idx ON profiles (type);
+
+-- Create index on country for filtering
+CREATE INDEX profiles_country_idx ON profiles (country);
 
 -- Create updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -64,3 +68,6 @@ CREATE POLICY "Users can delete their own profile" ON profiles
 
 -- Enable realtime for profiles table (for postgres_changes subscription)
 ALTER publication supabase_realtime ADD TABLE profiles;
+
+-- Add comment for documentation
+COMMENT ON COLUMN profiles.country IS 'ISO country code for determining payout provider availability';

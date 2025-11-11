@@ -1,4 +1,4 @@
-import { type User, type UserProfile, type AuthUser } from '@common/types';
+import { type AuthUser } from '@common/types';
 import { type AuthEventEmitter } from './AuthEventEmitter';
 
 /**

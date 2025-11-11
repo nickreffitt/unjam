@@ -13,6 +13,7 @@ export class AuthSupabaseRowMapper {
       name: row.name as string,
       email: row.email as string | undefined,
       authId: row.auth_id as string,
+      country: row.country as string | undefined,
       extensionInstalledAt: row.extension_installed_at ? new Date(row.extension_installed_at as string) : undefined,
       extensionInstalledVersion: row.extension_installed_version as string | undefined,
     };

@@ -19,6 +19,7 @@ CREATE TABLE tickets (
   problem_description TEXT NOT NULL,
   created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   assigned_to UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  console_logs JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   claimed_at TIMESTAMP WITH TIME ZONE,
   abandoned_at TIMESTAMP WITH TIME ZONE,
@@ -210,3 +211,6 @@ USING (
     )
   )
 );
+
+-- Add comment to document the console_logs column
+COMMENT ON COLUMN tickets.console_logs IS 'Array of console log objects captured from the customer preview page. Each object contains: type (log/warn/error/info/debug), message (string), timestamp (ISO string), and optional args (array).';

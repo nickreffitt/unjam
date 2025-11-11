@@ -22,6 +22,7 @@ export interface CustomerProfile {
   type: 'customer';
   email?: string;
   authId?: string;         // The auth system ID (e.g., Supabase Auth user ID)
+  country?: string;        // ISO country code (e.g., 'US', 'GB', 'DE')
   extensionInstalledAt?: Date;
   extensionInstalledVersion?: string;
 }
@@ -34,12 +35,15 @@ export interface EngineerProfile {
   specialties?: string[];
   githubUsername?: string;
   authId?: string;         // The auth system ID (e.g., Supabase Auth user ID)
+  country?: string;        // ISO country code (e.g., 'US', 'GB', 'DE')
   user?: User;             // 1:1 mapping with User from auth system
   extensionInstalledAt?: Date;
   extensionInstalledVersion?: string;
 }
 
 export type UserProfile = CustomerProfile | EngineerProfile;
+
+export type PayoutProvider = 'stripe' | 'payoneer' | 'unsupported';
 
 export interface ConsoleLog {
   type: 'log' | 'warn' | 'error' | 'info' | 'debug';
@@ -360,7 +364,7 @@ export interface CreditTransferResponse {
   success: boolean;
 }
 
-export type EngineerTransferStatus = 'pending' | 'completed' | 'failed';
+export type EngineerTransferStatus = 'pending' | 'pending_funds' | 'completed' | 'failed';
 
 export interface EngineerTransfer {
   id: string;
@@ -375,6 +379,7 @@ export interface EngineerTransfer {
   status: EngineerTransferStatus;
   errorMessage?: string | null;
   createdAt: Date;
+  availableForTransferAt?: Date | null; // When funds became available and transfer was created
 }
 
 export interface Rating {

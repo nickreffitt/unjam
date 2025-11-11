@@ -165,7 +165,7 @@ export class AuthManager {
    * @returns Promise that resolves with the created user profile
    * @throws Error if profile creation fails
    */
-  async createProfile(profileData: { name: string; type: 'customer' | 'engineer'; email?: string; githubUsername?: string; specialties?: string[] }): Promise<UserProfile> {
+  async createProfile(profileData: { name: string; type: 'customer' | 'engineer'; email?: string; githubUsername?: string; country?: string; specialties?: string[] }): Promise<UserProfile> {
     console.debug('AuthManager: Creating profile');
 
     // Get current user from auth store
@@ -183,6 +183,7 @@ export class AuthManager {
       type: profileData.type,
       email: profileData.email || currentUser.email || '',
       githubUsername: profileData.githubUsername,
+      country: profileData.country,
       specialties: profileData.specialties || [],
     };
 

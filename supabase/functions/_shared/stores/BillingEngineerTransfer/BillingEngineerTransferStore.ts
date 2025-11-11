@@ -46,5 +46,5 @@ export interface BillingEngineerTransferStore {
    * @param status - The transfer status to filter by
    * @returns Array of transfers with the given status
    */
-  fetchByStatus(status: 'pending' | 'completed' | 'failed'): Promise<EngineerTransfer[]>
+  fetchByStatus(status: 'pending' | 'pending_funds' | 'completed' | 'failed'): Promise<EngineerTransfer[]>
 }

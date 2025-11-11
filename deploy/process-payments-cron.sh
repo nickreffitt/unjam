@@ -9,7 +9,12 @@ else
   exit 1
 fi
 
-# Call the Supabase edge function
+# Call the ticket payment edge function
 curl -X POST "${SUPABASE_URL}/functions/v1/ticket-payment" \
+  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+  -H "Content-Type: application/json"
+
+# Call the retry pending transfers edge function
+curl -X POST "${SUPABASE_URL}/functions/v1/retry-pending-transfers" \
   -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
   -H "Content-Type: application/json"

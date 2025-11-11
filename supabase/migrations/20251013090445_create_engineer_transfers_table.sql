@@ -1,6 +1,7 @@
 -- Create engineer_transfer_status enum
 CREATE TYPE engineer_transfer_status AS ENUM (
   'pending',
+  'pending_funds',
   'completed',
   'failed'
 );
@@ -20,6 +21,7 @@ CREATE TABLE engineer_transfers (
   status engineer_transfer_status NOT NULL DEFAULT 'pending',
   error_message TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  available_for_transfer_at TIMESTAMP WITH TIME ZONE,
   CONSTRAINT fk_ticket
     FOREIGN KEY (ticket_id)
     REFERENCES tickets(id)
@@ -51,6 +53,10 @@ CREATE INDEX engineer_transfers_status_idx ON engineer_transfers (status);
 
 -- Create index on created_at for sorting by date
 CREATE INDEX engineer_transfers_created_at_idx ON engineer_transfers (created_at DESC);
+
+-- Create index on pending_funds status for retry queries
+CREATE INDEX engineer_transfers_pending_funds_idx ON engineer_transfers (status, created_at)
+  WHERE status = 'pending_funds';
 
 -- Enable Row Level Security
 ALTER TABLE engineer_transfers ENABLE ROW LEVEL SECURITY;
@@ -89,3 +95,6 @@ CREATE POLICY "Customers can update transfers for their tickets" ON engineer_tra
       SELECT id FROM profiles WHERE auth_id = (select auth.uid())
     )
   );
+
+-- Add comment explaining the available_for_transfer_at column
+COMMENT ON COLUMN engineer_transfers.available_for_transfer_at IS 'Timestamp when funds became available in Stripe and transfer was successfully created';

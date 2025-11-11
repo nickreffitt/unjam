@@ -6,6 +6,7 @@ export interface ProfileFormData {
   name: string;
   userType: UserType;
   githubUsername?: string;
+  country?: string;
 }
 
 export interface UseCreateProfileActionsReturn {
@@ -48,11 +49,16 @@ export const useCreateProfileActions = (): UseCreateProfileActionsReturn => {
         throw new Error('GitHub username is required for engineers');
       }
 
+      if (profileData.userType === 'engineer' && !profileData.country?.trim()) {
+        throw new Error('Country is required for engineers');
+      }
+
       // Use AuthManager to create the profile in the database
       const newProfile = await authManager.createProfile({
         name: profileData.name.trim(),
         type: profileData.userType,
         githubUsername: profileData.githubUsername?.trim(),
+        country: profileData.country?.trim(),
         specialties: profileData.userType === 'engineer' ? [] : undefined,
       });
 

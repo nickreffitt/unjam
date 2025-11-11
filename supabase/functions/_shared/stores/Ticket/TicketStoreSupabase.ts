@@ -88,7 +88,7 @@ export class TicketStoreSupabase implements TicketStore {
       markAsFixedAt: data.marked_as_fixed_at ? new Date(data.marked_as_fixed_at) : null
     }
 
-    console.info(`[TicketStoreSupabase] Updated ticket ${ticketId} status successfully`)
+    console.info(`[TicketStoreSupabase] Updated ticket ${ticketId} status successfully to ${data.status}`)
     return ticketInfo
   }
 

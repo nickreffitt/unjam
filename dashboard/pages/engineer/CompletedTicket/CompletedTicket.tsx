@@ -35,6 +35,15 @@ const CompletedTicket: React.FC = () => {
       return "Completed";
     }
 
+    // Handle payment-failed status
+    if (ticket.status === 'payment-failed') {
+      if (ticket.claimedAt && ticket.resolvedAt) {
+        const completionTime = formatCompletionTime(ticket.claimedAt, ticket.resolvedAt);
+        return `${completionTime} - Payment Failed`;
+      }
+      return "Payment Failed";
+    }
+
     // Handle pending-payment status
     if (ticket.status === 'pending-payment') {
       if (ticket.claimedAt && ticket.resolvedAt) {

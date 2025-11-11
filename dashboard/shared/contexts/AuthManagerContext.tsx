@@ -48,8 +48,6 @@ export const AuthManagerProvider: React.FC<AuthManagerProviderProps> = ({ childr
       return authManagerInstance;
     }
 
-    console.debug('[AuthManagerProvider] Creating NEW AuthManager singleton');
-
     // Check if we should use local storage implementation (for testing/development)
     const useLocalAuth = import.meta.env.VITE_USE_LOCAL_AUTH === 'true';
     const authUserEventEmitter = new AuthUserEventEmitterLocal();

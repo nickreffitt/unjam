@@ -87,8 +87,7 @@ const TicketPreviewContent: React.FC = () => {
         title: "Ticket Not Found",
         message: "The ticket you're looking for doesn't exist or may have already been claimed.",
         redirectPath: "/new",
-        redirectLabel: "Back to New Tickets",
-        emoji: "🔍"
+        redirectLabel: "Back to New Tickets"
       }}
     />
     </div>

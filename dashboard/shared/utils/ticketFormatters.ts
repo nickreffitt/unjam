@@ -104,6 +104,13 @@ export const getStatusDisplay = (status: string) => {
         textColor: 'unjam-text-orange-800',
         dotColor: 'unjam-bg-orange-400'
       };
+    case 'payment-failed':
+      return {
+        text: 'Payment Failed',
+        bgColor: 'unjam-bg-red-100',
+        textColor: 'unjam-text-red-800',
+        dotColor: 'unjam-bg-red-400'
+      };
     default:
       return {
         text: status,
@@ -143,6 +150,13 @@ export const getCompletionMessage = (status: string) => {
         text: 'This ticket has been marked as fixed. Waiting for customer to confirm the fix.',
         bgColor: 'bg-yellow-100',
         textColor: 'text-yellow-800'
+      };
+    case 'payment-failed':
+      return {
+        icon: '❌',
+        text: 'Payment processing failed. Our team has been notified and will resolve this issue.',
+        bgColor: 'bg-red-100',
+        textColor: 'text-red-800'
       };
     default:
       return {

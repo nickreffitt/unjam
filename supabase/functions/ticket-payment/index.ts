@@ -11,6 +11,7 @@ import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/
 import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
 import { BillingMeterServiceStripe } from "@services/BillingMeter/index.ts";
 import { BillingEngineerPayoutServiceStripe } from "@services/BillingEngineerPayout/index.ts";
+import { BillingBalanceServiceStripe } from "@services/BillingBalance/index.ts";
 
 console.debug("Ticket Payment queue processor loaded")
 
@@ -66,6 +67,7 @@ export const handler = async (request: Request): Promise<Response> => {
     const creditsService = new BillingCreditsServiceStripe(stripe)
     const meterService = new BillingMeterServiceStripe(stripe)
     const payoutService = new BillingEngineerPayoutServiceStripe(stripe)
+    const balanceService = new BillingBalanceServiceStripe(stripe)
 
     // Initialize payment handler
     const paymentHandler = new PaymentHandler(
@@ -76,7 +78,8 @@ export const handler = async (request: Request): Promise<Response> => {
       subscriptionService,
       creditsService,
       meterService,
-      payoutService
+      payoutService,
+      balanceService
     )
 
     const queueName = 'ticket_payments'
