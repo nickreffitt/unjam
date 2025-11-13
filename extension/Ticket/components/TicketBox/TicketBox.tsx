@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, MessageCircle, X, Copy, Check } from 'lucide-react';
+import { Clock, CheckCircle, MessageCircle, X, Copy, Check, XCircle } from 'lucide-react';
 import { type Ticket } from '@common/types';
 import { useTicketState } from '@extension/Ticket/hooks/useTicketState';
 import { useTicketActions } from '@extension/Ticket/hooks/useTicketActions';
+import { useTicketManager } from '@extension/Ticket/contexts/TicketManagerContext';
 import Rating from '@extension/Rating/Rating';
 import { shouldShowCompletedState } from '@common/util/ticketStatusHelpers';
 
@@ -94,8 +95,14 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   const {
     handleMarkFixed,
     handleConfirmFixed,
-    handleMarkStillBroken
+    handleMarkStillBroken,
+    handleCancelTicket
   } = useTicketActions(ticket, setActiveTicket, setIsTicketVisible);
+
+  const { ticketManager } = useTicketManager();
+
+  // Check if cancel button should be shown
+  const canCancel = ticket ? ticketManager.canCancelTicket(ticket) : false;
 
   // Force re-render every second when in awaiting-confirmation state to check if timer expired
   useEffect(() => {
@@ -106,6 +113,17 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       return () => clearInterval(interval);
     }
   }, [ticket?.status, ticket?.autoCompleteTimeoutAt]);
+
+  // Force re-render every second when ticket can be cancelled to update cancel button visibility
+  // This ensures the cancel button disappears after 5 minutes for in-progress/awaiting-confirmation tickets
+  useEffect(() => {
+    if (ticket && (ticket.status === 'in-progress' || ticket.status === 'awaiting-confirmation') && ticket.claimedAt) {
+      const interval = setInterval(() => {
+        forceUpdate({});
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [ticket?.status, ticket?.claimedAt]);
 
   if (!ticket) return null;
 
@@ -222,7 +240,17 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           <div className="unjam-text-2xl unjam-text-black unjam-font-mono unjam-mb-1">
             <Timer startTime={getTimerStartTime()} />
           </div>
-          <p className="unjam-text-xs unjam-text-gray-500">ETA is ~2:30</p>
+          <p className="unjam-text-xs unjam-text-gray-500 unjam-mb-4">ETA is ~2:30</p>
+
+          {canCancel && (
+            <button
+              onClick={handleCancelTicket}
+              className="unjam-w-full unjam-text-red-600 unjam-bg-white unjam-border unjam-border-red-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-red-50"
+            >
+              <XCircle size={16} />
+              Cancel Ticket
+            </button>
+          )}
         </div>
       )}
 
@@ -253,6 +281,15 @@ const TicketBox: React.FC<TicketBoxProps> = ({
               <CheckCircle size={16} />
               This is fixed
             </button>
+            {canCancel && (
+              <button
+                onClick={handleCancelTicket}
+                className="unjam-w-full unjam-text-red-600 unjam-bg-white unjam-border unjam-border-red-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-red-50"
+              >
+                <XCircle size={16} />
+                Cancel Ticket
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -266,21 +303,32 @@ const TicketBox: React.FC<TicketBoxProps> = ({
             </div>
           )}
 
-          <div className="unjam-flex unjam-gap-2">
-            <button
-              onClick={handleConfirmFixed}
-              className="unjam-flex-1 unjam-width-half unjam-bg-white unjam-text-black unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
-            >
-              <CheckCircle size={14} />
-              Fixed
-            </button>
-            <button
-              onClick={handleMarkStillBroken}
-              className="unjam-flex-1 unjam-width-half unjam-bg-white unjam-text-black unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
-            >
-              <X size={14} />
-              No
-            </button>
+          <div className="unjam-space-y-2">
+            <div className="unjam-flex unjam-gap-2">
+              <button
+                onClick={handleConfirmFixed}
+                className="unjam-flex-1 unjam-width-half unjam-bg-white unjam-text-black unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
+              >
+                <CheckCircle size={14} />
+                Fixed
+              </button>
+              <button
+                onClick={handleMarkStillBroken}
+                className="unjam-flex-1 unjam-width-half unjam-bg-white unjam-text-black unjam-border unjam-border-gray-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-1 hover:unjam-bg-gray-50"
+              >
+                <X size={14} />
+                No
+              </button>
+            </div>
+            {canCancel && (
+              <button
+                onClick={handleCancelTicket}
+                className="unjam-w-full unjam-text-red-600 unjam-bg-white unjam-border unjam-border-red-300 unjam-rounded unjam-py-2 unjam-px-4 unjam-text-sm unjam-flex unjam-items-center unjam-justify-center unjam-gap-2 hover:unjam-bg-red-50"
+              >
+                <XCircle size={16} />
+                Cancel Ticket
+              </button>
+            )}
           </div>
         </div>
       )}

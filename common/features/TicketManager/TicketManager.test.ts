@@ -704,4 +704,338 @@ describe('TicketManager', () => {
       ).rejects.toThrow('You can only mark your own tickets as still broken');
     });
   });
+
+  describe('cancelTicket', () => {
+    it('should allow customer to cancel a waiting ticket', async () => {
+      // Given a customer TicketManager and a waiting ticket
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const waitingTicket = {
+        id: 'TKT-999',
+        status: 'waiting' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        elapsedTime: 0
+      };
+      ticketStore.create(waitingTicket);
+
+      // When cancelling the ticket
+      const cancelledTicket = await ticketManager.cancelTicket('TKT-999');
+
+      // Then the ticket status should be cancelled
+      expect(cancelledTicket.status).toBe('cancelled');
+      expect(cancelledTicket.id).toBe('TKT-999');
+    });
+
+    it('should allow customer to cancel an in-progress ticket within 5 minutes', async () => {
+      // Given a customer TicketManager and an in-progress ticket claimed less than 5 minutes ago
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const claimedAt = new Date(Date.now() - 2 * 60 * 1000); // 2 minutes ago
+      const inProgressTicket = {
+        id: 'TKT-999',
+        status: 'in-progress' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        claimedAt,
+        elapsedTime: 0
+      };
+      ticketStore.create(inProgressTicket);
+
+      // When cancelling the ticket
+      const cancelledTicket = await ticketManager.cancelTicket('TKT-999');
+
+      // Then the ticket status should be cancelled
+      expect(cancelledTicket.status).toBe('cancelled');
+      expect(cancelledTicket.id).toBe('TKT-999');
+    });
+
+    it('should allow customer to cancel an awaiting-confirmation ticket within 5 minutes', async () => {
+      // Given a customer TicketManager and an awaiting-confirmation ticket claimed less than 5 minutes ago
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const claimedAt = new Date(Date.now() - 3 * 60 * 1000); // 3 minutes ago
+      const awaitingConfirmationTicket = {
+        id: 'TKT-999',
+        status: 'awaiting-confirmation' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        claimedAt,
+        markedAsFixedAt: new Date(),
+        autoCompleteTimeoutAt: new Date(Date.now() + 30 * 60 * 1000),
+        elapsedTime: 0
+      };
+      ticketStore.create(awaitingConfirmationTicket);
+
+      // When cancelling the ticket
+      const cancelledTicket = await ticketManager.cancelTicket('TKT-999');
+
+      // Then the ticket status should be cancelled
+      expect(cancelledTicket.status).toBe('cancelled');
+      expect(cancelledTicket.id).toBe('TKT-999');
+    });
+
+    it('should not allow customer to cancel an in-progress ticket after 5 minutes', async () => {
+      // Given a customer TicketManager and an in-progress ticket claimed more than 5 minutes ago
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const claimedAt = new Date(Date.now() - 6 * 60 * 1000); // 6 minutes ago
+      const inProgressTicket = {
+        id: 'TKT-999',
+        status: 'in-progress' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        claimedAt,
+        elapsedTime: 0
+      };
+      ticketStore.create(inProgressTicket);
+
+      // When trying to cancel the ticket
+      // Then it should throw an error
+      await expect(
+        ticketManager.cancelTicket('TKT-999')
+      ).rejects.toThrow('This ticket cannot be cancelled at this time');
+    });
+
+    it('should not allow customer to cancel an awaiting-confirmation ticket after 5 minutes', async () => {
+      // Given a customer TicketManager and an awaiting-confirmation ticket claimed more than 5 minutes ago
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const claimedAt = new Date(Date.now() - 7 * 60 * 1000); // 7 minutes ago
+      const awaitingConfirmationTicket = {
+        id: 'TKT-999',
+        status: 'awaiting-confirmation' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        claimedAt,
+        markedAsFixedAt: new Date(),
+        autoCompleteTimeoutAt: new Date(Date.now() + 30 * 60 * 1000),
+        elapsedTime: 0
+      };
+      ticketStore.create(awaitingConfirmationTicket);
+
+      // When trying to cancel the ticket
+      // Then it should throw an error
+      await expect(
+        ticketManager.cancelTicket('TKT-999')
+      ).rejects.toThrow('This ticket cannot be cancelled at this time');
+    });
+
+    it('should not allow customer to cancel a completed ticket', async () => {
+      // Given a customer TicketManager and a completed ticket
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const completedTicket = {
+        id: 'TKT-999',
+        status: 'completed' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        claimedAt: new Date(),
+        resolvedAt: new Date(),
+        elapsedTime: 0
+      };
+      ticketStore.create(completedTicket);
+
+      // When trying to cancel the ticket
+      // Then it should throw an error
+      await expect(
+        ticketManager.cancelTicket('TKT-999')
+      ).rejects.toThrow('This ticket cannot be cancelled at this time');
+    });
+
+    it('should throw error when engineer tries to cancel a ticket', async () => {
+      // Given an engineer TicketManager and a waiting ticket
+      const ticketManager = new TicketManager(mockEngineer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const waitingTicket = {
+        id: 'TKT-999',
+        status: 'waiting' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        elapsedTime: 0
+      };
+      ticketStore.create(waitingTicket);
+
+      // When engineer tries to cancel the ticket
+      // Then it should throw an error
+      await expect(
+        ticketManager.cancelTicket('TKT-999')
+      ).rejects.toThrow('Only customers can cancel tickets');
+    });
+
+    it('should throw error when ticket is not found', async () => {
+      // Given a customer TicketManager
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+
+      // When trying to cancel non-existent ticket
+      // Then it should throw an error
+      await expect(
+        ticketManager.cancelTicket('NONEXISTENT')
+      ).rejects.toThrow('Ticket with ID NONEXISTENT not found');
+    });
+
+    it('should throw error when customer tries to cancel another customer\'s ticket', async () => {
+      // Given a customer TicketManager and another customer's ticket
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const otherCustomer = {
+        id: 'CUST-OTHER',
+        name: 'Other Customer',
+        type: 'customer' as const,
+        email: 'other@customer.com'
+      };
+      const otherCustomerTicket = {
+        id: 'TKT-999',
+        status: 'waiting' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: otherCustomer,
+        createdAt: new Date(),
+        elapsedTime: 0
+      };
+      ticketStore.create(otherCustomerTicket);
+
+      // When trying to cancel another customer's ticket
+      // Then it should throw an error
+      await expect(
+        ticketManager.cancelTicket('TKT-999')
+      ).rejects.toThrow('You can only cancel your own tickets');
+    });
+  });
+
+  describe('canCancelTicket', () => {
+    it('should return true for waiting tickets', () => {
+      // Given a customer TicketManager and a waiting ticket
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const waitingTicket = {
+        id: 'TKT-999',
+        status: 'waiting' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        elapsedTime: 0
+      };
+
+      // When checking if ticket can be cancelled
+      const canCancel = ticketManager.canCancelTicket(waitingTicket);
+
+      // Then it should return true
+      expect(canCancel).toBe(true);
+    });
+
+    it('should return true for in-progress tickets within 5 minutes', () => {
+      // Given a customer TicketManager and an in-progress ticket claimed less than 5 minutes ago
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const claimedAt = new Date(Date.now() - 2 * 60 * 1000); // 2 minutes ago
+      const inProgressTicket = {
+        id: 'TKT-999',
+        status: 'in-progress' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        claimedAt,
+        elapsedTime: 0
+      };
+
+      // When checking if ticket can be cancelled
+      const canCancel = ticketManager.canCancelTicket(inProgressTicket);
+
+      // Then it should return true
+      expect(canCancel).toBe(true);
+    });
+
+    it('should return false for in-progress tickets after 5 minutes', () => {
+      // Given a customer TicketManager and an in-progress ticket claimed more than 5 minutes ago
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const claimedAt = new Date(Date.now() - 6 * 60 * 1000); // 6 minutes ago
+      const inProgressTicket = {
+        id: 'TKT-999',
+        status: 'in-progress' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        claimedAt,
+        elapsedTime: 0
+      };
+
+      // When checking if ticket can be cancelled
+      const canCancel = ticketManager.canCancelTicket(inProgressTicket);
+
+      // Then it should return false
+      expect(canCancel).toBe(false);
+    });
+
+    it('should return false for completed tickets', () => {
+      // Given a customer TicketManager and a completed ticket
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const completedTicket = {
+        id: 'TKT-999',
+        status: 'completed' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        claimedAt: new Date(),
+        resolvedAt: new Date(),
+        elapsedTime: 0
+      };
+
+      // When checking if ticket can be cancelled
+      const canCancel = ticketManager.canCancelTicket(completedTicket);
+
+      // Then it should return false
+      expect(canCancel).toBe(false);
+    });
+
+    it('should return false for in-progress tickets without claimedAt', () => {
+      // Given a customer TicketManager and an in-progress ticket without claimedAt
+      const ticketManager = new TicketManager(mockCustomer, ticketStore, mockTicketChanges, autoCompleteTimeoutSeconds);
+      const inProgressTicket = {
+        id: 'TKT-999',
+        status: 'in-progress' as const,
+        summary: 'Test ticket',
+        estimatedTime: '5-10 min',
+        problemDescription: 'Test problem',
+        createdBy: mockCustomer,
+        createdAt: new Date(),
+        assignedTo: mockEngineer,
+        elapsedTime: 0
+      };
+
+      // When checking if ticket can be cancelled
+      const canCancel = ticketManager.canCancelTicket(inProgressTicket);
+
+      // Then it should return false
+      expect(canCancel).toBe(false);
+    });
+  });
 });
