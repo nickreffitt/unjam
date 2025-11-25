@@ -6,6 +6,7 @@ import { Clock, Check, Eye, type LucideIcon } from 'lucide-react';
 import EmptyState from '@dashboard/engineer/TicketList/components/EmptyState/EmptyState';
 import BillingVerificationAlert from '@dashboard/engineer/BillingAccount/components/BillingVerificationAlert/BillingVerificationAlert';
 import { useBillingAccountState } from '@dashboard/engineer/BillingAccount/hooks/useBillingAccountState';
+import { useBillingBankTransferAccountState } from '@dashboard/engineer/BillingAccount/hooks/useBillingBankTransferAccountState';
 
 interface EmptyStateConfig {
   icon: LucideIcon;
@@ -40,9 +41,10 @@ const TicketsTableContent: React.FC<TicketsTableProps> = ({
   timeSource = 'elapsedTime'
 }) => {
   const [, setCurrentTime] = useState(new Date());
-  const { engineerAccount } = useBillingAccountState();
+  const { isBillingAccountVerified } = useBillingAccountState();
+  const { isBillingBankTransferAccountVerified } = useBillingBankTransferAccountState();
 
-  const canPerformActions = engineerAccount?.verificationStatus === 'active' || engineerAccount?.verificationStatus === 'eventually_due';
+  const canPerformActions = isBillingAccountVerified() || isBillingBankTransferAccountVerified();
 
   // Update current time every second for live time calculations
   useEffect(() => {

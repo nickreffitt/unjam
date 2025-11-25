@@ -43,7 +43,7 @@ export interface EngineerProfile {
 
 export type UserProfile = CustomerProfile | EngineerProfile;
 
-export type PayoutProvider = 'stripe' | 'payoneer' | 'unsupported';
+export type PayoutProvider = 'stripe' | 'bank_transfer' | 'unsupported';
 
 export interface ConsoleLog {
   type: 'log' | 'warn' | 'error' | 'info' | 'debug';
@@ -323,6 +323,217 @@ export interface EngineerAccountEvent {
 export type BillingEvent = CustomerEvent | SubscriptionEvent | InvoiceEvent | CheckoutSessionEvent;
 export type BillingEngineerEvent = EngineerAccountEvent;
 
+// Bank Transfer API types for engineer recipient forms
+export interface BankTransferQuote {
+  id: string;
+  sourceCurrency: string;
+  targetCurrency: string;
+  sourceAmount: number;
+  targetAmount: number;
+  rate: number;
+  fee: number;
+  estimatedDelivery: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+export interface BankTransferFormField {
+  name: string;
+  group: Array<{
+    key: string;
+    type: string;
+    required: boolean;
+    displayFormat?: string;
+    example?: string;
+    minLength?: number;
+    maxLength?: number;
+    validationRegexp?: string;
+    validationAsync?: string;
+    refreshRequirementsOnChange?: boolean;
+    valuesAllowed?: Array<{
+      key: string;
+      name: string;
+    }>;
+  }>;
+}
+
+export interface BankTransferAccountRequirements {
+  type: string;
+  fields: BankTransferFormField[];
+}
+
+export interface BankTransferRecipientFormData {
+  quoteId: string;
+  requirements: BankTransferAccountRequirements;
+}
+
+export interface BankTransferRecipient {
+  id?: string;
+  external_id: string;
+  name: string;
+  country: string;
+  summary?: string;
+  hash?: string;
+  active: boolean;
+}
+
+export interface BankTransferRecipientDetails {
+  [key: string]: any;
+}
+
+// Bank transfer beneficiary types
+export interface BeneficiaryFormValue {
+  beneficiary: {
+    additional_info?: {
+      personal_email?: string;
+      [key: string]: any;
+    };
+    address?: {
+      city?: string;
+      country_code?: string;
+      postcode?: string;
+      state?: string;
+      street_address?: string;
+      [key: string]: any;
+    };
+    bank_details?: {
+      account_currency?: string;
+      account_name?: string;
+      account_number?: string;
+      account_routing_type1?: string;
+      account_routing_type2?: string;
+      account_routing_value1?: string;
+      account_routing_value2?: string;
+      bank_country_code?: string;
+      iban?: string;
+      local_clearing_system?: string;
+      swift_code?: string;
+      [key: string]: any;
+    };
+    company_name?: string;
+    date_of_birth?: string;
+    entity_type?: 'PERSONAL' | 'COMPANY';
+    first_name?: string;
+    last_name?: string;
+    [key: string]: any;
+  };
+  nickname?: string;
+  transfer_methods?: Array<'LOCAL' | 'SWIFT'>;
+}
+
+export interface BeneficiaryResponse {
+  id: string;
+  beneficiary: {
+    additional_info?: Record<string, any>;
+    address?: Record<string, any>;
+    bank_details?: Record<string, any>;
+    company_name?: string;
+    date_of_birth?: string;
+    entity_type?: string;
+    first_name?: string;
+    last_name?: string;
+  };
+  nickname?: string;
+  transfer_methods?: string[];
+  payer_entity_type?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type BankTransferBatchGroupStatus = 'DRAFTING' | 'IN_APPROVAL' | 'APPROVAL_RECALLED' | 'APPROVAL_REJECTED' | 'APPROVAL_BLOCKED' | 'SCHEDULED' | 'OVERDUE' | 'BOOKING' | 'PARTIALLY_BOOKED' | 'BOOKED' | 'FAILED' | 'CANCELLATION_REQUESTED' | 'CANCELLED';
+
+export interface BatchTransferResponse {
+  id: string;
+  name: string;
+  request_id: string;
+  short_reference_id: string;
+  status: BankTransferBatchGroupStatus;
+  total_item_count: number;
+  valid_item_count: number;
+  transfer_date?: string;
+  updated_at: string;
+  remarks?: string;
+  metadata?: Record<string, any>;
+  funding?: {
+    deposit_type?: string;
+    failure_reason?: string;
+    funding_source_id?: string;
+    reference?: string;
+    status?: string;
+  };
+  quote_summary?: {
+    expires_at?: string;
+    last_quoted_at?: string;
+    quotes?: Array<{
+      amount_beneficiary_receives?: number;
+      amount_payer_pays?: number;
+      client_rate?: number;
+      currency_pair?: string;
+      fee_amount?: number;
+      fee_currency?: string;
+      source_currency?: string;
+      transfer_currency?: string;
+    }>;
+  };
+}
+
+/**
+ * Response from GET /api/v1/batch_transfers/{id}/items
+ */
+export interface BatchTransferItemsResponse {
+  items: Array<{
+    id: string; // External batch item ID
+    request_id: string; // Our request_id for matching
+    status: string;
+    transfer_id?: string; // Transfer ID if booked
+    updated_at: string;
+  }>;
+  page_after?: string;
+  page_before?: string;
+}
+
+/**
+ * Request for adding an item to a batch transfer
+ */
+export interface AddBatchItemRequest {
+  beneficiaryId: string;
+  sourceCurrency: string;
+  transferCurrency: string;
+  transferAmount: number; // In major units (dollars, not cents)
+  transferMethod: 'LOCAL' | 'SWIFT';
+  reason: string;
+  reference: string;
+  requestId: string;
+}
+
+export interface BankTransferBatchGroupDetails {
+  id: string; // internal ID
+  externalBatchGroupId: string; // ID from external provider API
+  name: string;
+  version: number;
+  status: BankTransferBatchGroupStatus;
+  transfers: string[]; // Array of transfer IDs in the batch
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt?: Date | null;
+  cancelledAt?: Date | null;
+}
+
+export type BankTransferBatchGroupItemStatus = 'pending' | 'processing' | 'sent' | 'paid' | 'failed' | 'cancelled';
+
+export interface BankTransferBatchGroupItem {
+  id: string;
+  externalId: string;
+  batchGroupId: string;
+  engineerId: string;
+  externalEngineerId: string;
+  totalAmount: number; // Sum of amounts for engineer in cents
+  totalPlatformProfit: number; // Sum of platform profits for engineer in cents
+  status: BankTransferBatchGroupItemStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // GitHub Webhook Event types
 export interface CollaboratorRemovedEvent {
   repositoryId: number;
@@ -366,12 +577,15 @@ export interface CreditTransferResponse {
 
 export type EngineerTransferStatus = 'pending' | 'pending_funds' | 'completed' | 'failed';
 
+export type EngineerTransferService = 'stripe_connect' | 'bank_transfer';
+
 export interface EngineerTransfer {
   id: string;
   ticketId: string;
   engineerId: string;
   customerId: string;
-  stripeTransferId: string | null;
+  service: EngineerTransferService;
+  batchGroupItemId?: string | null;
   amount: number; // Engineer payout amount in cents
   creditsUsed: number; // Number of credits consumed (1-2, based on hours)
   creditValue: number; // Customer credit value in cents (creditPrice × creditsUsed)

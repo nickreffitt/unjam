@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AlertCircle, AlertTriangle, Loader2, Settings } from 'lucide-react';
 import { useBillingAccountState } from '@dashboard/engineer/BillingAccount/hooks/useBillingAccountState';
 import type { EngineerAccountVerificationStatus } from '@common/types';
+import { useBillingBankTransferAccountState } from '../../hooks/useBillingBankTransferAccountState';
 
 type AlertType = 'info' | 'warning' | 'error';
 
@@ -103,10 +104,56 @@ const getAlertStyles = (type: AlertType) => {
 
 const BillingVerificationAlert: React.FC = () => {
   const { engineerAccount, isLoading } = useBillingAccountState();
+  const { bankTransferAccount, isBillingBankTransferAccountVerified } = useBillingBankTransferAccountState();
 
   // Wait for loading to complete before showing alert
   if (isLoading) {
     return null;
+  }
+
+  if (bankTransferAccount && isBillingBankTransferAccountVerified()) {
+    return null;
+  }
+
+  // Show alert for bank transfer account verification issues first
+  if (bankTransferAccount && !isBillingBankTransferAccountVerified()) {
+    const alertConfig: AlertConfig = {
+      type: 'error',
+      icon: AlertCircle,
+      title: 'Invalid Bank Transfer Details',
+      message: 'Please review your bank account details in the settings in order to claim tickets.',
+      showLink: true
+    };
+
+    const styles = getAlertStyles(alertConfig.type);
+    const Icon = alertConfig.icon;
+
+    return (
+      <div className={`unjam-mb-6 unjam-border unjam-rounded-lg unjam-p-4 ${styles.container}`}>
+        <div className="unjam-flex unjam-items-start unjam-gap-3">
+          <div className={`unjam-flex-shrink-0 unjam-w-8 unjam-h-8 unjam-rounded-full unjam-flex unjam-items-center unjam-justify-center ${styles.iconBg}`}>
+            <Icon size={18} className={styles.iconColor} />
+          </div>
+          <div className="unjam-flex-1">
+            <h3 className={`unjam-text-sm unjam-font-semibold ${styles.titleColor}`}>
+              {alertConfig.title}
+            </h3>
+            <p className={`unjam-mt-1 unjam-text-sm ${styles.messageColor}`}>
+              {alertConfig.message}
+            </p>
+            {alertConfig.showLink && (
+              <Link
+                to="/settings"
+                className={`unjam-mt-2 unjam-inline-flex unjam-items-center unjam-gap-1.5 unjam-text-sm unjam-font-medium ${styles.linkColor} unjam-transition-colors`}
+              >
+                <Settings size={16} />
+                Go to Settings
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Show alert for no account or based on verification status

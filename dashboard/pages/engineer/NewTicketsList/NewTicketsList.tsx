@@ -6,7 +6,7 @@ import TicketsTable from '@dashboard/engineer/TicketList/components/TicketsTable
 import { Ticket as TicketIcon, ToggleLeft, ToggleRight, RefreshCw, Plus, X } from 'lucide-react';
 import { type Ticket, type ErrorDisplay } from '@common/types';
 
-const NewTicketsList: React.FC = () => {
+const NewTicketsList: React.FC = React.memo(() => {
   const { tickets, refreshTickets } = useTicketListState(['waiting']);
   const { handleClaimTicket } = useTicketActions();
   const { createTestTicket } = useTicketListActions();
@@ -110,6 +110,6 @@ const NewTicketsList: React.FC = () => {
       />
     </div>
   );
-};
+});
 
 export default NewTicketsList;

@@ -6,7 +6,7 @@ import type { PayoutProvider } from '@common/types';
  * Note: This list should be updated periodically as Stripe expands to new markets
  * Last updated: November 2025
  */
-const STRIPE_CONNECT_COUNTRIES = [
+export const STRIPE_CONNECT_COUNTRIES = [
   'US', // United States
   'GB', // United Kingdom
   'CA', // Canada
@@ -57,35 +57,91 @@ const STRIPE_CONNECT_COUNTRIES = [
 ];
 
 /**
- * List of countries where Payoneer is supported
- * Source: https://www.payoneer.com/resources/tools/global-payment-capabilities/
- * Note: Payoneer supports 200+ countries. This list represents major markets.
- * For a complete list, refer to Payoneer's official documentation.
- * Last updated: November 2025
+ * List of countries where Wise supports sending money (for engineer payouts)
+ * Source: https://wise.com/help/articles/2571942/what-countriesregions-can-i-send-to
+ * Note: This list represents countries where Wise can send payments to
+ * Last updated: January 2025
  */
-const PAYONEER_COUNTRIES = [
-  // North America
-  'US', 'CA', 'MX',
+export const BANK_TRANSFER_COUNTRIES = [
   // Europe
-  'GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'CH', 'SE', 'NO', 'DK', 'FI',
-  'PL', 'CZ', 'HU', 'RO', 'BG', 'GR', 'PT', 'IE', 'HR', 'SK', 'SI', 'LT', 'LV',
-  'EE', 'CY', 'MT', 'LU', 'IS',
+  'AT', // Austria
+  'BE', // Belgium
+  'BG', // Bulgaria
+  'HR', // Croatia
+  'CY', // Cyprus
+  'CZ', // Czech Republic
+  'DK', // Denmark
+  'EE', // Estonia
+  'FI', // Finland
+  'FR', // France
+  'DE', // Germany
+  'GR', // Greece
+  'HU', // Hungary
+  'IE', // Ireland
+  'IT', // Italy
+  'LV', // Latvia
+  'LI', // Liechtenstein
+  'LT', // Lithuania
+  'LU', // Luxembourg
+  'MT', // Malta
+  'NL', // Netherlands
+  'NO', // Norway
+  'PL', // Poland
+  'PT', // Portugal
+  'RO', // Romania
+  'SK', // Slovakia
+  'SI', // Slovenia
+  'ES', // Spain
+  'SE', // Sweden
+  'CH', // Switzerland
+  'GB', // United Kingdom
+  'UA', // Ukraine
+  'TR', // Turkey
+
+  // Americas
+  'AR', // Argentina
+  'BR', // Brazil
+  'CA', // Canada
+  'CL', // Chile
+  'CO', // Colombia
+  'CR', // Costa Rica
+  'GT', // Guatemala
+  'MX', // Mexico
+  'US', // United States
+  'UY', // Uruguay
+
   // Asia-Pacific
-  'AU', 'NZ', 'SG', 'HK', 'JP', 'KR', 'CN', 'IN', 'MY', 'TH', 'ID', 'PH', 'VN',
-  'TW', 'BD', 'PK', 'LK',
+  'AU', // Australia
+  'BD', // Bangladesh
+  'CN', // China
+  'GE', // Georgia
+  'HK', // Hong Kong
+  'IN', // India
+  'ID', // Indonesia
+  'JP', // Japan
+  'MY', // Malaysia
+  'NP', // Nepal
+  'NZ', // New Zealand
+  'PK', // Pakistan
+  'PH', // Philippines
+  'SG', // Singapore
+  'KR', // South Korea
+  'LK', // Sri Lanka
+  'TH', // Thailand
+  'VN', // Vietnam
+
   // Middle East & Africa
-  'AE', 'SA', 'IL', 'TR', 'EG', 'ZA', 'NG', 'KE', 'GH', 'MA', 'TN', 'JO', 'LB',
-  'KW', 'QA', 'BH', 'OM',
-  // Latin America
-  'BR', 'AR', 'CL', 'CO', 'PE', 'VE', 'EC', 'BO', 'UY', 'PY', 'CR', 'PA', 'GT',
-  'DO', 'CU', 'HN', 'NI', 'SV', 'JM', 'TT',
-  // Eastern Europe & Central Asia
-  'RU', 'UA', 'BY', 'KZ', 'GE', 'AM', 'AZ', 'MD', 'UZ', 'KG', 'TJ', 'TM', 'MN',
-  // Additional countries
-  'AL', 'BA', 'MK', 'RS', 'ME', 'XK', 'DZ', 'LY', 'SD', 'ET', 'UG', 'TZ', 'ZW',
-  'ZM', 'MW', 'MZ', 'AO', 'NA', 'BW', 'SN', 'CI', 'CM', 'CD', 'MU', 'RE', 'SC',
-  'MG', 'RW', 'BJ', 'BF', 'TG', 'ML', 'NE', 'TD', 'GN', 'LR', 'SL', 'GM', 'GW',
-  'MR', 'CF', 'CG', 'GA', 'GQ', 'ST', 'DJ', 'SO', 'BI', 'KM', 'CV', 'SZ', 'LS',
+  'EG', // Egypt
+  'GH', // Ghana
+  'IL', // Israel
+  'KE', // Kenya
+  'MA', // Morocco
+  'NG', // Nigeria
+  'ZA', // South Africa
+  'TZ', // Tanzania
+  'UG', // Uganda
+  'AE', // United Arab Emirates
+  'ZM', // Zambia
 ];
 
 /**
@@ -94,7 +150,7 @@ const PAYONEER_COUNTRIES = [
  * @param countryCode - ISO 3166-1 alpha-2 country code (e.g., 'US', 'GB', 'DE')
  * @returns The payout provider available for the country:
  *   - 'stripe': Stripe Connect is supported (preferred)
- *   - 'payoneer': Only Payoneer is supported
+ *   - 'wise': Only Wise is supported
  *   - 'unsupported': Neither provider supports this country
  */
 export function getPayoutProvider(countryCode: string | undefined): PayoutProvider {
@@ -109,9 +165,9 @@ export function getPayoutProvider(countryCode: string | undefined): PayoutProvid
     return 'stripe';
   }
 
-  // Fall back to Payoneer
-  if (PAYONEER_COUNTRIES.includes(upperCountryCode)) {
-    return 'payoneer';
+  // Fall back to Wise
+  if (BANK_TRANSFER_COUNTRIES.includes(upperCountryCode)) {
+    return 'bank_transfer';
   }
 
   // Country not supported by either provider
@@ -129,14 +185,13 @@ export function isStripeConnectSupported(countryCode: string | undefined): boole
 }
 
 /**
- * Checks if Payoneer is supported for a given country
+ * Checks if Wise is supported for a given country
  *
  * @param countryCode - ISO 3166-1 alpha-2 country code
  * @returns true if Payoneer is supported in this country
  */
-export function isPayoneerSupported(countryCode: string | undefined): boolean {
-  const provider = getPayoutProvider(countryCode);
-  return provider === 'stripe' || provider === 'payoneer';
+export function isBankTransferSupported(countryCode: string | undefined): boolean {
+  return getPayoutProvider(countryCode) === 'bank_transfer';
 }
 
 /**
@@ -151,8 +206,8 @@ export function getPayoutProviderMessage(countryCode: string | undefined): strin
   switch (provider) {
     case 'stripe':
       return 'Stripe Connect is available for payouts in your country.';
-    case 'payoneer':
-      return 'Payoneer is available for payouts in your country. Stripe Connect is not currently supported.';
+    case 'bank_transfer':
+      return 'Bank Transfer is available for payouts in your country.';
     case 'unsupported':
       return "We don't currently support payouts in your country. Please contact support for more information.";
   }

@@ -7,15 +7,17 @@ import TicketPreviewLayout from '@dashboard/engineer/Ticket/components/TicketDet
 import { X } from 'lucide-react';
 import { type ErrorDisplay } from '@common/types';
 import { useBillingAccountState } from '@dashboard/engineer/BillingAccount/hooks/useBillingAccountState';
+import { useBillingBankTransferAccountState } from '@dashboard/engineer/BillingAccount/hooks/useBillingBankTransferAccountState';
 
 const TicketPreviewContent: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
   const { ticket, elapsedTime } = useTicketState(ticketId);
   const { handleClaimTicket } = useTicketActions();
   const [claimError, setClaimError] = useState<ErrorDisplay | null>(null);
-  const { engineerAccount } = useBillingAccountState();
+  const { isBillingAccountVerified } = useBillingAccountState();
+  const { isBillingBankTransferAccountVerified } = useBillingBankTransferAccountState();
 
-  const canClaim = engineerAccount?.verificationStatus === 'active' || engineerAccount?.verificationStatus === 'eventually_due';
+  const canClaim = isBillingAccountVerified() || isBillingBankTransferAccountVerified();
 
   const onClaimTicket = async () => {
     if (!ticket) return;

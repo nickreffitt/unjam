@@ -24,8 +24,10 @@
     "types:prod": "npx supabase gen types typescript --project-id fztlbcojvolnruifwnke --schema public > ./common/supabase.types.ts"
   },
   "dependencies": {
+    "@airwallex/components-sdk": "^1.27.2",
     "@radix-ui/react-popover": "^1.1.15",
     "@supabase/supabase-js": "^2.58.0",
+    "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "country-data-list": "^1.5.5",
     "lucide-react": "^0.544.0",

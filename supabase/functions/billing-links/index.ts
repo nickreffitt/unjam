@@ -1,8 +1,10 @@
 import { serve } from "server"
 import { BillingCustomerStoreSupabase } from '@stores/BillingCustomer/index.ts'
 import { BillingEngineerStoreSupabase } from '@stores/BillingEngineer/index.ts'
+import { BillingEngineerBankTransferAccountStoreSupabase } from '@stores/BillingEngineerBankTransferAccount/index.ts'
 import { BillingLinksServiceStripe } from '@services/BillingLinks/index.ts'
 import { BillingEngineerAccountServiceStripe } from '@services/BillingEngineerAccount/index.ts'
+import { BillingEngineerBankTransferAccountServiceAirwallex } from '@services/BillingEngineerBankTransferAccount/index.ts'
 import { BillingLinksHandler } from './BillingLinksHandler.ts'
 import { createClient } from "supabase";
 import Stripe from "stripe";
@@ -54,6 +56,9 @@ export const handler = async (request: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
     const stripeApiKey = Deno.env.get('STRIPE_API_KEY') as string
+    const airWallexURL = Deno.env.get('AIRWALLEX_URL') as string
+    const airWallexClientId = Deno.env.get('AIRWALLEX_CLIENT_ID') as string
+    const airWallexApiKey = Deno.env.get('AIRWALLEX_API_KEY') as string
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey,
       {
@@ -68,23 +73,63 @@ export const handler = async (request: Request): Promise<Response> => {
 
     const customerStore = new BillingCustomerStoreSupabase(supabase)
     const engineerStore = new BillingEngineerStoreSupabase(supabase)
+    const bankTransferAccountStore = new BillingEngineerBankTransferAccountStoreSupabase(supabase)
     const linksService = new BillingLinksServiceStripe(stripe)
     const engineerAccountService = new BillingEngineerAccountServiceStripe(stripe)
-    const billingLinksHandler = new BillingLinksHandler(customerStore, engineerStore, linksService, engineerAccountService)
-
-    let url: string
+    const bankTransferAccountService = new BillingEngineerBankTransferAccountServiceAirwallex(airWallexURL, airWallexClientId, airWallexApiKey)
+    const billingLinksHandler = new BillingLinksHandler(
+      customerStore,
+      engineerStore,
+      linksService,
+      engineerAccountService,
+      bankTransferAccountService,
+      bankTransferAccountStore
+    )
 
     // Route to appropriate handler based on link_type
     switch (link_type) {
-      case 'create_portal':
-        url = await billingLinksHandler.createPortalLink(payload, origin)
-        break
-      case 'create_engineer_account':
-        url = await billingLinksHandler.createEngineerAccountLink(payload, origin)
-        break
-      case 'create_engineer_login':
-        url = await billingLinksHandler.createEngineerLoginLink(payload)
-        break
+      case 'create_portal': {
+        const url = await billingLinksHandler.createPortalLink(payload, origin)
+        return new Response(
+          JSON.stringify({ url }),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+      case 'create_engineer_account': {
+        const url = await billingLinksHandler.createEngineerAccountLink(payload, origin)
+        return new Response(
+          JSON.stringify({ url }),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+      case 'create_engineer_login': {
+        const url = await billingLinksHandler.createEngineerLoginLink(payload)
+        return new Response(
+          JSON.stringify({ url }),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+      case 'create_engineer_beneficiary_auth_code': {
+        const authCodeResponse = await billingLinksHandler.createEngineerBeneficiaryAuthCode(payload)
+        return new Response(
+          JSON.stringify(authCodeResponse),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+      case 'create_engineer_beneficiary': {
+        const beneficiary = await billingLinksHandler.createEngineerBeneficiary(payload)
+        return new Response(
+          JSON.stringify(beneficiary),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
+      case 'delete_engineer_beneficiary': {
+        await billingLinksHandler.deleteEngineerBeneficiary(payload)
+        return new Response(
+          JSON.stringify({ success: true }),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
+        )
+      }
       default:
         console.error(`[billing-links] Unknown link_type: ${link_type}`)
         return new Response(
@@ -92,11 +137,6 @@ export const handler = async (request: Request): Promise<Response> => {
           { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
         )
     }
-
-    return new Response(
-      JSON.stringify({ url }),
-      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": corsOrigin } }
-    )
 
   } catch (err) {
     const error = err as Error

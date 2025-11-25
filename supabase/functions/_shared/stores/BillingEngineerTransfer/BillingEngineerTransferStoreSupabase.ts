@@ -4,7 +4,7 @@ import type { EngineerTransfer } from '@types'
 
 /**
  * Supabase implementation of BillingEngineerTransferStore
- * Provides audit trail for all engineer payouts via Stripe Connect
+ * Provides audit trail for all engineer payouts via Stripe Connect or bank_transfer
  */
 export class BillingEngineerTransferStoreSupabase implements BillingEngineerTransferStore {
   private supabase: SupabaseClient
@@ -27,7 +27,8 @@ export class BillingEngineerTransferStoreSupabase implements BillingEngineerTran
         ticket_id: transfer.ticketId,
         engineer_id: transfer.engineerId,
         customer_id: transfer.customerId,
-        stripe_transfer_id: transfer.stripeTransferId,
+        service: transfer.service,
+        batch_group_item_id: transfer.batchGroupItemId || null,
         amount: transfer.amount,
         credits_used: transfer.creditsUsed,
         credit_value: transfer.creditValue,
@@ -50,7 +51,7 @@ export class BillingEngineerTransferStoreSupabase implements BillingEngineerTran
 
   /**
    * Updates an existing engineer transfer record
-   * Used primarily to update status on failure or add Stripe transfer ID
+   * Used primarily to update status on failure or add external transfer ID
    * @param id - The transfer ID
    * @param updates - Partial transfer data to update
    */
@@ -60,7 +61,8 @@ export class BillingEngineerTransferStoreSupabase implements BillingEngineerTran
     const updateData: Record<string, any> = {}
 
     if (updates.status !== undefined) updateData.status = updates.status
-    if (updates.stripeTransferId !== undefined) updateData.stripe_transfer_id = updates.stripeTransferId
+    if (updates.service !== undefined) updateData.service = updates.service
+    if (updates.batchGroupItemId !== undefined) updateData.batch_group_item_id = updates.batchGroupItemId
     if (updates.errorMessage !== undefined) updateData.error_message = updates.errorMessage
     if (updates.amount !== undefined) updateData.amount = updates.amount
     if (updates.creditsUsed !== undefined) updateData.credits_used = updates.creditsUsed
@@ -110,35 +112,6 @@ export class BillingEngineerTransferStoreSupabase implements BillingEngineerTran
   }
 
   /**
-   * Fetches a transfer by Stripe transfer ID
-   * @param stripeTransferId - The Stripe transfer ID
-   * @returns The transfer if found, undefined otherwise
-   */
-  async fetchByStripeTransferId(stripeTransferId: string): Promise<EngineerTransfer | undefined> {
-    console.info(`[BillingEngineerTransferStoreSupabase] Fetching transfer by Stripe ID: ${stripeTransferId}`)
-
-    const { data, error } = await this.supabase
-      .from('engineer_transfers')
-      .select('*')
-      .eq('stripe_transfer_id', stripeTransferId)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // Not found
-        console.info(`[BillingEngineerTransferStoreSupabase] Transfer not found for Stripe ID: ${stripeTransferId}`)
-        return undefined
-      }
-      console.error(`[BillingEngineerTransferStoreSupabase] Error fetching transfer:`, error)
-      throw new Error(`Failed to fetch engineer transfer: ${error.message}`)
-    }
-
-    const transfer = this.mapFromDatabase(data)
-    console.info(`[BillingEngineerTransferStoreSupabase] Found transfer ${transfer.id}`)
-    return transfer
-  }
-
-  /**
    * Fetches all transfers for an engineer
    * @param engineerId - The engineer ID
    * @returns Array of transfers
@@ -160,6 +133,52 @@ export class BillingEngineerTransferStoreSupabase implements BillingEngineerTran
     const transfers = data.map(row => this.mapFromDatabase(row))
     console.info(`[BillingEngineerTransferStoreSupabase] Found ${transfers.length} transfers for engineer ${engineerId}`)
     return transfers
+  }
+
+  /**
+   * Fetches all transfers linked to a batch group item
+   * @param itemId - The batch group item ID
+   * @returns Array of transfers in the batch group item
+   */
+  async fetchByBatchGroupItemId(itemId: string): Promise<EngineerTransfer[]> {
+    console.info(`[BillingEngineerTransferStoreSupabase] Fetching transfers for batch group item: ${itemId}`)
+
+    const { data, error } = await this.supabase
+      .from('engineer_transfers')
+      .select('*')
+      .eq('batch_group_item_id', itemId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error(`[BillingEngineerTransferStoreSupabase] Error fetching transfers by batch group item:`, error)
+      throw new Error(`Failed to fetch transfers by batch group item: ${error.message}`)
+    }
+
+    const transfers = data.map(row => this.mapFromDatabase(row))
+    console.info(`[BillingEngineerTransferStoreSupabase] Found ${transfers.length} transfers for batch group item ${itemId}`)
+    return transfers
+  }
+
+  /**
+   * Updates multiple transfers to link them to a batch group item
+   * Used when rolling up individual transfers into a batch
+   * @param transferIds - Array of transfer IDs to update
+   * @param itemId - The batch group item ID to link to
+   */
+  async updateBatchGroupItemId(transferIds: string[], itemId: string): Promise<void> {
+    console.info(`[BillingEngineerTransferStoreSupabase] Updating ${transferIds.length} transfers to link to batch group item: ${itemId}`)
+
+    const { error } = await this.supabase
+      .from('engineer_transfers')
+      .update({ batch_group_item_id: itemId })
+      .in('id', transferIds)
+
+    if (error) {
+      console.error(`[BillingEngineerTransferStoreSupabase] Error updating transfers with batch group item:`, error)
+      throw new Error(`Failed to update transfers with batch group item: ${error.message}`)
+    }
+
+    console.info(`[BillingEngineerTransferStoreSupabase] Successfully linked ${transferIds.length} transfers to batch group item ${itemId}`)
   }
 
   /**
@@ -187,6 +206,62 @@ export class BillingEngineerTransferStoreSupabase implements BillingEngineerTran
   }
 
   /**
+   * Fetches pending bank_transfer transfers grouped by engineer ID
+   * Used for batch transfer aggregation
+   * @returns Map of engineer ID to aggregated transfer data
+   */
+  async fetchPendingBankTransfersGroupedByEngineer(): Promise<Map<string, {
+    engineerId: string;
+    totalAmount: number;
+    totalPlatformProfit: number;
+    transferIds: string[];
+  }>> {
+    console.info(`[BillingEngineerTransferStoreSupabase] Fetching pending bank_transfer transfers grouped by engineer`)
+
+    const { data, error } = await this.supabase
+      .from('engineer_transfers')
+      .select('id, engineer_id, amount, platform_profit')
+      .eq('status', 'pending')
+      .eq('service', 'bank_transfer')
+      .is('batch_group_item_id', null)
+      .order('engineer_id')
+
+    if (error) {
+      console.error(`[BillingEngineerTransferStoreSupabase] Error fetching pending bank_transfer transfers:`, error)
+      throw new Error(`Failed to fetch pending bank_transfer transfers: ${error.message}`)
+    }
+
+    // Group transfers by engineer_id
+    const groupedMap = new Map<string, {
+      engineerId: string;
+      totalAmount: number;
+      totalPlatformProfit: number;
+      transferIds: string[];
+    }>()
+
+    for (const row of data) {
+      const engineerId = row.engineer_id
+
+      if (!groupedMap.has(engineerId)) {
+        groupedMap.set(engineerId, {
+          engineerId,
+          totalAmount: 0,
+          totalPlatformProfit: 0,
+          transferIds: []
+        })
+      }
+
+      const group = groupedMap.get(engineerId)!
+      group.totalAmount += row.amount
+      group.totalPlatformProfit += row.platform_profit
+      group.transferIds.push(row.id)
+    }
+
+    console.info(`[BillingEngineerTransferStoreSupabase] Found ${groupedMap.size} engineer(s) with pending bank_transfer transfers`)
+    return groupedMap
+  }
+
+  /**
    * Maps database row to EngineerTransfer type
    */
   private mapFromDatabase(row: any): EngineerTransfer {
@@ -195,7 +270,8 @@ export class BillingEngineerTransferStoreSupabase implements BillingEngineerTran
       ticketId: row.ticket_id,
       engineerId: row.engineer_id,
       customerId: row.customer_id,
-      stripeTransferId: row.stripe_transfer_id,
+      service: row.service,
+      batchGroupItemId: row.batch_group_item_id,
       amount: row.amount,
       creditsUsed: row.credits_used,
       creditValue: row.credit_value,
