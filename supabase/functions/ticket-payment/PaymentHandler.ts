@@ -1,13 +1,17 @@
-import type { BillingCreditsService } from '@services/BillingCredits/index.ts'
 import type { BillingSubscriptionService } from '@services/BillingSubscription/index.ts'
 import type { BillingMeterService } from '@services/BillingMeter/index.ts'
 import type { BillingEngineerPayoutService } from '@services/BillingEngineerPayout/index.ts'
 import type { BillingBalanceService } from '@services/BillingBalance/index.ts'
+import type { BillingBatchGroupService } from '@services/BillingBatchGroup/index.ts'
+import type { BillingBatchGroupItemService } from '@services/BillingBatchGroupItem/index.ts'
 import { type BillingCustomerStore } from "@stores/BillingCustomer/index.ts";
 import { type BillingEngineerStore } from "@stores/BillingEngineer/index.ts";
 import { type BillingEngineerTransferStore } from "@stores/BillingEngineerTransfer/index.ts";
+import { type BillingBatchGroupStore } from "@stores/BillingBatchGroup/index.ts";
+import { type BillingBatchGroupItemStore } from "@stores/BillingBatchGroupItem/index.ts";
+import { type BillingEngineerBankTransferAccountStore } from "@stores/BillingEngineerBankTransferAccount/index.ts";
 import { type TicketStore } from "@stores/Ticket/index.ts";
-import type { CreditTransferResponse } from '@types';
+import type { AddBatchItemRequest, CreditTransferResponse } from '@types';
 
 /**
  * Result when transfer is completed successfully
@@ -41,34 +45,46 @@ type TransferOperationResult = TransferCompletedResult | TransferPendingResult |
 export class PaymentHandler {
   private readonly customerStore: BillingCustomerStore
   private readonly engineerStore: BillingEngineerStore
+  private readonly bankTransferAccountStore: BillingEngineerBankTransferAccountStore
   private readonly transferStore: BillingEngineerTransferStore
+  private readonly batchGroupStore: BillingBatchGroupStore
+  private readonly batchGroupItemStore: BillingBatchGroupItemStore
   private readonly ticketStore: TicketStore
   private readonly subscriptionService: BillingSubscriptionService
-  private readonly creditsService: BillingCreditsService
   private readonly meterService: BillingMeterService
   private readonly payoutService: BillingEngineerPayoutService
   private readonly balanceService: BillingBalanceService
+  private readonly batchGroupService: BillingBatchGroupService
+  private readonly batchGroupItemService: BillingBatchGroupItemService
 
   constructor(
     customerStore: BillingCustomerStore,
     engineerStore: BillingEngineerStore,
+    bankTransferAccountStore: BillingEngineerBankTransferAccountStore,
     transferStore: BillingEngineerTransferStore,
+    batchGroupStore: BillingBatchGroupStore,
+    batchGroupItemStore: BillingBatchGroupItemStore,
     ticketStore: TicketStore,
     subscriptionService: BillingSubscriptionService,
-    creditsService: BillingCreditsService,
     meterService: BillingMeterService,
     payoutService: BillingEngineerPayoutService,
     balanceService: BillingBalanceService,
+    batchGroupService: BillingBatchGroupService,
+    batchGroupItemService: BillingBatchGroupItemService,
   ) {
     this.customerStore = customerStore
     this.engineerStore = engineerStore
+    this.bankTransferAccountStore = bankTransferAccountStore
     this.transferStore = transferStore
+    this.batchGroupStore = batchGroupStore
+    this.batchGroupItemStore = batchGroupItemStore
     this.ticketStore = ticketStore
     this.subscriptionService = subscriptionService
-    this.creditsService = creditsService
     this.meterService = meterService
     this.payoutService = payoutService
     this.balanceService = balanceService
+    this.batchGroupService = batchGroupService
+    this.batchGroupItemService = batchGroupItemService
   }
 
   async processPayment(ticketId: string, customerId: string): Promise<CreditTransferResponse> {
@@ -101,18 +117,38 @@ export class PaymentHandler {
     }
 
     // Validate prerequisites
-    const { ticket, stripeCustomerId, engineerAccount, creditsUsed, creditValue } = await this.validateTransferPrerequisites(ticketId)
-
+    const { ticket, stripeCustomerId, creditsUsed, creditValue } = await this.validateTransferPrerequisites(ticketId)
+    if (!ticket.engineerId) {
+      throw new Error(`Engineer ID not set in ticket`)
+    }
     console.info(`✅ [PaymentHandler] Prerequisites validated. Credit value: ${creditValue} cents`)
 
+    // Check which payment account the engineer has set up
+    console.info(`[PaymentHandler] Checking engineer payment account setup`)
+
+    const engineerAccount = await this.engineerStore.getByProfileId(ticket.engineerId)
+    const bankTransferAccount = await this.bankTransferAccountStore.getByProfileId(ticket.engineerId)
+
+    let paymentService: 'stripe_connect' | 'bank_transfer'
+
+    if (engineerAccount && engineerAccount.chargesEnabled && engineerAccount.payoutsEnabled) {
+      console.info(`[PaymentHandler] Engineer has Stripe Connect account`)
+      paymentService = 'stripe_connect'
+    } else if (bankTransferAccount && bankTransferAccount.active) {
+      console.info(`[PaymentHandler] Engineer has bank transfer account`)
+      paymentService = 'bank_transfer'
+    } else {
+      throw new Error(`Engineer has no valid payment account. Stripe enabled: ${engineerAccount?.chargesEnabled}/${engineerAccount?.payoutsEnabled}, Bank transfer active: ${bankTransferAccount?.active}`)
+    }
+
     // STEP 2: Create audit record FIRST (status: 'pending')
-    console.info(`[PaymentHandler] Step 2: Creating audit record`)
+    console.info(`[PaymentHandler] Step 2: Creating audit record with service: ${paymentService}`)
 
     const transferRecord = await this.transferStore.create({
       ticketId,
       engineerId: ticket.engineerId!, // Non-null assertion: validated in validateTransferPrerequisites
       customerId: ticket.customerId,
-      stripeTransferId: null,
+      service: paymentService,
       amount: 0, // Will be updated after payout
       creditsUsed,
       creditValue,
@@ -124,16 +160,51 @@ export class PaymentHandler {
     console.info(`✅ [PaymentHandler] Audit record created: ${transferRecord.id}`)
 
     try {
-      // STEP 3 & 4: Execute transfer operations
-      const transferResult = await this.executeTransferOperations({
-        ticketId,
-        stripeCustomerId,
-        creditsUsed,
-        engineerId: ticket.engineerId!,
-        engineerAccountId: engineerAccount.id,
-        customerId: ticket.customerId,
-        creditValue
-      })
+      // STEP 3 & 4: Execute transfer operations based on payment service
+      let transferResult: TransferOperationResult
+
+      if (paymentService === 'stripe_connect') {
+        transferResult = await this.executeTransferOperations({
+          ticketId,
+          stripeCustomerId,
+          creditsUsed,
+          engineerId: ticket.engineerId!,
+          engineerAccountId: engineerAccount!.id,
+          customerId: ticket.customerId,
+          creditValue
+        })
+      } else {
+        // Bank transfer - just record meter event and create pending transfer
+        console.info(`[PaymentHandler] Recording meter event for bank transfer`)
+
+        await this.meterService.recordTicketCompletion({
+          customerId: stripeCustomerId,
+          ticketId,
+          value: creditsUsed
+        })
+
+        console.info(`✅ [PaymentHandler] Meter event recorded: ${creditsUsed} credits`)
+
+        // Calculate fixed payout amount and platform profit
+        const payoutAmount = 2000 // Fixed $20 payout
+        const platformProfit = creditValue - payoutAmount
+
+        // Update transfer record with calculated amounts
+        await this.transferStore.update(transferRecord.id, {
+          amount: payoutAmount,
+          platformProfit,
+          status: 'pending'
+        })
+
+        console.info(`[PaymentHandler] Transfer record updated with amounts. Awaiting batch processing.`)
+
+        // Update ticket status to pending-payment
+        await this.ticketStore.updateStatus(ticketId, 'pending-payment')
+
+        console.info(`✅ [PaymentHandler] Bank transfer pending for ticket ${ticketId} - awaiting weekly batch processing`)
+
+        return { success: true }
+      }
 
       // Check if there are insufficient funds entirely
       if (transferResult.status === 'insufficient_funds') {
@@ -145,7 +216,6 @@ export class PaymentHandler {
         const platformProfit = creditValue - payoutAmount
 
         await this.transferStore.update(transferRecord.id, {
-          stripeTransferId: null,
           amount: payoutAmount,
           platformProfit,
           status: 'failed',
@@ -168,11 +238,10 @@ export class PaymentHandler {
         console.info(`[PaymentHandler] Step 5b: Updating audit record to pending_funds`)
 
         // Fetch payout amount for the transfer record
-        const payoutAmount = await this.payoutService.fetchPayoutAmount(engineerAccount.id)
+        const payoutAmount = await this.payoutService.fetchPayoutAmount(engineerAccount!.id)
         const platformProfit = creditValue - payoutAmount
 
         await this.transferStore.update(transferRecord.id, {
-          stripeTransferId: null,
           amount: payoutAmount,
           platformProfit,
           status: 'pending_funds'
@@ -193,7 +262,6 @@ export class PaymentHandler {
       console.info(`[PaymentHandler] Step 5: Updating audit record to completed`)
 
       await this.transferStore.update(transferRecord.id, {
-        stripeTransferId: transferResult.transferId,
         amount: transferResult.amount,
         platformProfit: transferResult.platformProfit,
         status: 'completed',
@@ -228,6 +296,164 @@ export class PaymentHandler {
 
       throw new Error(`Payment failed: ${errorMessage}`)
     }
+  }
+
+  /**
+   * Processes weekly batch transfer
+   * This method handles the batch group lifecycle:
+   * 1. Fetch all pending bank transfers grouped by engineer
+   * 2. Create new batch group via BatchGroupService and persist to BatchGroupStore
+   * 3. Add items to batch via BatchGroupItemService, then store items in BatchGroupItemStore
+   * 4. If >1 transfer, submit the batch via BatchGroupService
+   */
+  async processWeeklyBatchTransfer(): Promise<CreditTransferResponse> {
+    console.info(`[PaymentHandler] Processing weekly batch transfer`)
+
+    // STEP 1: Fetch all pending bank transfers grouped by engineer
+    console.info(`[PaymentHandler] Step 1: Fetching pending bank transfers`)
+
+    const pendingTransfers = await this.transferStore.fetchPendingBankTransfersGroupedByEngineer()
+
+    if (pendingTransfers.size === 0) {
+      console.info(`[PaymentHandler] No pending bank transfers to process`)
+      return { success: true }
+    }
+
+    console.info(`[PaymentHandler] Found ${pendingTransfers.size} engineers with pending transfers`)
+
+    // STEP 2: Create new batch group via BatchGroupService
+    console.info(`[PaymentHandler] Step 2: Creating batch group`)
+
+    const batchGroupResponse = await this.batchGroupService.createBatchGroup()
+
+    console.info(`✅ [PaymentHandler] Batch group created: ${batchGroupResponse.id}`)
+
+    // STEP 3: Persist batch group to BatchGroupStore
+    console.info(`[PaymentHandler] Step 3: Persisting batch group`)
+
+    const batchGroup = await this.batchGroupStore.create({
+      externalBatchGroupId: batchGroupResponse.id,
+      name: batchGroupResponse.name,
+      version: 1, // Initial version for new batch group
+      status: batchGroupResponse.status,
+      transfers: []
+    })
+
+    console.info(`✅ [PaymentHandler] Batch group persisted: ${batchGroup.id}`)
+
+    // STEP 4: Build batch items for each engineer
+    console.info(`[PaymentHandler] Step 4: Building batch items`)
+
+    const batchItems: AddBatchItemRequest[] = []
+    const engineerBatchItemMap: Map<string, {
+      totalAmount: number;
+      totalPlatformProfit: number;
+      externalEngineerId: string;
+      transferIds: string[];
+      requestId: string;
+    }> = new Map()
+
+    for (const [engineerId, data] of pendingTransfers) {
+      // Get engineer's bank transfer account (beneficiary)
+      const bankAccount = await this.bankTransferAccountStore.getByProfileId(engineerId)
+      if (!bankAccount) {
+        console.error(`[PaymentHandler] No bank account for engineer ${engineerId}, skipping`)
+        continue
+      }
+
+      // Create batch item request (amount in major units - dollars)
+      const item: AddBatchItemRequest = {
+        beneficiaryId: bankAccount.external_id,
+        sourceCurrency: 'USD',
+        transferCurrency: 'USD', // All transfers are in USD
+        transferAmount: data.totalAmount / 100, // Convert cents to dollars
+        transferMethod: 'LOCAL',
+        reason: 'Contractor payment',
+        reference: `Unjam`,
+        requestId: crypto.randomUUID()
+      }
+      batchItems.push(item)
+
+      // Store mapping for later persistence (include requestId for matching with Airwallex response)
+      engineerBatchItemMap.set(engineerId, {
+        totalAmount: data.totalAmount,
+        totalPlatformProfit: data.totalPlatformProfit,
+        externalEngineerId: bankAccount.external_id,
+        transferIds: data.transferIds,
+        requestId: item.requestId
+      })
+
+      console.info(`[PaymentHandler] Added batch item for engineer ${engineerId}: $${(data.totalAmount / 100).toFixed(2)}`)
+    }
+
+    if (batchItems.length === 0) {
+      console.warn(`[PaymentHandler] No valid batch items to process`)
+      return { success: true }
+    }
+
+    // STEP 5: Add items to batch via BatchGroupItemService
+    console.info(`[PaymentHandler] Step 5: Adding ${batchItems.length} items to batch`)
+
+    await this.batchGroupItemService.addItemsToBatch(
+      batchGroupResponse.id,
+      batchItems
+    )
+
+    console.info(`✅ [PaymentHandler] Items added to batch`)
+
+    // STEP 6: Fetch batch items to get external IDs
+    console.info(`[PaymentHandler] Step 6: Fetching batch items with external IDs`)
+
+    const batchItemsResponse = await this.batchGroupItemService.getBatchItems(batchGroupResponse.id)
+
+    console.info(`✅ [PaymentHandler] Retrieved ${batchItemsResponse.items.length} batch items from Airwallex`)
+
+    // STEP 7: Store batch items in BatchGroupItemStore with external IDs
+    console.info(`[PaymentHandler] Step 7: Persisting batch items`)
+
+    for (const [engineerId, data] of engineerBatchItemMap) {
+      // Find the matching external batch item by request_id
+      const externalBatchItem = batchItemsResponse.items.find(item => item.request_id === data.requestId)
+
+      if (!externalBatchItem) {
+        console.error(`[PaymentHandler] Could not find external batch item for engineer ${engineerId} with request_id ${data.requestId}`)
+        throw new Error(`Could not find external batch item for engineer ${engineerId}`)
+      }
+
+      const batchItem = await this.batchGroupItemStore.create({
+        externalId: externalBatchItem.request_id,
+        batchGroupId: batchGroup.id,
+        engineerId,
+        externalEngineerId: data.externalEngineerId,
+        totalAmount: data.totalAmount,
+        totalPlatformProfit: data.totalPlatformProfit,
+        status: 'pending'
+      })
+
+      console.info(`[PaymentHandler] Batch item persisted for engineer ${engineerId} with external ID ${externalBatchItem.id}`)
+
+      // Link all engineer transfers to this batch item
+      await this.transferStore.updateBatchGroupItemId(data.transferIds, batchItem.id)
+
+      console.info(`[PaymentHandler] Linked ${data.transferIds.length} transfers to batch item ${batchItem.id}`)
+    }
+
+    // STEP 8: Submit batch if there are items
+    if (batchItems.length > 0) {
+      console.info(`[PaymentHandler] Step 8: Submitting batch for processing`)
+
+      await this.batchGroupService.submitBatchGroup(batchGroupResponse.id)
+
+      // Update batch group status
+      await this.batchGroupStore.update(batchGroup.id, {
+        status: 'SCHEDULED'
+      })
+
+      console.info(`✅ [PaymentHandler] Batch submitted for processing`)
+    }
+
+    console.info(`✅ [PaymentHandler] Weekly batch transfer completed with ${batchItems.length} items`)
+    return { success: true }
   }
 
   /**
@@ -271,20 +497,9 @@ export class PaymentHandler {
 
     console.info(`[PaymentHandler] Elapsed time: ${elapsedHours.toFixed(2)} hours, Credits used: ${creditsUsed}, Credit value: ${creditValue} cents`)
 
-    // Fetch engineer Connect account
-    const engineerAccount = await this.engineerStore.getByProfileId(ticket.engineerId)
-    if (!engineerAccount) {
-      throw new Error(`No billing engineer account found for profile: ${ticket.engineerId}`)
-    }
-
-    if (!engineerAccount.chargesEnabled || !engineerAccount.payoutsEnabled) {
-      throw new Error(`Engineer Connect account not fully enabled. Charges: ${engineerAccount.chargesEnabled}, Payouts: ${engineerAccount.payoutsEnabled}`)
-    }
-
     return {
       ticket,
       stripeCustomerId,
-      engineerAccount,
       creditsUsed,
       creditValue
     }

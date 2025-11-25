@@ -3,7 +3,7 @@ import { useTicketListState } from '@dashboard/engineer/TicketList/hooks/useTick
 import TicketsTable from '@dashboard/engineer/TicketList/components/TicketsTable/TicketsTable';
 import { CheckCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 
-const CompletedTicketsList: React.FC = () => {
+const CompletedTicketsList: React.FC = React.memo(() => {
   const { tickets } = useTicketListState(['completed', 'auto-completed', 'pending-payment', 'awaiting-confirmation', 'payment-failed']);
   const [showEmpty, setShowEmpty] = useState(false);
 
@@ -36,6 +36,6 @@ const CompletedTicketsList: React.FC = () => {
       />
     </div>
   );
-};
+});
 
 export default CompletedTicketsList;

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useMemo, useEffect, useRef } from 're
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 import { useSupabase } from '@dashboard/shared/contexts/SupabaseContext';
 import { ApiManager } from '@common/features/ApiManager';
-import { BillingAccountManager, BillingAccountStoreSupabase } from '@common/features/BillingAccountManager';
+import { BillingAccountManager, BillingAccountStoreSupabase, BillingBankTransferAccountStoreSupabase } from '@common/features/BillingAccountManager';
 import type { EngineerProfile } from '@common/types';
 
 
@@ -37,9 +37,10 @@ export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProvid
   const billingAccountManager = useMemo(() => {
     const billingAccountStore = new BillingAccountStoreSupabase(supabaseClient);
     billingAccountStoreRef.current = billingAccountStore;
+    const billingBankTransferAccountStore = new BillingBankTransferAccountStoreSupabase(supabaseClient);
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1`;
     const apiManager = new ApiManager(supabaseClient, edgeFunctionUrl);
-    return new BillingAccountManager(billingAccountStore, apiManager, engineerProfile);
+    return new BillingAccountManager(billingAccountStore, billingBankTransferAccountStore, apiManager, engineerProfile);
   }, [engineerProfile.id, supabaseClient, supabaseUrl]);
 
   // Start listening to Postgres changes on mount, stop on unmount
@@ -58,7 +59,7 @@ export const BillingAccountManagerProvider: React.FC<BillingAccountManagerProvid
   const contextValue: BillingAccountManagerContextType = useMemo(() => ({
     engineerProfile,
     billingAccountManager
-  }), [engineerProfile.id, billingAccountManager]);
+  }), [engineerProfile, billingAccountManager]);
 
   return (
     <BillingAccountManagerContext.Provider value={contextValue}>

@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BillingAccountManager } from './BillingAccountManager';
 import type { BillingAccountStore } from './store/BillingAccountStore';
+import type { BillingBankTransferAccountStore } from './store/BillingBankTransferAccountStore';
 import type { ApiManager } from '@common/features/ApiManager';
 import type { EngineerAccount, EngineerProfile } from '@common/types';
 
 describe('BillingAccountManager', () => {
   let manager: BillingAccountManager;
   let mockStore: BillingAccountStore;
+  let mockBankTransferStore: BillingBankTransferAccountStore;
   let mockApiManager: ApiManager;
 
   const createTestAccount = (overrides?: Partial<EngineerAccount>): EngineerAccount => ({
@@ -37,13 +39,23 @@ describe('BillingAccountManager', () => {
       getByProfileId: vi.fn(),
     };
 
+    mockBankTransferStore = {
+      getByProfileId: vi.fn(),
+    } as any;
+
     mockApiManager = {
       createEngineerAccountLink: vi.fn(),
       createBillingPortalLink: vi.fn(),
+      createEngineerLoginLink: vi.fn(),
+      createEngineerRecipientForm: vi.fn(),
+      createEngineerRecipient: vi.fn(),
+      createEngineerBeneficiaryAuthCode: vi.fn(),
+      createEngineerBeneficiary: vi.fn(),
+      deleteEngineerBeneficiary: vi.fn(),
     } as any;
 
     const engineerProfile = createTestEngineerProfile();
-    manager = new BillingAccountManager(mockStore, mockApiManager, engineerProfile);
+    manager = new BillingAccountManager(mockStore, mockBankTransferStore, mockApiManager, engineerProfile);
   });
 
   describe('constructor', () => {
@@ -51,8 +63,17 @@ describe('BillingAccountManager', () => {
       // when creating manager without store
       // then error should be thrown
       const engineerProfile = createTestEngineerProfile();
-      expect(() => new BillingAccountManager(null as any, mockApiManager, engineerProfile)).toThrow(
+      expect(() => new BillingAccountManager(null as any, mockBankTransferStore, mockApiManager, engineerProfile)).toThrow(
         'BillingAccountManager: billingAccountStore is required'
+      );
+    });
+
+    it('throws error when billingBankTransferAccountStore is not provided', () => {
+      // when creating manager without bank transfer store
+      // then error should be thrown
+      const engineerProfile = createTestEngineerProfile();
+      expect(() => new BillingAccountManager(mockStore, null as any, mockApiManager, engineerProfile)).toThrow(
+        'BillingAccountManager: billingBankTransferAccountStore is required'
       );
     });
 
@@ -60,7 +81,7 @@ describe('BillingAccountManager', () => {
       // when creating manager without apiManager
       // then error should be thrown
       const engineerProfile = createTestEngineerProfile();
-      expect(() => new BillingAccountManager(mockStore, null as any, engineerProfile)).toThrow(
+      expect(() => new BillingAccountManager(mockStore, mockBankTransferStore, null as any, engineerProfile)).toThrow(
         'BillingAccountManager: apiManager is required'
       );
     });
@@ -68,7 +89,7 @@ describe('BillingAccountManager', () => {
     it('throws error when engineerProfile is not provided', () => {
       // when creating manager without engineerProfile
       // then error should be thrown
-      expect(() => new BillingAccountManager(mockStore, mockApiManager, null as any)).toThrow(
+      expect(() => new BillingAccountManager(mockStore, mockBankTransferStore, mockApiManager, null as any)).toThrow(
         'BillingAccountManager: engineerProfile is required'
       );
     });

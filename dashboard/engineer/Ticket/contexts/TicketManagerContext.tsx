@@ -54,7 +54,7 @@ export const TicketManagerProvider: React.FC<TicketManagerProviderProps> = ({ ch
     const manager = new TicketManager(authUser.profile, ticketStore, ticketChanges, autoCompleteTimeoutSeconds);
     ticketManagerRef.current = manager;
     return manager;
-  }, [authUser, ticketStore, ticketChanges]);
+  }, [authUser.profile?.id, ticketStore, ticketChanges]);
 
   return (
     <TicketManagerContext.Provider value={{ ticketManager, ticketStore, ticketChanges }}>

@@ -63,9 +63,16 @@ export const useBillingAccountState = () => {
   // Listen for real-time billing account events with stable callbacks
   useBillingAccountListener(billingAccountListenerCallbacks);
 
+  // Check if billing account is verified and ready
+  const isBillingAccountVerified = useCallback(() => {
+    if (!engineerAccount) return false;
+    return engineerAccount.verificationStatus === 'active' || engineerAccount.verificationStatus === 'eventually_due';
+  }, [engineerAccount]);
+
   return {
     engineerAccount,
     isLoading,
-    error
+    error,
+    isBillingAccountVerified
   };
 };

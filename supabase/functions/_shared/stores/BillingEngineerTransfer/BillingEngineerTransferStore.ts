@@ -28,13 +28,6 @@ export interface BillingEngineerTransferStore {
   fetchByTicketId(ticketId: string): Promise<EngineerTransfer | undefined>
 
   /**
-   * Fetches a transfer by Stripe transfer ID
-   * @param stripeTransferId - The Stripe transfer ID
-   * @returns The transfer if found, undefined otherwise
-   */
-  fetchByStripeTransferId(stripeTransferId: string): Promise<EngineerTransfer | undefined>
-
-  /**
    * Fetches all transfers for an engineer
    * @param engineerId - The engineer ID
    * @returns Array of transfers
@@ -42,9 +35,36 @@ export interface BillingEngineerTransferStore {
   fetchByEngineerId(engineerId: string): Promise<EngineerTransfer[]>
 
   /**
+   * Fetches all transfers linked to a batch group item
+   * @param itemId - The batch group item ID
+   * @returns Array of transfers in the batch group item
+   */
+  fetchByBatchGroupItemId(itemId: string): Promise<EngineerTransfer[]>
+
+  /**
+   * Updates multiple transfers to link them to a batch group item
+   * Used when rolling up individual transfers into a batch
+   * @param transferIds - Array of transfer IDs to update
+   * @param itemId - The batch group item ID to link to
+   */
+  updateBatchGroupItemId(transferIds: string[], itemId: string): Promise<void>
+
+  /**
    * Fetches all transfers with a specific status
    * @param status - The transfer status to filter by
    * @returns Array of transfers with the given status
    */
   fetchByStatus(status: 'pending' | 'pending_funds' | 'completed' | 'failed'): Promise<EngineerTransfer[]>
+
+  /**
+   * Fetches pending bank transfers grouped by engineer ID
+   * Used for batch transfer aggregation
+   * @returns Map of engineer ID to aggregated transfer data
+   */
+  fetchPendingBankTransfersGroupedByEngineer(): Promise<Map<string, {
+    engineerId: string;
+    totalAmount: number;
+    totalPlatformProfit: number;
+    transferIds: string[];
+  }>>
 }

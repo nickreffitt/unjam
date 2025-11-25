@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
 import { useBillingAccountManager } from './contexts/BillingAccountManagerContext';
 import { useBillingAccountState } from './hooks/useBillingAccountState';
+import { useBillingBankTransferAccountState } from './hooks/useBillingBankTransferAccountState';
 import { useBillingAccountActions } from './hooks/useBillingAccountActions';
-import { CheckCircle, XCircle, Clock, AlertTriangle, Globe, CreditCard, Building2 } from 'lucide-react';
-import { getPayoutProvider, getPayoutProviderMessage, isStripeConnectSupported, isPayoneerSupported } from '@common/utils/payoutProviders';
+import { CheckCircle, XCircle, Clock, AlertTriangle, Globe, Trash2 } from 'lucide-react';
+import { getPayoutProvider, getPayoutProviderMessage, isStripeConnectSupported, isBankTransferSupported } from '@common/utils/payoutProviders';
+import AirwallexBeneficiaryForm from './components/AirwallexBeneficiaryForm';
 
-type PayoutTab = 'stripe' | 'payoneer';
+type PayoutTab = 'stripe' | 'bank_transfer';
 
 const BillingAccount: React.FC = () => {
-  const { engineerProfile } = useBillingAccountManager();
+  const { engineerProfile, billingAccountManager } = useBillingAccountManager();
   const { engineerAccount: account, isLoading, error } = useBillingAccountState();
+  const { bankTransferAccount, isLoading: isLoadingBankTransfer, refreshBankTransferAccount } = useBillingBankTransferAccountState();
   const { createAccountLink, isCreatingLink, linkError } = useBillingAccountActions();
 
   const payoutProvider = getPayoutProvider(engineerProfile.country);
   const payoutMessage = getPayoutProviderMessage(engineerProfile.country);
 
   const stripeAvailable = isStripeConnectSupported(engineerProfile.country);
-  const payoneerAvailable = isPayoneerSupported(engineerProfile.country);
+  const bankTransferAvailable = isBankTransferSupported(engineerProfile.country);
 
-  // Default to stripe if available, otherwise payoneer
-  const [activeTab, setActiveTab] = useState<PayoutTab>(stripeAvailable ? 'stripe' : 'payoneer');
+  // Default to stripe if available, otherwise bank_transfer
+  const [activeTab, setActiveTab] = useState<PayoutTab>(stripeAvailable ? 'stripe' : 'bank_transfer');
+  const [isDeletingBankTransfer, setIsDeletingBankTransfer] = useState(false);
+  const [deleteBankTransferError, setDeleteBankTransferError] = useState<string | null>(null);
 
   const handleManageAccount = async () => {
     const url = await createAccountLink();
@@ -28,7 +33,29 @@ const BillingAccount: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  const handleDeleteBankTransferAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete your bank transfer account? You will need to set it up again to receive payments.')) {
+      return;
+    }
+
+    try {
+      setIsDeletingBankTransfer(true);
+      setDeleteBankTransferError(null);
+      console.info('[BillingAccount] Deleting bank transfer account');
+      await billingAccountManager.deleteBankTransferAccount();
+      console.info('[BillingAccount] Successfully deleted bank transfer account');
+      // Refresh the bank transfer account state to reflect deletion
+      await refreshBankTransferAccount();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete bank transfer account';
+      console.error('[BillingAccount] Error deleting bank transfer account:', errorMessage);
+      setDeleteBankTransferError(errorMessage);
+    } finally {
+      setIsDeletingBankTransfer(false);
+    }
+  };
+
+  if (isLoading || isLoadingBankTransfer) {
     return (
       <div className="unjam-h-full unjam-flex unjam-items-center unjam-justify-center unjam-p-4">
         <div className="unjam-text-gray-600">Loading billing account...</div>
@@ -128,21 +155,82 @@ const BillingAccount: React.FC = () => {
     );
   }
 
-  // If Payoneer only (no Stripe)
-  if (payoutProvider === 'payoneer') {
+  // Render bank transfer account details or form
+  const renderBankTransferContent = () => {
+    if (bankTransferAccount) {
+      return (
+        <div>
+          <div className="unjam-mb-6 unjam-p-4 unjam-bg-gray-50 unjam-rounded-lg">
+            <h3 className="unjam-text-lg unjam-font-semibold unjam-mb-3">Bank Transfer Account Details</h3>
+            <div className="unjam-space-y-2">
+              <div className="unjam-flex unjam-justify-between unjam-items-center">
+                <span className="unjam-text-gray-600">Account Holder:</span>
+                <span className="unjam-font-medium">{bankTransferAccount.name}</span>
+              </div>
+              <div className="unjam-flex unjam-justify-between unjam-items-center">
+                <span className="unjam-text-gray-600">Country:</span>
+                <span className="unjam-font-medium">{bankTransferAccount.country}</span>
+              </div>
+              {bankTransferAccount.summary && (
+                <div className="unjam-flex unjam-justify-between unjam-items-center">
+                  <span className="unjam-text-gray-600">Account Summary:</span>
+                  <span className="unjam-font-medium">{bankTransferAccount.summary}</span>
+                </div>
+              )}
+              <div className="unjam-flex unjam-justify-between unjam-items-center">
+                <span className="unjam-text-gray-600">Status:</span>
+                <span className={bankTransferAccount.active ? 'unjam-text-green-600' : 'unjam-text-gray-500'}>
+                  {bankTransferAccount.active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {deleteBankTransferError && (
+            <div className="unjam-mb-4 unjam-p-3 unjam-bg-red-50 unjam-border unjam-border-red-200 unjam-rounded">
+              <p className="unjam-text-red-600">{deleteBankTransferError}</p>
+            </div>
+          )}
+
+          <button
+            onClick={handleDeleteBankTransferAccount}
+            disabled={isDeletingBankTransfer}
+            className="unjam-inline-flex unjam-items-center unjam-gap-2 unjam-bg-red-600 unjam-text-white unjam-px-6 unjam-py-2 unjam-rounded-lg hover:unjam-bg-red-700 unjam-transition-colors disabled:unjam-bg-red-400 disabled:unjam-cursor-not-allowed"
+          >
+            {isDeletingBankTransfer ? (
+              <>
+                <div className="unjam-w-4 unjam-h-4 unjam-border-2 unjam-border-white unjam-border-t-transparent unjam-rounded-full unjam-animate-spin" />
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <>
+                <Trash2 className="unjam-w-4 unjam-h-4" />
+                <span>Delete Bank Transfer Account</span>
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    // Render Airwallex embedded beneficiary form
+    return <AirwallexBeneficiaryForm />;
+  };
+
+  // If bank transfer only (no Stripe) - show bank transfer account details or form
+  if (payoutProvider === 'bank_transfer') {
     return (
       <div className="unjam-h-full unjam-overflow-y-auto unjam-p-4">
         <div className="unjam-max-w-2xl unjam-mx-auto">
           <div className="unjam-bg-white unjam-rounded-lg unjam-shadow unjam-p-6">
             <h2 className="unjam-text-2xl unjam-font-bold unjam-mb-4">Billing Account</h2>
 
-            {/* Payout Provider Info */}
-            <div className="unjam-mb-6 unjam-p-4 unjam-bg-blue-50 unjam-border unjam-border-blue-200 unjam-rounded-lg">
+            <div className="unjam-mb-6 unjam-p-4 unjam-bg-green-50 unjam-border unjam-border-green-200 unjam-rounded-lg">
               <div className="unjam-flex unjam-items-start unjam-gap-3">
-                <Globe className="unjam-w-5 unjam-h-5 unjam-text-blue-600 unjam-mt-0.5" />
+                <CheckCircle className="unjam-w-5 unjam-h-5 unjam-text-green-600 unjam-mt-0.5" />
                 <div>
                   <h3 className="unjam-font-semibold unjam-text-gray-900 unjam-mb-1">
-                    Payoneer Payouts Available
+                    Bank Transfer Available
                   </h3>
                   <p className="unjam-text-sm unjam-text-gray-600">
                     {payoutMessage}
@@ -151,31 +239,15 @@ const BillingAccount: React.FC = () => {
               </div>
             </div>
 
-            <div className="unjam-bg-yellow-50 unjam-border unjam-border-yellow-200 unjam-rounded-lg unjam-p-6">
-              <h3 className="unjam-text-lg unjam-font-semibold unjam-text-gray-900 unjam-mb-3">
-                Payoneer Setup Instructions
-              </h3>
-              <div className="unjam-space-y-3 unjam-text-sm unjam-text-gray-700">
-                <p>To receive payouts via Payoneer:</p>
-                <ol className="unjam-list-decimal unjam-list-inside unjam-space-y-2 unjam-ml-2">
-                  <li>Create a Payoneer account at payoneer.com if you don't have one</li>
-                  <li>Complete your Payoneer account verification</li>
-                  <li>Contact our support team with your Payoneer email address</li>
-                  <li>We'll configure your account to receive payouts</li>
-                </ol>
-                <p className="unjam-mt-4 unjam-text-gray-600">
-                  For questions or assistance, please contact support@unjam.com
-                </p>
-              </div>
-            </div>
+            {renderBankTransferContent()}
           </div>
         </div>
       </div>
     );
   }
 
-  // Both Stripe and Payoneer available - show tabs
-  if (stripeAvailable && payoneerAvailable) {
+  // Both Stripe and bank transfer available - show tabs
+  if (stripeAvailable && bankTransferAvailable) {
     return (
       <div className="unjam-h-full unjam-overflow-y-auto unjam-p-4">
         <div className="unjam-max-w-2xl unjam-mx-auto">
@@ -191,7 +263,7 @@ const BillingAccount: React.FC = () => {
                     Multiple Payout Options Available
                   </h3>
                   <p className="unjam-text-sm unjam-text-gray-600">
-                    Your country supports both Stripe Connect and Payoneer. Choose your preferred payout provider below.
+                    Your country supports both Stripe Connect and bank transfer. Choose your preferred payout provider below.
                   </p>
                 </div>
               </div>
@@ -211,14 +283,14 @@ const BillingAccount: React.FC = () => {
                   <span>Stripe Connect</span>
                 </button>
                 <button
-                  onClick={() => setActiveTab('payoneer')}
+                  onClick={() => setActiveTab('bank_transfer')}
                   className={`unjam-flex unjam-items-center unjam-gap-2 unjam-px-4 unjam-py-3 unjam-font-medium unjam-transition-colors unjam-border-b-2 ${
-                    activeTab === 'payoneer'
+                    activeTab === 'bank_transfer'
                       ? 'unjam-border-blue-600 unjam-text-blue-600'
                       : 'unjam-border-transparent unjam-text-gray-500 hover:unjam-text-gray-700 hover:unjam-border-gray-300'
                   }`}
                 >
-                  <span>Payoneer</span>
+                  <span>Bank Transfer</span>
                 </button>
               </div>
             </div>
@@ -294,26 +366,7 @@ const BillingAccount: React.FC = () => {
                 </div>
               </>
             ) : (
-              <>
-                {/* Payoneer Setup Instructions */}
-                <div className="unjam-bg-blue-50 unjam-border unjam-border-blue-200 unjam-rounded-lg unjam-p-6">
-                  <h3 className="unjam-text-lg unjam-font-semibold unjam-text-gray-900 unjam-mb-3">
-                    Payoneer Setup Instructions
-                  </h3>
-                  <div className="unjam-space-y-3 unjam-text-sm unjam-text-gray-700">
-                    <p>To receive payouts via Payoneer:</p>
-                    <ol className="unjam-list-decimal unjam-list-inside unjam-space-y-2 unjam-ml-2">
-                      <li>Create a Payoneer account at payoneer.com if you don't have one</li>
-                      <li>Complete your Payoneer account verification</li>
-                      <li>Contact our support team with your Payoneer email address</li>
-                      <li>We'll configure your account to receive payouts</li>
-                    </ol>
-                    <p className="unjam-mt-4 unjam-text-gray-600">
-                      For questions or assistance, please contact support@unjam.com
-                    </p>
-                  </div>
-                </div>
-              </>
+              renderBankTransferContent()
             )}
           </div>
         </div>

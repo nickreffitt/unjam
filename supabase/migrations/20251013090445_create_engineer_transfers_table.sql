@@ -6,14 +6,20 @@ CREATE TYPE engineer_transfer_status AS ENUM (
   'failed'
 );
 
+-- Create engineer_transfer_service enum
+CREATE TYPE engineer_transfer_service AS ENUM (
+  'stripe_connect',
+  'bank_transfer'
+);
+
 -- Create engineer_transfers table
--- Audit trail for all engineer payouts via Stripe Connect
+-- Audit trail for all engineer payouts via Stripe Connect or Wise
 CREATE TABLE engineer_transfers (
   id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id UUID NOT NULL,
   engineer_id UUID NOT NULL,
   customer_id UUID NOT NULL,
-  stripe_transfer_id TEXT UNIQUE,
+  service engineer_transfer_service NOT NULL,
   amount INTEGER NOT NULL,
   credits_used INTEGER NOT NULL,
   credit_value INTEGER NOT NULL,
@@ -38,9 +44,6 @@ CREATE TABLE engineer_transfers (
 
 -- Create unique index on ticket_id to prevent duplicate transfers for same ticket
 CREATE UNIQUE INDEX engineer_transfers_ticket_id_idx ON engineer_transfers (ticket_id);
-
--- Create index on stripe_transfer_id for faster lookups
-CREATE INDEX engineer_transfers_stripe_transfer_id_idx ON engineer_transfers (stripe_transfer_id);
 
 -- Create index on engineer_id for filtering transfers by engineer
 CREATE INDEX engineer_transfers_engineer_id_idx ON engineer_transfers (engineer_id);
@@ -97,4 +100,4 @@ CREATE POLICY "Customers can update transfers for their tickets" ON engineer_tra
   );
 
 -- Add comment explaining the available_for_transfer_at column
-COMMENT ON COLUMN engineer_transfers.available_for_transfer_at IS 'Timestamp when funds became available in Stripe and transfer was successfully created';
+COMMENT ON COLUMN engineer_transfers.available_for_transfer_at IS 'Timestamp when funds became available and transfer was successfully created';

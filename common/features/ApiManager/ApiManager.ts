@@ -1,5 +1,5 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
-import type { EngineerProfile, CreditBalanceResponse, CreditTransferResponse } from '@common/types';
+import type { EngineerProfile, CreditBalanceResponse, CreditTransferResponse, WiseRecipientFormData, WiseRecipient, WiseRecipientDetails, BeneficiaryFormValue, BankTransferRecipient } from '@common/types';
 
 export interface ICEServersResponse {
   iceServers: RTCIceServer[];
@@ -185,6 +185,114 @@ export class ApiManager {
     }
   }
 
+  /**
+   * Generates an authorization code for Airwallex embedded beneficiary component
+   * @param engineerId - The engineer profile ID
+   * @param codeChallenge - The PKCE code challenge (SHA256 hash of code_verifier)
+   * @returns The authorization code valid for 30 seconds
+   * @throws Error if the request fails
+   */
+  async createEngineerBeneficiaryAuthCode(
+    engineerId: string,
+    codeChallenge: string
+  ): Promise<string> {
+    console.info(`[ApiManager] Generating beneficiary auth code for profile: ${engineerId}`);
+
+    try {
+      const response = await this.makeAuthenticatedRequest<{ authorization_code: string }>(
+        'billing-links',
+        {
+          link_type: 'create_engineer_beneficiary_auth_code',
+          payload: {
+            engineer_id: engineerId,
+            code_challenge: codeChallenge
+          }
+        },
+        'Failed to generate beneficiary authorization code'
+      );
+
+      if (!response.authorization_code) {
+        throw new Error('No authorization code returned from service');
+      }
+
+      console.info(`[ApiManager] Successfully generated beneficiary auth code`);
+      return response.authorization_code;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error generating beneficiary auth code:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a beneficiary in Airwallex for an engineer
+   * @param engineerId - The engineer profile ID
+   * @param beneficiaryData - The beneficiary form data from Airwallex embedded component
+   * @returns The created beneficiary account
+   * @throws Error if the request fails
+   */
+  async createEngineerBeneficiary(
+    engineerId: string,
+    beneficiaryData: BeneficiaryFormValue
+  ): Promise<BankTransferRecipient> {
+    console.info(`[ApiManager] Creating engineer beneficiary for profile: ${engineerId}`);
+
+    try {
+      const beneficiary = await this.makeAuthenticatedRequest<BankTransferRecipient>(
+        'billing-links',
+        {
+          link_type: 'create_engineer_beneficiary',
+          payload: {
+            engineer_id: engineerId,
+            beneficiary_data: beneficiaryData
+          }
+        },
+        'Failed to create engineer beneficiary'
+      );
+
+      if (!beneficiary.external_id) {
+        throw new Error('Invalid beneficiary data returned from service');
+      }
+
+      console.info(`[ApiManager] Successfully created engineer beneficiary: ${beneficiary.id}`);
+      return beneficiary;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error creating engineer beneficiary:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletes a beneficiary in Airwallex for an engineer
+   * @param engineerId - The engineer profile ID
+   * @throws Error if the request fails or no beneficiary exists
+   */
+  async deleteEngineerBeneficiary(engineerId: string): Promise<void> {
+    console.info(`[ApiManager] Deleting engineer beneficiary for profile: ${engineerId}`);
+
+    try {
+      await this.makeAuthenticatedRequest<void>(
+        'billing-links',
+        {
+          link_type: 'delete_engineer_beneficiary',
+          payload: {
+            engineer_id: engineerId
+          }
+        },
+        'Failed to delete engineer beneficiary'
+      );
+
+      console.info(`[ApiManager] Successfully deleted engineer beneficiary`);
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error deleting engineer beneficiary:', error.message);
+      throw error;
+    }
+  }
 
   /**
    * Makes an authenticated POST request to an edge function

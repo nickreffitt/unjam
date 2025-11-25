@@ -16,11 +16,13 @@ export const useTicketListState = (filterStatuses: TicketStatus[]): UseTicketLis
   const ticketListManagerRef = useRef(ticketListManager);
   const memoizedFilterStatusesRef = useRef(filterStatuses);
   const setTicketsRef = useRef(setTickets);
+  const newTicketListRef = useRef(newTicketList);
 
   // Update refs on every render to keep them current
   ticketListManagerRef.current = ticketListManager;
   memoizedFilterStatusesRef.current = filterStatuses;
   setTicketsRef.current = setTickets;
+  newTicketListRef.current = newTicketList;
 
   // Memoize filterStatuses to prevent unnecessary re-renders based on array contents
   const memoizedFilterStatuses = useMemo(() => filterStatuses, [filterStatuses.join(',')]);
@@ -36,7 +38,7 @@ export const useTicketListState = (filterStatuses: TicketStatus[]): UseTicketLis
 
       if (currentFilterStatuses.includes('waiting')) {
         // Use newTicketList from context for waiting tickets (real-time updated)
-        ticketListItems = newTicketList;
+        ticketListItems = newTicketListRef.current;
       } else if (currentFilterStatuses.includes('in-progress')) {
         // Use TicketListManager for active tickets (includes in-progress and awaiting-confirmation from backend)
         if (manager) {
@@ -54,7 +56,7 @@ export const useTicketListState = (filterStatuses: TicketStatus[]): UseTicketLis
       console.error('Failed to fetch tickets:', error);
       setTicketsRef.current([]);
     }
-  }, [newTicketList]);
+  }, []);
 
   useEffect(() => {
     console.debug('useTicketsList: Initial load useEffect triggered for:', memoizedFilterStatuses);

@@ -39,7 +39,7 @@ export const TicketListManagerProvider: React.FC<TicketListManagerProviderProps>
     console.debug('[TicketListManagerContext] TicketListManager created successfully');
     ticketListManagerRef.current = manager;
     return manager;
-  }, [userProfile, ticketStore, ticketChanges]);
+  }, [userProfile.id, ticketStore, ticketChanges]);
 
   // Refresh new tickets from storage
   const refreshNewTicketList = useCallback(async () => {

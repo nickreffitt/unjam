@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { User, Code, Users } from 'lucide-react';
 import { type UserType } from '@common/types';
 import { type ProfileFormData } from '../../hooks/useCreateProfileActions';
 import CountryDropdown from '@dashboard/shared/components/CountryDropdown/CountryDropdown';
+import { STRIPE_CONNECT_COUNTRIES, BANK_TRANSFER_COUNTRIES } from '@common/utils/payoutProviders';
 
 interface ProfileFormProps {
   onSubmit: (profileData: ProfileFormData) => void;
@@ -22,14 +23,19 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   const [githubUsername, setGithubUsername] = useState('');
   const [country, setCountry] = useState('');
 
+  // Determine allowed countries based on user type
+  const allowedCountries = useMemo(() => {
+    return userType === 'customer' ? STRIPE_CONNECT_COUNTRIES : BANK_TRANSFER_COUNTRIES;
+  }, [userType]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const profileData: ProfileFormData = {
       name,
       userType,
+      country,
       ...(userType === 'engineer' && { githubUsername }),
-      ...(userType === 'engineer' && { country }),
     };
 
     onSubmit(profileData);
@@ -101,23 +107,24 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
         </div>
       </div>
 
-      {/* Country Selection (only for engineers) */}
-      {userType === 'engineer' && (
-        <div>
-          <label htmlFor="country" className="unjam-block unjam-text-sm unjam-font-medium unjam-text-gray-700 unjam-mb-1">
-            Country
-          </label>
-          <CountryDropdown
-            value={country}
-            onChange={(countryCode) => setCountry(countryCode)}
-            placeholder="Select your country"
-            required={userType === 'engineer'}
-          />
-          <p className="unjam-mt-2 unjam-text-sm unjam-text-gray-500">
-            Your country determines which payout options are available to you
-          </p>
-        </div>
-      )}
+      {/* Country Selection */}
+      <div>
+        <label htmlFor="country" className="unjam-block unjam-text-sm unjam-font-medium unjam-text-gray-700 unjam-mb-1">
+          Country
+        </label>
+        <CountryDropdown
+          value={country}
+          onChange={(countryCode) => setCountry(countryCode)}
+          placeholder="Select your country"
+          required
+          allowedCountries={allowedCountries}
+        />
+        <p className="unjam-mt-2 unjam-text-sm unjam-text-gray-500">
+          {userType === 'engineer'
+            ? 'Your country determines which payout options are available to you'
+            : 'We currently support customers in these countries'}
+        </p>
+      </div>
 
       {/* GitHub Username (only for engineers) */}
       {userType === 'engineer' && (

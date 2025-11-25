@@ -5,7 +5,7 @@ import TicketsTable from '@dashboard/engineer/TicketList/components/TicketsTable
 import { MessageCircle, Clock, ToggleLeft, ToggleRight, Ticket } from 'lucide-react';
 import { shouldShowCompletedState } from '@common/util/ticketStatusHelpers';
 
-const ActiveTicketsList: React.FC = () => {
+const ActiveTicketsList: React.FC = React.memo(() => {
   const { tickets: rawTickets } = useTicketListState(['in-progress']);
   const [showEmpty, setShowEmpty] = useState(false);
   const navigate = useNavigate();
@@ -71,6 +71,6 @@ const ActiveTicketsList: React.FC = () => {
       />
     </div>
   );
-};
+});
 
 export default ActiveTicketsList;

@@ -27,45 +27,62 @@ import { SubscriptionManagerProvider } from '@dashboard/customer/Subscription';
 import CreditSuccess from '@dashboard/pages/customer/CreditSuccess';
 import GithubConnect from '@dashboard/pages/customer/GithubConnect/GithubConnect';
 import GithubCallback from '@dashboard/pages/customer/GithubCallback/GithubCallback';
-import { BillingAccountManagerProvider } from './engineer/BillingAccount';
-import { GithubConnectManagerProvider } from './customer/GithubConnect';
+import { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount';
+import { GithubConnectManagerProvider } from '@dashboard/customer/GithubConnect';
+import { BillingRecipientFormProvider } from '@dashboard/engineer/BillingRecipientForm';
 
 
 const ProtectedEngineerDashboard: React.FC = React.memo(() => {
+  const { authUser } = useAuthState();
+
+  // Don't render providers until user is signed in with a profile
+  if (authUser.status !== 'signed-in' || !authUser.profile) {
+    return null;
+  }
+
   return (
     <BillingAccountManagerProvider>
-      <TicketManagerProvider>
-        <TicketListManagerProvider>
-          <ChatManagerProvider>
-            <ScreenShareManagerProvider>
-              <CodeShareManagerProvider>
-                <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
-                  <Sidebar />
-                  <div className="unjam-flex-1 unjam-overflow-hidden">
-                    <Routes>
-                      <Route path="new" element={<NewTicketsList />} />
-                      <Route path="new/:ticketId" element={<TicketPreview />} />
-                      <Route path="active" element={<ActiveTicketsList />} />
-                      <Route path="active/:ticketId" element={<ActiveTicket />} />
-                      <Route path="completed" element={<CompletedTicketsList />} />
-                      <Route path="completed/:ticketId" element={<CompletedTicket />} />
-                      <Route path="settings" element={<EngineerSettings />} />
-                      <Route path="auth/logout" element={<Logout />} />
-                      <Route path="*" element={<NewTicketsList />} />
-                    </Routes>
+      <BillingRecipientFormProvider>
+        <TicketManagerProvider>
+          <TicketListManagerProvider>
+            <ChatManagerProvider>
+              <ScreenShareManagerProvider>
+                <CodeShareManagerProvider>
+                  <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
+                    <Sidebar />
+                    <div className="unjam-flex-1 unjam-overflow-hidden">
+                      <Routes>
+                        <Route path="new" element={<NewTicketsList />} />
+                        <Route path="new/:ticketId" element={<TicketPreview />} />
+                        <Route path="active" element={<ActiveTicketsList />} />
+                        <Route path="active/:ticketId" element={<ActiveTicket />} />
+                        <Route path="completed" element={<CompletedTicketsList />} />
+                        <Route path="completed/:ticketId" element={<CompletedTicket />} />
+                        <Route path="settings" element={<EngineerSettings />} />
+                        <Route path="auth/logout" element={<Logout />} />
+                        <Route path="*" element={<NewTicketsList />} />
+                      </Routes>
+                    </div>
                   </div>
-                </div>
-              </CodeShareManagerProvider>
-            </ScreenShareManagerProvider>
-          </ChatManagerProvider>
-        </TicketListManagerProvider>
-      </TicketManagerProvider>
+                </CodeShareManagerProvider>
+              </ScreenShareManagerProvider>
+            </ChatManagerProvider>
+          </TicketListManagerProvider>
+        </TicketManagerProvider>
+      </BillingRecipientFormProvider>
     </BillingAccountManagerProvider>
   );
 });
 
 
 const ProtectedCustomerDashboard: React.FC = React.memo(() => {
+  const { authUser } = useAuthState();
+
+  // Don't render providers until user is signed in with a profile
+  if (authUser.status !== 'signed-in' || !authUser.profile) {
+    return null;
+  }
+
   return (
     <SubscriptionManagerProvider>
       <GithubConnectManagerProvider>
@@ -109,35 +126,30 @@ const DashboardContent: React.FC = () => {
   console.debug('[EngineerDashboard] current pathname:', window.location.pathname);
   console.debug('[EngineerDashboard] search params:', window.location.search);
 
+  // Keep provider components mounted, they will handle their own conditional rendering
+  // This prevents flickering from unmounting/remounting during auth state changes
+  return (
+    <>
+      {/* Render providers once for signed-in users, they stay mounted */}
+      {authUser.status === 'signed-in' && authUser.profile?.type === 'customer' && <ProtectedCustomerDashboard />}
+      {authUser.status === 'signed-in' && authUser.profile?.type === 'engineer' && <ProtectedEngineerDashboard />}
 
-  switch (authUser.status) {
-    case 'signed-in': {
-      if (authUser.profile?.type === 'customer') {
-        return <ProtectedCustomerDashboard />;
-      } else {
-        return <ProtectedEngineerDashboard />;
-      }
-    }
-    case 'requires-profile': {
-      return (
-          <Routes>
-            <Route path="*" element={<CreateProfile />} />
-          </Routes>
-        );
-      break;
-    }
-    default: {
-      return (
-          <Routes>
-            <Route path="auth" element={<SignIn />} />
-            <Route path="auth/complete-profile" element={<CreateProfile />} />
-            <Route path="auth/logout" element={<Logout />} />
-            <Route path="*" element={<SignIn />} />
-          </Routes>
-        );
-      break;
-    }
-  }
+      {/* Non-authenticated routes */}
+      {authUser.status === 'requires-profile' && (
+        <Routes>
+          <Route path="*" element={<CreateProfile />} />
+        </Routes>
+      )}
+      {authUser.status === 'not-signed-in' && (
+        <Routes>
+          <Route path="auth" element={<SignIn />} />
+          <Route path="auth/complete-profile" element={<CreateProfile />} />
+          <Route path="auth/logout" element={<Logout />} />
+          <Route path="*" element={<SignIn />} />
+        </Routes>
+      )}
+    </>
+  );
 };
 
 const Dashboard: React.FC = () => {

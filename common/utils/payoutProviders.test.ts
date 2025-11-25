@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getPayoutProvider,
   isStripeConnectSupported,
-  isPayoneerSupported,
+  isBankTransferSupported,
   getPayoutProviderMessage
 } from './payoutProviders';
 
@@ -41,26 +41,26 @@ describe('payoutProviders', () => {
       expect(result).toBe('stripe');
     });
 
-    it('should return payoneer for Russia (Stripe not supported)', () => {
-      // given a Russian country code (not in Stripe list)
-      const countryCode = 'RU';
-
-      // when getting the payout provider
-      const result = getPayoutProvider(countryCode);
-
-      // then it should return payoneer
-      expect(result).toBe('payoneer');
-    });
-
-    it('should return payoneer for Argentina (Stripe not supported)', () => {
-      // given an Argentinian country code (not in Stripe list)
+    it('should return bank_transfer for Argentina (Stripe not supported)', () => {
+      // given an Argentinian country code (not in Stripe list but in Wise list)
       const countryCode = 'AR';
 
       // when getting the payout provider
       const result = getPayoutProvider(countryCode);
 
-      // then it should return payoneer
-      expect(result).toBe('payoneer');
+      // then it should return bank_transfer
+      expect(result).toBe('bank_transfer');
+    });
+
+    it('should return bank_transfer for Bangladesh (Stripe not supported)', () => {
+      // given a Bangladesh country code (not in Stripe list but in Wise list)
+      const countryCode = 'BD';
+
+      // when getting the payout provider
+      const result = getPayoutProvider(countryCode);
+
+      // then it should return bank_transfer
+      expect(result).toBe('bank_transfer');
     });
 
     it('should return unsupported for country not in either list', () => {
@@ -147,24 +147,24 @@ describe('payoutProviders', () => {
     });
   });
 
-  describe('isPayoneerSupported', () => {
-    it('should return true for Stripe countries (dual support)', () => {
+  describe('isBankTransferSupported', () => {
+    it('should return false for Stripe countries (no bank transfer needed)', () => {
       // given a Stripe-supported country
       const countryCode = 'US';
 
-      // when checking if Payoneer is supported
-      const result = isPayoneerSupported(countryCode);
+      // when checking if bank transfer is supported
+      const result = isBankTransferSupported(countryCode);
 
-      // then it should return true (Stripe countries also have Payoneer)
-      expect(result).toBe(true);
+      // then it should return false (Stripe is preferred)
+      expect(result).toBe(false);
     });
 
-    it('should return true for Payoneer-only countries', () => {
-      // given Payoneer-only country codes
-      const payoneerCodes = ['RU', 'AR', 'BD', 'KE'];
+    it('should return true for bank transfer countries', () => {
+      // given bank transfer country codes (not in Stripe list)
+      const bankTransferCodes = ['AR', 'BD', 'KE', 'UA'];
 
-      // when checking if Payoneer is supported
-      const results = payoneerCodes.map(code => isPayoneerSupported(code));
+      // when checking if bank transfer is supported
+      const results = bankTransferCodes.map(code => isBankTransferSupported(code));
 
       // then all should return true
       results.forEach(result => {
@@ -176,8 +176,8 @@ describe('payoutProviders', () => {
       // given an unsupported country code
       const countryCode = 'XX';
 
-      // when checking if Payoneer is supported
-      const result = isPayoneerSupported(countryCode);
+      // when checking if bank transfer is supported
+      const result = isBankTransferSupported(countryCode);
 
       // then it should return false
       expect(result).toBe(false);
@@ -187,8 +187,8 @@ describe('payoutProviders', () => {
       // given undefined
       const countryCode = undefined;
 
-      // when checking if Payoneer is supported
-      const result = isPayoneerSupported(countryCode);
+      // when checking if bank transfer is supported
+      const result = isBankTransferSupported(countryCode);
 
       // then it should return false
       expect(result).toBe(false);
@@ -208,16 +208,16 @@ describe('payoutProviders', () => {
       expect(message).toContain('available');
     });
 
-    it('should return Payoneer message for Payoneer-only countries', () => {
-      // given a Payoneer-only country
-      const countryCode = 'RU';
+    it('should return Bank Transfer message for bank transfer countries', () => {
+      // given a bank transfer country (not in Stripe list)
+      const countryCode = 'AR';
 
       // when getting the payout provider message
       const message = getPayoutProviderMessage(countryCode);
 
-      // then it should mention Payoneer and that Stripe is not supported
-      expect(message).toContain('Payoneer');
-      expect(message).toContain('not currently supported');
+      // then it should mention Bank Transfer
+      expect(message).toContain('Bank Transfer');
+      expect(message).toContain('available');
     });
 
     it('should return unsupported message for unsupported countries', () => {
