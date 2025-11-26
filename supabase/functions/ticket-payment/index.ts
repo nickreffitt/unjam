@@ -10,7 +10,8 @@ import { BillingEngineerTransferStoreSupabase } from "@stores/BillingEngineerTra
 import { BillingBatchGroupStoreSupabase } from "@stores/BillingBatchGroup/index.ts";
 import { BillingBatchGroupItemStoreSupabase } from "@stores/BillingBatchGroupItem/index.ts";
 import { TicketStoreSupabase } from "@stores/Ticket/index.ts";
-import { BillingSubscriptionServiceStripe } from "@services/BillingSubscription/index.ts";
+import { BillingInvoiceServiceStripe } from "@services/BillingInvoice/index.ts";
+import { BillingCreditsServiceStripe } from "@services/BillingCredits/index.ts";
 import { BillingMeterServiceStripe } from "@services/BillingMeter/index.ts";
 import { BillingEngineerPayoutServiceStripe } from "@services/BillingEngineerPayout/index.ts";
 import { BillingBalanceServiceStripe } from "@services/BillingBalance/index.ts";
@@ -74,7 +75,8 @@ export const handler = async (request: Request): Promise<Response> => {
     const ticketStore = new TicketStoreSupabase(supabase)
 
     // Initialize services
-    const subscriptionService = new BillingSubscriptionServiceStripe(stripe)
+    const invoiceService = new BillingInvoiceServiceStripe(stripe)
+    const creditsService = new BillingCreditsServiceStripe(stripe)
     const meterService = new BillingMeterServiceStripe(stripe)
     const payoutService = new BillingEngineerPayoutServiceStripe(stripe)
     const balanceService = new BillingBalanceServiceStripe(stripe)
@@ -95,7 +97,8 @@ export const handler = async (request: Request): Promise<Response> => {
       batchGroupStore,
       batchGroupItemStore,
       ticketStore,
-      subscriptionService,
+      invoiceService,
+      creditsService,
       meterService,
       payoutService,
       balanceService,

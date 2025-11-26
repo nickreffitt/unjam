@@ -39,4 +39,17 @@ export class SubscriptionManager {
   async createBillingPortalLink(profileId: string): Promise<string> {
     return await this.apiManager.createBillingPortalLink(profileId);
   }
+
+  /**
+   * Creates a Stripe Customer Session for subscription purchases via pricing table
+   * Used to enable existing customers to use the pricing table with pre-populated data
+   * If the profile doesn't have a Stripe customer, one will be created automatically
+   * @param profileId - The profile ID to create the customer session for
+   * @returns The customer session client secret for use with Stripe pricing table
+   * @throws Error if the request fails
+   */
+  async createSubscriptionCheckoutSession(profileId: string): Promise<string> {
+    const response = await this.apiManager.createSubscriptionCheckoutSession(profileId);
+    return response.client_secret;
+  }
 }

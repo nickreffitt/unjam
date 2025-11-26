@@ -1,24 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import StripePricingTable from './components/StripePricingTable/StripePricingTable';
 import ManageSubscription from './components/ManageSubscription/ManageSubscription';
 import { useSubscriptionState } from './hooks/useSubscriptionState';
+import { useSubscriptionManager } from './contexts/SubscriptionManagerContext';
 
 interface SubscriptionProps {
   stripePricingTableId?: string;
   stripePublishableKey?: string;
   clientReferenceId?: string;
-  customerEmail?: string;
 }
 
 const Subscription: React.FC<SubscriptionProps> = ({
   stripePricingTableId,
   stripePublishableKey,
   clientReferenceId,
-  customerEmail,
 }) => {
   const { subscription, creditBalance, pendingCredits, isLoading, error, hasActiveSubscription } = useSubscriptionState();
+  const { subscriptionManager, userProfile } = useSubscriptionManager();
+  const [customerSessionSecret, setCustomerSessionSecret] = useState<string | undefined>(undefined);
+  const [sessionLoading, setSessionLoading] = useState(false);
 
-  if (isLoading) {
+  // Fetch subscription checkout session when showing pricing table
+  useEffect(() => {
+    const fetchSubscriptionCheckoutSession = async () => {
+      if (!hasActiveSubscription && stripePricingTableId && stripePublishableKey) {
+        try {
+          setSessionLoading(true);
+          console.info('[Subscription] Fetching subscription checkout session for profile:', userProfile.id);
+          const clientSecret = await subscriptionManager.createSubscriptionCheckoutSession(userProfile.id);
+          setCustomerSessionSecret(clientSecret);
+          console.info('[Subscription] Successfully fetched subscription checkout session');
+        } catch (err) {
+          console.error('[Subscription] Error fetching subscription checkout session:', err);
+          // Don't fail the entire component - pricing table can work without customer session
+          setCustomerSessionSecret(undefined);
+        } finally {
+          setSessionLoading(false);
+        }
+      }
+    };
+
+    fetchSubscriptionCheckoutSession();
+  }, [hasActiveSubscription, stripePricingTableId, stripePublishableKey, subscriptionManager, userProfile.id]);
+
+  if (isLoading || sessionLoading) {
     return (
       <div className="unjam-h-full unjam-flex unjam-items-center unjam-justify-center unjam-p-4">
         <div className="unjam-text-gray-600">Loading subscription...</div>
@@ -70,7 +95,7 @@ const Subscription: React.FC<SubscriptionProps> = ({
       pricingTableId={stripePricingTableId}
       publishableKey={stripePublishableKey}
       clientReferenceId={clientReferenceId}
-      customerEmail={customerEmail}
+      customerSessionClientSecret={customerSessionSecret}
     />
   );
 };

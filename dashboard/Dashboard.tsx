@@ -30,6 +30,7 @@ import GithubCallback from '@dashboard/pages/customer/GithubCallback/GithubCallb
 import { BillingAccountManagerProvider } from '@dashboard/engineer/BillingAccount';
 import { GithubConnectManagerProvider } from '@dashboard/customer/GithubConnect';
 import { BillingRecipientFormProvider } from '@dashboard/engineer/BillingRecipientForm';
+import { BillingManagerProvider } from '@dashboard/customer/Credits';
 
 
 const ProtectedEngineerDashboard: React.FC = React.memo(() => {
@@ -85,23 +86,25 @@ const ProtectedCustomerDashboard: React.FC = React.memo(() => {
 
   return (
     <SubscriptionManagerProvider>
-      <GithubConnectManagerProvider>
-        <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
-          <CustomerSidebar />
-          <div className="unjam-flex-1 unjam-overflow-hidden">
-            <Routes>
-              <Route path="onboarding" element={<InstallExtension />} />
-              <Route path="buy" element={<BuyCredits />} />
-              <Route path="buy/success" element={<CreditSuccess />} />
-              <Route path="github/connect" element={<GithubConnect />} />
-              <Route path="github/callback" element={<GithubCallback />} />
-              <Route path="settings" element={<CustomerSettings />} />
-              <Route path="auth/logout" element={<Logout />} />
-              <Route path="*" element={<CustomerHome />} />
-            </Routes>
+      <BillingManagerProvider>
+        <GithubConnectManagerProvider>
+          <div className="unjam-flex unjam-h-screen unjam-bg-gray-100 unjam-font-sans">
+            <CustomerSidebar />
+            <div className="unjam-flex-1 unjam-overflow-hidden">
+              <Routes>
+                <Route path="onboarding" element={<InstallExtension />} />
+                <Route path="buy" element={<BuyCredits />} />
+                <Route path="buy/success" element={<CreditSuccess />} />
+                <Route path="github/connect" element={<GithubConnect />} />
+                <Route path="github/callback" element={<GithubCallback />} />
+                <Route path="settings" element={<CustomerSettings />} />
+                <Route path="auth/logout" element={<Logout />} />
+                <Route path="*" element={<CustomerHome />} />
+              </Routes>
+            </div>
           </div>
-        </div>
-      </GithubConnectManagerProvider>
+        </GithubConnectManagerProvider>
+      </BillingManagerProvider>
     </SubscriptionManagerProvider>
   );
 });

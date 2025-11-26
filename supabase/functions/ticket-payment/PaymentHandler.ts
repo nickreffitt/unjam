@@ -1,4 +1,5 @@
-import type { BillingSubscriptionService } from '@services/BillingSubscription/index.ts'
+import type { BillingCreditsService } from '@services/BillingCredits/index.ts'
+import type { BillingInvoiceService, InvoiceLineItemWithProduct } from '@services/BillingInvoice/index.ts'
 import type { BillingMeterService } from '@services/BillingMeter/index.ts'
 import type { BillingEngineerPayoutService } from '@services/BillingEngineerPayout/index.ts'
 import type { BillingBalanceService } from '@services/BillingBalance/index.ts'
@@ -50,7 +51,8 @@ export class PaymentHandler {
   private readonly batchGroupStore: BillingBatchGroupStore
   private readonly batchGroupItemStore: BillingBatchGroupItemStore
   private readonly ticketStore: TicketStore
-  private readonly subscriptionService: BillingSubscriptionService
+  private readonly invoiceService: BillingInvoiceService
+  private readonly creditsService: BillingCreditsService
   private readonly meterService: BillingMeterService
   private readonly payoutService: BillingEngineerPayoutService
   private readonly balanceService: BillingBalanceService
@@ -65,7 +67,8 @@ export class PaymentHandler {
     batchGroupStore: BillingBatchGroupStore,
     batchGroupItemStore: BillingBatchGroupItemStore,
     ticketStore: TicketStore,
-    subscriptionService: BillingSubscriptionService,
+    invoiceService: BillingInvoiceService,
+    creditsService: BillingCreditsService,
     meterService: BillingMeterService,
     payoutService: BillingEngineerPayoutService,
     balanceService: BillingBalanceService,
@@ -79,7 +82,8 @@ export class PaymentHandler {
     this.batchGroupStore = batchGroupStore
     this.batchGroupItemStore = batchGroupItemStore
     this.ticketStore = ticketStore
-    this.subscriptionService = subscriptionService
+    this.invoiceService = invoiceService
+    this.creditsService = creditsService
     this.meterService = meterService
     this.payoutService = payoutService
     this.balanceService = balanceService
@@ -117,10 +121,11 @@ export class PaymentHandler {
     }
 
     // Validate prerequisites
-    const { ticket, stripeCustomerId, creditsUsed, creditValue } = await this.validateTransferPrerequisites(ticketId)
+    const { ticket, stripeCustomerId, creditsUsed, creditValue, allocatedInvoiceLineItems } = await this.validateTransferPrerequisites(ticketId)
     if (!ticket.engineerId) {
       throw new Error(`Engineer ID not set in ticket`)
     }
+
     console.info(`✅ [PaymentHandler] Prerequisites validated. Credit value: ${creditValue} cents`)
 
     // Check which payment account the engineer has set up
@@ -477,12 +482,6 @@ export class PaymentHandler {
       throw new Error(`No billing customer found for profile: ${ticket.customerId}`)
     }
 
-    // Fetch active subscription to get credit price
-    const subscription = await this.subscriptionService.fetchActiveByCustomerId(stripeCustomerId)
-    if (!subscription) {
-      throw new Error(`No active subscription found for customer: ${stripeCustomerId}`)
-    }
-
     // Calculate elapsed time in hours
     const startTime = ticket.claimedAt || ticket.createdAt
     const endTime = ticket.resolvedAt || ticket.markAsFixedAt || new Date()
@@ -492,16 +491,57 @@ export class PaymentHandler {
     // Calculate number of credits (rounded up to nearest hour, max 2)
     const creditsUsed = Math.min(Math.ceil(elapsedHours), 2)
 
-    // Calculate credit value (credit price × number of credits)
-    const creditValue = subscription.creditPrice * creditsUsed
+    console.info(`[PaymentHandler] Elapsed time: ${elapsedHours.toFixed(2)} hours, Credits used: ${creditsUsed}`)
 
-    console.info(`[PaymentHandler] Elapsed time: ${elapsedHours.toFixed(2)} hours, Credits used: ${creditsUsed}, Credit value: ${creditValue} cents`)
+    // Fetch paid invoices with product information
+    const invoices = await this.invoiceService.fetchPaidInvoicesWithProducts(stripeCustomerId)
+
+    if (invoices.length === 0) {
+      throw new Error(`No paid invoices found for customer: ${stripeCustomerId}`)
+    }
+
+    // Allocate credits from invoices (FIFO - oldest first)
+    // Invoices are already sorted by paidAt in ascending order
+    const allocatedInvoiceLineItems: InvoiceLineItemWithProduct[] = []
+    let remainingCreditsToAllocate = creditsUsed
+
+    for (const invoice of invoices) {
+      if (remainingCreditsToAllocate <= 0) break
+
+      for (const lineItem of invoice.lineItems) {
+        if (remainingCreditsToAllocate <= 0) break
+
+        // Allocate up to the available credits from this line item
+        const creditsToAllocateFromThisItem = Math.min(remainingCreditsToAllocate, lineItem.creditsFromLineItem)
+
+        if (creditsToAllocateFromThisItem > 0) {
+          allocatedInvoiceLineItems.push({
+            ...lineItem,
+            creditsFromLineItem: creditsToAllocateFromThisItem // Override with actual allocated amount
+          })
+
+          remainingCreditsToAllocate -= creditsToAllocateFromThisItem
+        }
+      }
+    }
+
+    if (remainingCreditsToAllocate > 0) {
+      throw new Error(`Insufficient credits: need ${creditsUsed}, but only ${creditsUsed - remainingCreditsToAllocate} available from paid invoices`)
+    }
+
+    // Calculate total credit value from allocated line items
+    const creditValue = allocatedInvoiceLineItems.reduce((sum, item) => {
+      return sum + (item.creditsFromLineItem * item.creditPrice)
+    }, 0)
+
+    console.info(`[PaymentHandler] Allocated ${creditsUsed} credits from ${allocatedInvoiceLineItems.length} invoice line item(s), total value: ${creditValue} cents`)
 
     return {
       ticket,
       stripeCustomerId,
       creditsUsed,
-      creditValue
+      creditValue,
+      allocatedInvoiceLineItems
     }
   }
 
@@ -518,6 +558,7 @@ export class PaymentHandler {
     engineerAccountId: string
     customerId: string
     creditValue: number
+    allocatedInvoiceLineItems: InvoiceLineItemWithProduct[]
   }): Promise<TransferOperationResult> {
     // STEP 3: Record meter event to Stripe (deduct customer credit)
     console.info(`[PaymentHandler] Recording meter event to Stripe`)
@@ -562,6 +603,9 @@ export class PaymentHandler {
 
     // STEP 4: Transfer funds to engineer via Stripe Connect
     console.info(`[PaymentHandler] Creating transfer to engineer`)
+    console.info(`[PaymentHandler] Credit value breakdown: ${params.allocatedInvoiceLineItems.map(item =>
+      `${item.creditsFromLineItem} credits @ ${item.creditPrice} cents = ${item.creditsFromLineItem * item.creditPrice} cents`
+    ).join(', ')}`)
 
     const transferResult = await this.payoutService.createTransfer({
       ticketId: params.ticketId,

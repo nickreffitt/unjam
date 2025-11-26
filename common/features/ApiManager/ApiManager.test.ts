@@ -188,4 +188,86 @@ describe('ApiManager', () => {
         .rejects.toThrow('Network error');
     });
   });
+
+  describe('createSubscriptionCheckoutSession', () => {
+    const profileId = 'profile-123';
+    const mockAccessToken = 'mock-access-token';
+    const mockClientSecret = 'cus_session_test_secret123';
+
+    it('should successfully create subscription checkout session', async () => {
+      // Given a valid session and successful API response
+      vi.mocked(mockSupabaseClient.auth.getSession).mockResolvedValue({
+        data: {
+          session: {
+            access_token: mockAccessToken,
+            user: {} as any
+          } as any
+        },
+        error: null
+      });
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ client_secret: mockClientSecret })
+      } as Response);
+
+      // When creating a subscription checkout session
+      const response = await apiManager.createSubscriptionCheckoutSession(profileId);
+
+      // Then it should return the client secret
+      expect(response.client_secret).toBe(mockClientSecret);
+
+      // And it should call the edge function with correct parameters
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${edgeFunctionUrl}/billing_credits/subscription_checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mockAccessToken}`
+          },
+          body: JSON.stringify({
+            profile_id: profileId
+          })
+        }
+      );
+    });
+
+    it('should throw error when no active session exists', async () => {
+      // Given no active session
+      vi.mocked(mockSupabaseClient.auth.getSession).mockResolvedValue({
+        data: { session: null },
+        error: null
+      });
+
+      // When creating a subscription checkout session
+      // Then it should throw an error
+      await expect(apiManager.createSubscriptionCheckoutSession(profileId))
+        .rejects.toThrow('No active session found. Please sign in.');
+    });
+
+    it('should throw error when edge function returns error response', async () => {
+      // Given a valid session but failed API response
+      vi.mocked(mockSupabaseClient.auth.getSession).mockResolvedValue({
+        data: {
+          session: {
+            access_token: mockAccessToken,
+            user: {} as any
+          } as any
+        },
+        error: null
+      });
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: false,
+        statusText: 'Bad Request',
+        json: async () => ({ error: 'Profile not found or missing email' })
+      } as Response);
+
+      // When creating a subscription checkout session
+      // Then it should throw the error from the API
+      await expect(apiManager.createSubscriptionCheckoutSession(profileId))
+        .rejects.toThrow('Profile not found or missing email');
+    });
+  });
 });

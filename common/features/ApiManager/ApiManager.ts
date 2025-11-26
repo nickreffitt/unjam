@@ -1,5 +1,5 @@
 import { type SupabaseClient } from '@supabase/supabase-js';
-import type { EngineerProfile, CreditBalanceResponse, CreditTransferResponse, WiseRecipientFormData, WiseRecipient, WiseRecipientDetails, BeneficiaryFormValue, BankTransferRecipient } from '@common/types';
+import type { EngineerProfile, CreditBalanceResponse, CustomerSessionResponse, ProductsResponse, CheckoutSessionResponse, CreditTransferResponse, WiseRecipientFormData, WiseRecipient, WiseRecipientDetails, BeneficiaryFormValue, BankTransferRecipient } from '@common/types';
 
 export interface ICEServersResponse {
   iceServers: RTCIceServer[];
@@ -34,7 +34,7 @@ export class ApiManager {
     console.info(`[ApiManager] Creating billing portal link for profile: ${profileId}`);
 
     try {
-      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+      const { url } = await this.makeAuthenticatedPostRequest<{ url: string }>(
         'billing-links',
         {
           link_type: 'create_portal',
@@ -73,7 +73,7 @@ export class ApiManager {
     }
 
     try {
-      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+      const { url } = await this.makeAuthenticatedPostRequest<{ url: string }>(
         'billing-links',
         {
           link_type: 'create_engineer_account',
@@ -109,7 +109,7 @@ export class ApiManager {
     console.info(`[ApiManager] Creating engineer login link for profile: ${engineerId}`);
 
     try {
-      const { url } = await this.makeAuthenticatedRequest<{ url: string }>(
+      const { url } = await this.makeAuthenticatedPostRequest<{ url: string }>(
         'billing-links',
         {
           link_type: 'create_engineer_login',
@@ -145,7 +145,7 @@ export class ApiManager {
 
     try {
       const creditBalanceResponse = await this.makeAuthenticatedGetRequest<CreditBalanceResponse>(
-        'billing_credits',
+        'billing_credits/credit_balance',
         { profile_id: profileId },
         'Failed to fetch credit balance'
       );
@@ -156,6 +156,86 @@ export class ApiManager {
     } catch (err) {
       const error = err as Error;
       console.error('[ApiManager] Error fetching credit balance:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches all active credit purchase products
+   * @returns Array of available products with pricing information
+   * @throws Error if the request fails
+   */
+  async fetchProducts(): Promise<ProductsResponse> {
+    console.info(`[ApiManager] Fetching products`);
+
+    try {
+      const productsResponse = await this.makeAuthenticatedGetRequest<ProductsResponse>(
+        'billing_credits/products',
+        {},
+        'Failed to fetch products'
+      );
+
+      console.info(`[ApiManager] Successfully fetched ${productsResponse.products.length} products`);
+      return productsResponse;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error fetching products:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a checkout session for a one-time credit purchase
+   * Redirects user to Stripe Checkout to complete the purchase
+   * @param profileId - The user profile ID
+   * @param priceId - The Stripe price ID of the product to purchase
+   * @returns The checkout session URL to redirect the user to
+   * @throws Error if the request fails
+   */
+  async createProductCheckoutSession(profileId: string, priceId: string): Promise<CheckoutSessionResponse> {
+    console.info(`[ApiManager] Creating product checkout session for profile: ${profileId}, price: ${priceId}`);
+
+    try {
+      const checkoutResponse = await this.makeAuthenticatedPostRequest<CheckoutSessionResponse>(
+        'billing_credits/product_checkout',
+        { profile_id: profileId, price_id: priceId },
+        'Failed to create product checkout session'
+      );
+
+      console.info(`[ApiManager] Successfully created product checkout session`);
+      return checkoutResponse;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error creating product checkout session:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a Stripe Customer Session for subscription purchases
+   * Used to enable existing customers to use the pricing table with pre-populated data
+   * @param profileId - The user profile ID
+   * @returns The customer session client secret for the pricing table
+   * @throws Error if the request fails
+   */
+  async createSubscriptionCheckoutSession(profileId: string): Promise<CustomerSessionResponse> {
+    console.info(`[ApiManager] Creating subscription checkout session for profile: ${profileId}`);
+
+    try {
+      const sessionResponse = await this.makeAuthenticatedPostRequest<CustomerSessionResponse>(
+        'billing_credits/subscription_checkout',
+        { profile_id: profileId },
+        'Failed to create subscription checkout session'
+      );
+
+      console.info(`[ApiManager] Successfully created subscription checkout session`);
+      return sessionResponse;
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('[ApiManager] Error creating subscription checkout session:', error.message);
       throw error;
     }
   }
@@ -302,7 +382,7 @@ export class ApiManager {
    * @returns The response data
    * @throws Error if authentication fails or request fails
    */
-  private async makeAuthenticatedRequest<T>(
+  private async makeAuthenticatedPostRequest<T>(
     endpoint: string,
     body: unknown,
     errorContext: string
