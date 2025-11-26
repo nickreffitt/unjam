@@ -6,7 +6,7 @@ import type { BillingLinksService } from '@services/BillingLinks/index.ts'
 import { type BillingCustomerStore } from "@stores/BillingCustomer/index.ts";
 import { type ProfileStore } from "@stores/Profile/index.ts";
 import { type TicketStore, type TicketBillingInfo } from "@stores/Ticket/index.ts";
-import type { CreditBalanceRequest, CreditBalanceResponse, CustomerSessionRequest, CustomerSessionResponse, ProductsRequest, ProductsResponse, CheckoutSessionRequest, CheckoutSessionResponse } from '@types';
+import type { CheckoutSessionRequest, CheckoutSessionResponse, CreditBalanceRequest, CreditBalanceResponse, CustomerSessionRequest, CustomerSessionResponse, ProductsRequest, ProductsResponse } from '@types';
 
 export class BillingCreditsHandler {
   private readonly customerStore: BillingCustomerStore
@@ -47,17 +47,22 @@ export class BillingCreditsHandler {
     const customerId = await this.customerStore.getByProfileId(profile_id)
 
     if (!customerId) {
-      console.error(`[BillingCreditsHandler] No billing customer found for profile: ${profile_id}`)
-      throw new Error('No billing customer found for this profile')
+      console.info(`[BillingCreditsHandler] No billing customer found for profile: ${profile_id} - returning zero balance (user hasn't purchased credits yet)`)
+
+      // Return zero balance for new users who haven't purchased credits yet
+      return {
+        creditBalance: 0,
+        pendingCredits: 0
+      }
     }
 
     // 2. Fetch credit balance from invoices (invoice credits - meter usage)
-    console.info(`[BillingCreditsHandler] No active subscription found, fetching balance from invoices`)
+    console.info(`[BillingCreditsHandler] Fetching balance from invoices for customer: ${customerId}`)
     const creditBalanceData = await this.creditsService.fetchCreditBalanceFromInvoices(customerId)
 
     console.info(`✅ [BillingCreditsHandler] Credit balance fetched: ${creditBalanceData.availableCredits} available (${creditBalanceData.totalCredits} total - ${creditBalanceData.usedCredits} used)`)
 
-    // 4. Calculate pending credits from tickets in processing states
+    // 3. Calculate pending credits from tickets in processing states
     const pendingCredits = await this.calculatePendingCredits(profile_id)
 
     console.info(`✅ [BillingCreditsHandler] Pending credits calculated: ${pendingCredits}`)

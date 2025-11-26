@@ -7,6 +7,7 @@ export interface CreateTransferParams {
   engineerConnectAccountId: string
   customerId: string
   creditValue: number // Customer credit value in cents (e.g., 1000 = $10)
+  payoutAmount: number // Engineer payout amount in cents (e.g., 2000 = $20)
 }
 
 /**

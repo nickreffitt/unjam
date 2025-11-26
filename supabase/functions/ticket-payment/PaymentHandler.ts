@@ -43,6 +43,8 @@ interface TransferInsufficientFundsResult {
  */
 type TransferOperationResult = TransferCompletedResult | TransferPendingResult | TransferInsufficientFundsResult;
 
+const PAYOUT_AMOUNT_PER_HOUR = 2000; // $20 an hour
+
 export class PaymentHandler {
   private readonly customerStore: BillingCustomerStore
   private readonly engineerStore: BillingEngineerStore
@@ -121,12 +123,12 @@ export class PaymentHandler {
     }
 
     // Validate prerequisites
-    const { ticket, stripeCustomerId, creditsUsed, creditValue, allocatedInvoiceLineItems } = await this.validateTransferPrerequisites(ticketId)
+    const { ticket, stripeCustomerId, creditsUsed, creditValue, allocatedInvoiceLineItems, hoursWorked } = await this.validateTransferPrerequisites(ticketId)
     if (!ticket.engineerId) {
       throw new Error(`Engineer ID not set in ticket`)
     }
 
-    console.info(`✅ [PaymentHandler] Prerequisites validated. Credit value: ${creditValue} cents`)
+    console.info(`✅ [PaymentHandler] Prerequisites validated. Hours worked: ${hoursWorked}, Credit value: ${creditValue} cents`)
 
     // Check which payment account the engineer has set up
     console.info(`[PaymentHandler] Checking engineer payment account setup`)
@@ -173,6 +175,7 @@ export class PaymentHandler {
           ticketId,
           stripeCustomerId,
           creditsUsed,
+          hoursWorked,
           engineerId: ticket.engineerId!,
           engineerAccountId: engineerAccount!.id,
           customerId: ticket.customerId,
@@ -190,9 +193,10 @@ export class PaymentHandler {
 
         console.info(`✅ [PaymentHandler] Meter event recorded: ${creditsUsed} credits`)
 
-        // Calculate fixed payout amount and platform profit
-        const payoutAmount = 2000 // Fixed $20 payout
+        const payoutAmount = hoursWorked * PAYOUT_AMOUNT_PER_HOUR
         const platformProfit = creditValue - payoutAmount
+
+        console.info(`[PaymentHandler] Calculated payout: ${hoursWorked} hours × $20/hour = $${(payoutAmount / 100).toFixed(2)}`)
 
         // Update transfer record with calculated amounts
         await this.transferStore.update(transferRecord.id, {
@@ -216,8 +220,8 @@ export class PaymentHandler {
         // STEP 5a: Update audit record (status: 'failed')
         console.error(`[PaymentHandler] Step 5a: Updating audit record to failed - insufficient funds`)
 
-        // Fetch payout amount for the transfer record
-        const payoutAmount = await this.payoutService.fetchPayoutAmount(engineerAccount.id)
+        // Calculate payout amount based on hours worked
+        const payoutAmount = hoursWorked * PAYOUT_AMOUNT_PER_HOUR // $20 per hour in cents
         const platformProfit = creditValue - payoutAmount
 
         await this.transferStore.update(transferRecord.id, {
@@ -242,8 +246,7 @@ export class PaymentHandler {
         // STEP 5b: Update audit record (status: 'pending_funds')
         console.info(`[PaymentHandler] Step 5b: Updating audit record to pending_funds`)
 
-        // Fetch payout amount for the transfer record
-        const payoutAmount = await this.payoutService.fetchPayoutAmount(engineerAccount!.id)
+        const payoutAmount = hoursWorked * PAYOUT_AMOUNT_PER_HOUR 
         const platformProfit = creditValue - payoutAmount
 
         await this.transferStore.update(transferRecord.id, {
@@ -491,7 +494,10 @@ export class PaymentHandler {
     // Calculate number of credits (rounded up to nearest hour, max 2)
     const creditsUsed = Math.min(Math.ceil(elapsedHours), 2)
 
-    console.info(`[PaymentHandler] Elapsed time: ${elapsedHours.toFixed(2)} hours, Credits used: ${creditsUsed}`)
+    // Hours worked for engineer payout (same as credits, rounded up to nearest hour, max 2)
+    const hoursWorked = creditsUsed
+
+    console.info(`[PaymentHandler] Elapsed time: ${elapsedHours.toFixed(2)} hours, Credits used: ${creditsUsed}, Hours worked for payout: ${hoursWorked}`)
 
     // Fetch paid invoices with product information
     const invoices = await this.invoiceService.fetchPaidInvoicesWithProducts(stripeCustomerId)
@@ -540,6 +546,7 @@ export class PaymentHandler {
       ticket,
       stripeCustomerId,
       creditsUsed,
+      hoursWorked,
       creditValue,
       allocatedInvoiceLineItems
     }
@@ -554,11 +561,12 @@ export class PaymentHandler {
     ticketId: string
     stripeCustomerId: string
     creditsUsed: number
+    hoursWorked: number
     engineerId: string
     engineerAccountId: string
     customerId: string
     creditValue: number
-    allocatedInvoiceLineItems: InvoiceLineItemWithProduct[]
+    allocatedInvoiceLineItems?: InvoiceLineItemWithProduct[]
   }): Promise<TransferOperationResult> {
     // STEP 3: Record meter event to Stripe (deduct customer credit)
     console.info(`[PaymentHandler] Recording meter event to Stripe`)
@@ -571,12 +579,12 @@ export class PaymentHandler {
 
     console.info(`✅ [PaymentHandler] Meter event recorded: ${params.creditsUsed} credits`)
 
-    // STEP 3.5: Fetch payout amount to check balance requirement
-    console.info(`[PaymentHandler] Fetching payout amount for engineer`)
+    // STEP 3.5: Calculate payout amount based on hours worked ($20/hour)
+    console.info(`[PaymentHandler] Calculating payout amount for engineer`)
 
-    const payoutAmount = await this.payoutService.fetchPayoutAmount(params.engineerAccountId)
+    const payoutAmount = params.hoursWorked * PAYOUT_AMOUNT_PER_HOUR // $20 per hour in cents
 
-    console.info(`[PaymentHandler] Payout amount: ${payoutAmount} cents ($${(payoutAmount / 100).toFixed(2)})`)
+    console.info(`[PaymentHandler] Payout amount: ${params.hoursWorked} hours × $20/hour = ${payoutAmount} cents ($${(payoutAmount / 100).toFixed(2)})`)
 
     // STEP 3.6: Check if sufficient balance is available
     console.info(`[PaymentHandler] Checking Stripe available balance`)
@@ -603,16 +611,19 @@ export class PaymentHandler {
 
     // STEP 4: Transfer funds to engineer via Stripe Connect
     console.info(`[PaymentHandler] Creating transfer to engineer`)
-    console.info(`[PaymentHandler] Credit value breakdown: ${params.allocatedInvoiceLineItems.map(item =>
-      `${item.creditsFromLineItem} credits @ ${item.creditPrice} cents = ${item.creditsFromLineItem * item.creditPrice} cents`
-    ).join(', ')}`)
+    if (params.allocatedInvoiceLineItems) {
+      console.info(`[PaymentHandler] Credit value breakdown: ${params.allocatedInvoiceLineItems.map(item =>
+        `${item.creditsFromLineItem} credits @ ${item.creditPrice} cents = ${item.creditsFromLineItem * item.creditPrice} cents`
+      ).join(', ')}`)
+    }
 
     const transferResult = await this.payoutService.createTransfer({
       ticketId: params.ticketId,
       engineerId: params.engineerId,
       engineerConnectAccountId: params.engineerAccountId,
       customerId: params.customerId,
-      creditValue: params.creditValue
+      creditValue: params.creditValue,
+      payoutAmount: payoutAmount
     })
 
     console.info(`✅ [PaymentHandler] Transfer created: ${transferResult.transferId}, amount: ${transferResult.amount}, profit: ${transferResult.platformProfit}`)

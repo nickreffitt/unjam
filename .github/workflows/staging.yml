@@ -162,6 +162,7 @@ jobs:
           scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/nginx-reverse-proxy.conf ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
           scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/zero-downtime-deploy.sh ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
           scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/process-payments-cron.sh ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/process-batch-transfer-cron.sh ${{ secrets.SVR_USERNAME }}@${{ secrets.SVR_HOST }}:/opt/unjam/
 
           rm /tmp/ssh_key
 
@@ -276,8 +277,9 @@ jobs:
             # Set strict permissions (only root can read/write)
             chmod 600 /opt/unjam/.env.cron
 
-            # Make cron script executable
+            # Make cron scripts executable
             chmod +x /opt/unjam/process-payments-cron.sh
+            chmod +x /opt/unjam/process-batch-transfer-cron.sh
 
             # Install cron if not installed
             if ! command -v cron &> /dev/null; then
@@ -286,14 +288,17 @@ jobs:
               systemctl start cron
             fi
 
-            # Add cron job (runs every 5 minutes)
-            # Remove existing cron job if it exists
-            crontab -l 2>/dev/null | grep -v "process-payments-cron.sh" | crontab -
+            # Remove existing cron jobs if they exist
+            crontab -l 2>/dev/null | grep -v "process-payments-cron.sh" | grep -v "process-batch-transfer-cron.sh" | crontab -
 
-            # Add new cron job
+            # Add cron jobs
+            # 1. Payment processing (runs every 5 minutes)
             (crontab -l 2>/dev/null; echo "*/5 * * * * /opt/unjam/process-payments-cron.sh >> /var/log/ticket-payments-cron.log 2>&1") | crontab -
 
-            echo "Cron job installed successfully"
+            # 2. Batch transfer processing (runs every Monday at 9am UTC)
+            (crontab -l 2>/dev/null; echo "0 9 * * 1 /opt/unjam/process-batch-transfer-cron.sh >> /var/log/batch-transfer-cron.log 2>&1") | crontab -
+
+            echo "Cron jobs installed successfully"
 
             # Clean up
             rm -f "/tmp/image.tar"

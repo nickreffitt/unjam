@@ -20,30 +20,26 @@ export class BillingEngineerPayoutServiceStripe implements BillingEngineerPayout
 
   /**
    * Creates a transfer to pay an engineer for completing a ticket
-   * Fetches the engineer's payout amount from their Connect account metadata
-   * and creates a transfer to their account
+   * Uses the provided payout amount (calculated based on hours worked)
    *
-   * @param params - Transfer parameters
+   * @param params - Transfer parameters including calculated payout amount
    * @returns Transfer result with Stripe transfer ID and platform profit
    * @throws Error if Connect account not found or transfer fails
    */
   async createTransfer(params: CreateTransferParams): Promise<TransferResult> {
-    const { ticketId, engineerId, engineerConnectAccountId, customerId, creditValue } = params
+    const { ticketId, engineerId, engineerConnectAccountId, customerId, creditValue, payoutAmount } = params
 
     console.info(`[BillingEngineerPayoutServiceStripe] Creating transfer for ticket: ${ticketId}, engineer: ${engineerId}`)
 
     try {
-      // 1. Fetch payout amount from Connect account metadata
-      const payoutAmount = await this.fetchPayoutAmount(engineerConnectAccountId)
-
       console.info(`[BillingEngineerPayoutServiceStripe] Payout amount: ${payoutAmount} cents ($${(payoutAmount / 100).toFixed(2)})`)
 
-      // 2. Validate that credit value covers payout
+      // Note: We no longer validate that credit value covers payout, as platform may operate at a loss
       if (creditValue < payoutAmount) {
-        throw new Error(`Credit value (${creditValue}) is less than payout amount (${payoutAmount})`)
+        console.warn(`[BillingEngineerPayoutServiceStripe] Platform will operate at a loss: credit value (${creditValue}) < payout amount (${payoutAmount})`)
       }
 
-      // 3. Create transfer to engineer's Connect account
+      // 2. Create transfer to engineer's Connect account
       const transfer = await this.stripe.transfers.create({
         amount: payoutAmount,
         currency: 'usd',
@@ -56,7 +52,7 @@ export class BillingEngineerPayoutServiceStripe implements BillingEngineerPayout
         }
       })
 
-      // 4. Calculate platform profit
+      // 3. Calculate platform profit (may be negative)
       const platformProfit = creditValue - payoutAmount
 
       console.info(`✅ [BillingEngineerPayoutServiceStripe] Transfer created: ${transfer.id}, amount: ${payoutAmount}, profit: ${platformProfit}`)

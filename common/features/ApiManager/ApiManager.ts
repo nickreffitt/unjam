@@ -279,7 +279,7 @@ export class ApiManager {
     console.info(`[ApiManager] Generating beneficiary auth code for profile: ${engineerId}`);
 
     try {
-      const response = await this.makeAuthenticatedRequest<{ authorization_code: string }>(
+      const response = await this.makeAuthenticatedPostRequest<{ authorization_code: string }>(
         'billing-links',
         {
           link_type: 'create_engineer_beneficiary_auth_code',
@@ -319,7 +319,7 @@ export class ApiManager {
     console.info(`[ApiManager] Creating engineer beneficiary for profile: ${engineerId}`);
 
     try {
-      const beneficiary = await this.makeAuthenticatedRequest<BankTransferRecipient>(
+      const beneficiary = await this.makeAuthenticatedPostRequest<BankTransferRecipient>(
         'billing-links',
         {
           link_type: 'create_engineer_beneficiary',
@@ -354,7 +354,7 @@ export class ApiManager {
     console.info(`[ApiManager] Deleting engineer beneficiary for profile: ${engineerId}`);
 
     try {
-      await this.makeAuthenticatedRequest<void>(
+      await this.makeAuthenticatedPostRequest<void>(
         'billing-links',
         {
           link_type: 'delete_engineer_beneficiary',
