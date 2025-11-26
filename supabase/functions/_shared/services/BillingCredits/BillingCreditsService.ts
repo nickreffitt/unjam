@@ -15,15 +15,6 @@ export interface CreditBalance {
  */
 export interface BillingCreditsService {
   /**
-   * Fetches the current credit balance for a customer with an active subscription
-   * Calculates: subscription credits - meter events in current period
-   * @param subscription - The customer's subscription containing credit allocation
-   * @param customerId - The Stripe customer ID
-   * @returns Credit balance information including available, used, and total credits
-   */
-  fetchCreditBalance(subscription: Subscription, customerId: string): Promise<CreditBalance>
-
-  /**
    * Fetches the current credit balance for a customer from paid invoices
    * Calculates: credits from paid invoices (last 365 days) - meter events (last 365 days)
    * @param customerId - The Stripe customer ID

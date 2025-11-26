@@ -22,20 +22,15 @@ export const useSubscriptionState = () => {
 
         console.info('[useSubscriptionState] Checking for active subscription for profile:', userProfile.id);
         const activeSubscription = await subscriptionManager.getActiveSubscriptionForProfile(userProfile.id);
-
         setSubscription(activeSubscription);
 
-        if (activeSubscription) {
-          console.info('[useSubscriptionState] Active subscription found, fetching credit balance');
-          const balance = await subscriptionManager.getCreditBalanceForProfile(userProfile.id);
-          setCreditBalance(balance.creditBalance);
-          setPendingCredits(balance.pendingCredits)
-          console.info('[useSubscriptionState] Successfully fetched credit balance');
-        } else {
-          console.info('[useSubscriptionState] No active subscription found');
-          setCreditBalance(null);
-          setPendingCredits(null)
-        }
+        // Always fetch credit balance regardless of subscription status
+        // (credits can exist from one-time purchases without a subscription)
+        console.info('[useSubscriptionState] Fetching credit balance');
+        const balance = await subscriptionManager.getCreditBalanceForProfile(userProfile.id);
+        setCreditBalance(balance.creditBalance);
+        setPendingCredits(balance.pendingCredits);
+        console.info('[useSubscriptionState] Successfully fetched credit balance:', balance.creditBalance);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load subscription state';
         console.error('[useSubscriptionState] Error:', errorMessage);

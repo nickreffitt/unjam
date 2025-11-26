@@ -123,7 +123,7 @@ export class PaymentHandler {
     }
 
     // Validate prerequisites
-    const { ticket, stripeCustomerId, creditsUsed, creditValue, allocatedInvoiceLineItems, hoursWorked } = await this.validateTransferPrerequisites(ticketId)
+    const { ticket, stripeCustomerId, creditsUsed, creditValue, hoursWorked } = await this.validateTransferPrerequisites(ticketId)
     if (!ticket.engineerId) {
       throw new Error(`Engineer ID not set in ticket`)
     }
@@ -499,6 +499,18 @@ export class PaymentHandler {
 
     console.info(`[PaymentHandler] Elapsed time: ${elapsedHours.toFixed(2)} hours, Credits used: ${creditsUsed}, Hours worked for payout: ${hoursWorked}`)
 
+    const creditValue = await this.fetchCreditValueFromEarliestUnusedInvoice(stripeCustomerId, creditsUsed)
+
+    return {
+      ticket,
+      stripeCustomerId,
+      creditsUsed,
+      creditValue,
+      hoursWorked
+    }
+  }
+
+  private async fetchCreditValueFromEarliestUnusedInvoice(stripeCustomerId: string, creditsUsed: number): Promise<number> {
     // Fetch paid invoices with product information
     const invoices = await this.invoiceService.fetchPaidInvoicesWithProducts(stripeCustomerId)
 
@@ -541,15 +553,7 @@ export class PaymentHandler {
     }, 0)
 
     console.info(`[PaymentHandler] Allocated ${creditsUsed} credits from ${allocatedInvoiceLineItems.length} invoice line item(s), total value: ${creditValue} cents`)
-
-    return {
-      ticket,
-      stripeCustomerId,
-      creditsUsed,
-      hoursWorked,
-      creditValue,
-      allocatedInvoiceLineItems
-    }
+    return creditValue
   }
 
   /**
@@ -623,7 +627,7 @@ export class PaymentHandler {
       engineerConnectAccountId: params.engineerAccountId,
       customerId: params.customerId,
       creditValue: params.creditValue,
-      payoutAmount: payoutAmount
+      payoutAmount
     })
 
     console.info(`✅ [PaymentHandler] Transfer created: ${transferResult.transferId}, amount: ${transferResult.amount}, profit: ${transferResult.platformProfit}`)

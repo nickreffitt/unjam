@@ -13,7 +13,6 @@ const EDITOR_OPTIONS = [
 
 const OnboardingStatus: React.FC = () => {
   const {
-    subscription,
     creditBalance,
     pendingCredits,
     extensionInstalled,
@@ -27,7 +26,7 @@ const OnboardingStatus: React.FC = () => {
     window.open(selectedEditor.url, '_blank');
   };
 
-  const hasSubscription = subscription !== null;
+  const hasCredits = creditBalance !== null && creditBalance !== undefined;
   const hasGithub = githubIntegration !== null;
 
   if (isLoading) {
@@ -44,28 +43,23 @@ const OnboardingStatus: React.FC = () => {
     <div className="unjam-bg-white unjam-shadow unjam-rounded-lg unjam-p-6 unjam-space-y-6">
       <h2 className="unjam-text-xl unjam-font-semibold unjam-text-gray-900">Getting Started</h2>
 
-      {/* Subscription Status */}
+      {/* Credit Balance Status */}
       <div className="unjam-space-y-2">
         <div className="unjam-flex unjam-items-center unjam-justify-between">
           <div className="unjam-flex unjam-items-center unjam-space-x-2">
-            {hasSubscription ? (
+            {hasCredits ? (
               <CheckCircle className="unjam-h-5 unjam-w-5 unjam-text-green-500" />
             ) : (
               <XCircle className="unjam-h-5 unjam-w-5 unjam-text-gray-400" />
             )}
             <span className="unjam-text-sm unjam-font-medium unjam-text-gray-700">
-              Subscription
+              Credits
             </span>
           </div>
-          {hasSubscription && subscription && (
-            <span className="unjam-text-sm unjam-text-gray-600">
-              {subscription.planName}
-            </span>
-          )}
         </div>
-        {hasSubscription && (
+        {hasCredits && (
           <div className="unjam-ml-7 unjam-text-sm unjam-text-gray-600">
-            <div>Credits available: <span className="unjam-font-semibold">{creditBalance ?? 0}</span></div>
+            <div>Available: <span className="unjam-font-semibold">{creditBalance ?? 0}</span></div>
             {pendingCredits !== null && pendingCredits > 0 && (
               <div className="unjam-text-xs unjam-text-gray-500">
                 Pending: {pendingCredits} credits

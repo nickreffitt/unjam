@@ -1,20 +1,19 @@
-import { useSubscriptionState } from '@dashboard/customer/Subscription/hooks/useSubscriptionState';
+import { useCreditBalanceState } from './useCreditBalanceState';
 import { useGithubConnectState } from '@dashboard/customer/GithubConnect/hooks/useGithubConnectState';
 import { useAuthState } from '@dashboard/shared/contexts/AuthManagerContext';
 
 /**
  * Hook to get onboarding status data
- * Returns subscription, extension, and GitHub integration status
+ * Returns credit balance, extension, and GitHub integration status
  */
 export const useOnboardingState = () => {
-  // Get subscription data
+  // Get credit balance data
   const {
-    subscription,
     creditBalance,
     pendingCredits,
-    isLoading: subscriptionLoading,
-    error: subscriptionError
-  } = useSubscriptionState();
+    isLoading: creditsLoading,
+    error: creditsError
+  } = useCreditBalanceState();
 
   // Get GitHub integration status
   const {
@@ -27,11 +26,10 @@ export const useOnboardingState = () => {
   const { authUser } = useAuthState();
   const extensionInstalled = !!authUser.profile?.extensionInstalledAt;
 
-  const isLoading = subscriptionLoading || githubLoading;
-  const error = subscriptionError || githubError;
+  const isLoading = creditsLoading || githubLoading;
+  const error = creditsError || githubError;
 
   return {
-    subscription,
     creditBalance,
     pendingCredits,
     extensionInstalled,
