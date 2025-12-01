@@ -290,6 +290,77 @@ export class TicketManager {
   }
 
   /**
+   * Cancels a ticket (customer only)
+   * Can cancel if:
+   * - Status is 'waiting', OR
+   * - Status is 'in-progress' or 'awaiting-confirmation' AND time since claimed < 5 minutes
+   * @param ticketId - The ID of the ticket to cancel
+   * @returns The updated ticket
+   * @throws Error if user is not a customer, ticket not found, or cancellation not allowed
+   */
+  async cancelTicket(ticketId: string): Promise<Ticket> {
+    if (!isCustomerProfile(this.userProfile)) {
+      throw new Error('Only customers can cancel tickets');
+    }
+
+    // Get the ticket from the store
+    const ticket = await this.ticketStore.get(ticketId);
+    if (!ticket) {
+      throw new Error(`Ticket with ID ${ticketId} not found`);
+    }
+
+    // Verify this is the customer's ticket
+    const customerProfile = this.userProfile;
+    if (ticket.createdBy.id !== customerProfile.id) {
+      throw new Error('You can only cancel your own tickets');
+    }
+
+    // Check if cancellation is allowed
+    const canCancel = this.canCancelTicket(ticket);
+    if (!canCancel) {
+      throw new Error('This ticket cannot be cancelled at this time');
+    }
+
+    // Update the ticket to cancelled status
+    const updatedTicket: Ticket = {
+      ...ticket,
+      status: 'cancelled',
+    };
+
+    console.debug(`Customer ${customerProfile.name} cancelled ticket ${ticketId}`);
+    return await this.ticketStore.update(ticketId, updatedTicket);
+  }
+
+  /**
+   * Checks if a ticket can be cancelled by the customer
+   * Public method for UI to determine button visibility
+   * @param ticket - The ticket to check
+   * @returns true if the ticket can be cancelled, false otherwise
+   */
+  canCancelTicket(ticket: Ticket): boolean {
+    // Can cancel if status is 'waiting'
+    if (ticket.status === 'waiting') {
+      return true;
+    }
+
+    // Can cancel if status is 'in-progress' or 'awaiting-confirmation'
+    // AND time since claimed < 5 minutes
+    if (ticket.status === 'in-progress' || ticket.status === 'awaiting-confirmation') {
+      if (!ticket.claimedAt) {
+        return false;
+      }
+
+      const now = new Date();
+      const timeSinceClaimedMs = now.getTime() - ticket.claimedAt.getTime();
+      const fiveMinutesMs = 5 * 60 * 1000;
+
+      return timeSinceClaimedMs < fiveMinutesMs;
+    }
+
+    return false;
+  }
+
+  /**
    * Gets a ticket by ID
    * @param ticketId - The ID of the ticket to retrieve
    * @returns The ticket or null if not found
